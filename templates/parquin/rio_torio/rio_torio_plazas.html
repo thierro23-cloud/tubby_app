@@ -1,0 +1,710 @@
+{# =============================================================================
+   🅿️  RÍO / TORIO · LISTADO Y GESTIÓN DE PLAZAS DE CAMIONES
+   =============================================================================
+   OBJETIVO GENERAL
+   ----------------
+   Esta plantilla HTML muestra el listado de plazas de camiones (tbl_plazas)
+   para la zona RÍO / TORIO, incluyendo:
+
+   - Datos de la plaza (código, fila, observaciones, inventario).
+   - Datos del usuario vinculado (idtbl_usuarios, numero_cuenta).
+   - Datos del proveedor (Nombre_Razon_Social, idtbl_proveedores).
+   - Información de fechas y expedientes.
+
+   Además:
+   - Permite ir al formulario de alta/edición de plaza.
+   - Permite navegar al histórico de plazas:
+       · listado global del histórico;
+       · detalle del histórico de la plaza concreta.
+
+   Variables recibidas desde Flask:
+   - plazas: lista de dicts con los campos devueltos por el SELECT del blueprint.
+   - usuario_actual: objeto current_user (solo lectura).
+   ============================================================================= #}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <!-- =========================================================================
+         1️⃣ METADATOS Y DEPENDENCIAS
+         ========================================================================= -->
+    <meta charset="UTF-8">
+    <title>Gestión de Plazas · RÍO / TORIO</title>
+
+    {# 1.1️⃣ Bootstrap 5 (layout y componentes base) #}
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+        crossorigin="anonymous"
+    >
+
+    {# 1.2️⃣ Font Awesome 6 (iconos para botones, estados, etc.) #}
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+        integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA=="
+        crossorigin="anonymous"
+        referrerpolicy="no-referrer"
+    >
+
+    <!-- =========================================================================
+         2️⃣ ESTILOS PERSONALIZADOS (GLASS + DEGRADADOS + COMPONENTES)
+         ========================================================================= -->
+    <style>
+        /* 2.1️⃣ Fondo general con degradado pastel a pantalla completa */
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #f5f7ff 0%, #fdf2ff 40%, #f2fbff 100%);
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+
+        /* 2.2️⃣ Wrapper principal: separación del borde de la ventana */
+        .main-wrapper {
+            padding: 2.5rem 1rem;
+        }
+
+        @media (min-width: 992px) {
+            .main-wrapper {
+                padding: 3.5rem 2rem;
+            }
+        }
+
+        /* 2.3️⃣ Tarjeta principal tipo cristal (glassmorphism) */
+        .card-glass {
+            background: rgba(255, 255, 255, 0.86);
+            border-radius: 1.25rem;
+            box-shadow:
+                0 10px 30px rgba(15, 23, 42, 0.08),
+                0 0 0 1px rgba(148, 163, 184, 0.12);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(148, 163, 184, 0.25);
+        }
+
+        /* 2.4️⃣ Cabecera superior con degradado suave y borde inferior */
+        .header-gradient {
+            background: radial-gradient(circle at top left, #e0f2fe 0, transparent 45%),
+                        radial-gradient(circle at top right, #fee2ff 0, transparent 55%),
+                        linear-gradient(120deg, #eff6ff, #fdf2ff);
+            border-radius: 1.25rem 1.25rem 0 0;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.25);
+            padding: 1.5rem 1.75rem;
+        }
+
+        .header-title {
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            color: #64748b;
+        }
+
+        .header-main {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .header-subtitle {
+            font-size: 0.95rem;
+            color: #64748b;
+        }
+
+        /* 2.5️⃣ Chip de información (estado, sesión, etc.) */
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.3rem 0.85rem;
+            border-radius: 999px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            background: rgba(59, 130, 246, 0.06);
+            color: #1d4ed8;
+        }
+
+        /* 2.6️⃣ Botón principal con degradado (Nueva plaza) */
+        .btn-gradient {
+            border: none;
+            border-radius: 999px;
+            padding-inline: 1.25rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            background-image: linear-gradient(135deg, #4f46e5, #7c3aed);
+            color: #f9fafb;
+            box-shadow: 0 10px 20px rgba(79, 70, 229, 0.35);
+            transition: transform 0.05s ease-out, box-shadow 0.08s ease-out, filter 0.08s ease-out;
+        }
+
+        .btn-gradient:hover {
+            filter: brightness(1.02);
+            transform: translateY(-1px);
+            box-shadow: 0 14px 24px rgba(79, 70, 229, 0.45);
+            color: #f9fafb;
+        }
+
+        /* 2.7️⃣ Botón suave para acciones secundarias */
+        .btn-soft {
+            border-radius: 999px;
+            border: 1px solid rgba(148, 163, 184, 0.5);
+            background: rgba(248, 250, 252, 0.85);
+            color: #475569;
+            font-weight: 500;
+            padding-inline: 0.9rem;
+        }
+
+        .btn-soft:hover {
+            background: #e5edff;
+            color: #1e293b;
+        }
+
+        /* 2.8️⃣ Contenedor de tabla dentro de la tarjeta */
+        .table-container {
+            padding: 1.25rem 1.75rem 1.5rem;
+        }
+
+        /* 2.9️⃣ Tabla con colores suaves y rayado alterno */
+        .table {
+            --bs-table-bg: transparent;
+            --bs-table-striped-bg: rgba(241, 245, 249, 0.75);
+            --bs-table-hover-bg: rgba(219, 234, 254, 0.75);
+            color: #0f172a;
+        }
+
+        .table thead th {
+            border-bottom-width: 1px;
+            border-color: rgba(148, 163, 184, 0.5);
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: #64748b;
+            font-weight: 700;
+            background: rgba(248, 250, 252, 0.9);
+        }
+
+        .table tbody td {
+            vertical-align: middle;
+            font-size: 0.88rem;
+            border-color: rgba(226, 232, 240, 0.9);
+        }
+
+        /* 2.10️⃣ Badges suaves para etiquetas varias */
+        .badge-soft {
+            border-radius: 999px;
+            padding: 0.25rem 0.6rem;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+        .badge-soft-green {
+            background: rgba(16, 185, 129, 0.08);
+            color: #047857;
+        }
+
+        .badge-soft-amber {
+            background: rgba(251, 191, 36, 0.14);
+            color: #92400e;
+        }
+
+        .badge-soft-slate {
+            background: rgba(148, 163, 184, 0.16);
+            color: #334155;
+        }
+
+        /* 2.11️⃣ Píldora de estado (activa / finalizada) */
+        .pill-status {
+            border-radius: 999px;
+            background: rgba(59, 130, 246, 0.04);
+            padding: 0.25rem 0.7rem;
+            font-size: 0.72rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            color: #1d4ed8;
+        }
+
+        .pill-status.off {
+            background: rgba(148, 163, 184, 0.12);
+            color: #64748b;
+        }
+
+        /* 2.12️⃣ Scroll fino para tablas altas (cuando hay muchas filas) */
+        .table-responsive {
+            max-height: 65vh;
+            overflow-y: auto;
+        }
+
+        .table-responsive::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        .table-responsive::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .table-responsive::-webkit-scrollbar-thumb {
+            background: rgba(148, 163, 184, 0.6);
+            border-radius: 999px;
+        }
+
+        /* 2.13️⃣ Barra superior (toolbar) con título, filtros y buscador) */
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.75rem;
+            justify-content: space-between;
+            padding: 1.25rem 1.75rem 0.25rem;
+        }
+
+        /* 2.14️⃣ Input de búsqueda estilizado (icono + pill) */
+        .search-input {
+            max-width: 260px;
+        }
+
+        .search-input .form-control {
+            border-radius: 999px;
+            border-color: rgba(148, 163, 184, 0.7);
+            font-size: 0.85rem;
+            padding-left: 2.1rem;
+            background: rgba(248, 250, 252, 0.9);
+        }
+
+        .search-input .form-control:focus {
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.35);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 0.8rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #9ca3af;
+            font-size: 0.85rem;
+        }
+
+        /* 2.15️⃣ Etiquetas de sección (subtítulo pequeño encima del bloque) */
+        .section-title {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.16em;
+            color: #94a3b8;
+            margin-bottom: 0.4rem;
+        }
+
+        .section-subtitle {
+            font-size: 0.86rem;
+            color: #64748b;
+        }
+
+        /* 2.16️⃣ Chips de filtros (visual, sin lógica de backend por ahora) */
+        .chip-filter {
+            border-radius: 999px;
+            border: 1px solid rgba(148, 163, 184, 0.5);
+            background: rgba(248, 250, 252, 0.9);
+            color: #475569;
+            font-size: 0.78rem;
+            padding: 0.12rem 0.7rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .chip-filter.active {
+            background: rgba(59, 130, 246, 0.09);
+            border-color: rgba(59, 130, 246, 0.75);
+            color: #1d4ed8;
+        }
+
+        /* 2.17️⃣ Mensajes flash suaves (información del sistema) */
+        .alert-soft {
+            border-radius: 0.85rem;
+            border: 1px solid rgba(129, 140, 248, 0.45);
+            background: rgba(239, 246, 255, 0.9);
+            color: #1e293b;
+            font-size: 0.85rem;
+        }
+
+        .alert-soft .fa-circle-info {
+            color: #4f46e5;
+        }
+
+        /* 2.18️⃣ Footer pequeño con texto de ayuda / rol */
+        .footer-small {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            padding: 0.75rem 1.75rem 1.25rem;
+            border-top: 1px dashed rgba(148, 163, 184, 0.5);
+        }
+    </style>
+</head>
+<body>
+
+<!-- =========================================================================
+     3️⃣ LAYOUT PRINCIPAL (CONTENEDOR + TARJETA)
+     ========================================================================= -->
+<div class="container-fluid main-wrapper">
+    <div class="row justify-content-center">
+        <div class="col-12 col-xl-11 col-xxl-10">
+            <div class="card-glass">
+
+                <!-- =========================================================
+                     3.1️⃣ CABECERA SUPERIOR (TÍTULO, DESCRIPCIÓN, USUARIO)
+                     ========================================================= -->
+                <div class="header-gradient d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+                    <div>
+                        <div class="header-title">
+                            <i class="fa-solid fa-truck-ramp-box me-2"></i>
+                            Módulo de parking · Camiones
+                        </div>
+                        <div class="header-main">
+                            Plazas RÍO / TORIO
+                        </div>
+                        <div class="header-subtitle mt-1">
+                            Gestiona las plazas de camiones vinculadas a usuarios y proveedores con parquin activo.
+                        </div>
+                    </div>
+
+                    <div class="text-md-end">
+                        <div class="chip mb-2">
+                            <i class="fa-solid fa-circle-check"></i>
+                            Sesión segura · Login requerido
+                        </div>
+                        {% if usuario_actual.is_authenticated %}
+                            <div class="small text-muted">
+                                <i class="fa-solid fa-user-shield me-1"></i>
+                                {{ usuario_actual.nombre if usuario_actual.nombre else usuario_actual.id }}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- =========================================================
+                     3.2️⃣ TOOLBAR SUPERIOR (TÍTULO, FILTROS, BUSCADOR, NUEVA PLAZA, HISTÓRICO GLOBAL)
+                     ========================================================= -->
+                <div class="toolbar">
+                    <!-- 3.2.1️⃣ Título de sección del listado -->
+                    <div>
+                        <div class="section-title">
+                            Listado de plazas
+                        </div>
+                        <div class="section-subtitle">
+                            Revisa el estado actual, expedientes y asignaciones de usuarios/proveedores.
+                        </div>
+                    </div>
+
+                    <!-- 3.2.2️⃣ Filtros, buscador y botones de navegación -->
+                    <div class="d-flex align-items-center gap-2">
+                        {# Filtros a modo de "tags" (solo visual; lógica JS opcional) #}
+                        <div class="d-none d-lg-flex align-items-center gap-2 me-2">
+                            <span class="chip-filter active">
+                                <i class="fa-solid fa-layer-group"></i>
+                                Todas
+                            </span>
+                            <span class="chip-filter">
+                                <i class="fa-solid fa-circle-play text-success"></i>
+                                Activas
+                            </span>
+                            <span class="chip-filter">
+                                <i class="fa-solid fa-circle-pause text-warning"></i>
+                                Pendientes
+                            </span>
+                        </div>
+
+                        {# Buscador local (filtra por texto en toda la fila, ver script al final) #}
+                        <div class="position-relative search-input">
+                            <span class="search-icon">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                            </span>
+                            <input type="text"
+                                   id="searchPlazas"
+                                   class="form-control form-control-sm"
+                                   placeholder="Buscar plaza, expediente, proveedor...">
+                        </div>
+
+                        {# Botón para ir al listado global del histórico de plazas #}
+                        <a href="{{ url_for('btn_rio_torio_historico_plazas_bp.btn_rio_torio_historico_plazas') }}"
+                           class="btn btn-soft btn-sm ms-1"
+                           title="Ver histórico global de plazas">
+                            <i class="fa-solid fa-clock-rotate-left me-1"></i>
+                            Histórico global
+                        </a>
+
+                        {# Botón para ir al formulario de alta de plaza (ruta del blueprint de plazas) #}
+                        <a href="{{ url_for('rio_torio_plazas_bp.nueva_plaza_rio_torio') }}"
+                           class="btn btn-gradient btn-sm ms-1">
+                            <i class="fa-solid fa-plus"></i>
+                            Nueva plaza
+                        </a>
+                    </div>
+                </div>
+
+                <!-- =========================================================
+                     3.3️⃣ MENSAJES FLASH (FEEDBACK DEL SISTEMA)
+                     ========================================================= -->
+                <div class="px-4 pt-2">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-soft mt-1 mb-2" role="alert">
+                                    <i class="fa-solid fa-circle-info me-2"></i>
+                                    {{ message }}
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+                </div>
+
+                <!-- =========================================================
+                     3.4️⃣ TABLA DE PLAZAS (DATOS PRINCIPALES + ENLACE A HISTÓRICO)
+                     ========================================================= -->
+                <div class="table-container">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-striped align-middle" id="tablaPlazas">
+                            <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Plaza</th>
+                                <th>Fila</th>
+                                <th>Expediente</th>
+                                <th>Usuario</th>
+                                <th>Proveedor</th>
+                                <th>Fechas</th>
+                                <th>Exp. solicitud</th>
+                                <th>Inventario</th>
+                                <th>Estado</th>
+                                <th class="text-end">Acciones</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for plaza in plazas %}
+                                <tr>
+                                    <!-- 3.4.1️⃣ ID interno de la plaza -->
+                                    <td class="text-muted small">
+                                        {{ plaza.idtbl_plazas }}
+                                    </td>
+
+                                    <!-- 3.4.2️⃣ Información de la plaza (código + observaciones) -->
+                                    <td>
+                                        <div class="fw-semibold">
+                                            <i class="fa-solid fa-square-parking text-primary me-1"></i>
+                                            {{ plaza.codigo_plazas or 'Sin código' }}
+                                        </div>
+                                        {% if plaza.observaciones %}
+                                            <div class="text-muted small">
+                                                <i class="fa-regular fa-note-sticky me-1"></i>
+                                                {{ plaza.observaciones }}
+                                            </div>
+                                        {% endif %}
+                                    </td>
+
+                                    <!-- 3.4.3️⃣ Fila de la plaza -->
+                                    <td>
+                                        {% if plaza.fila %}
+                                            <span class="badge-soft badge-soft-slate">
+                                                <i class="fa-solid fa-grip-lines-vertical me-1"></i>
+                                                Fila {{ plaza.fila }}
+                                            </span>
+                                        {% else %}
+                                            <span class="text-muted small">–</span>
+                                        {% endif %}
+                                    </td>
+
+                                    <!-- 3.4.4️⃣ Número de expediente -->
+                                    <td>
+                                        {% if plaza.numero_expediente %}
+                                            <span class="badge-soft badge-soft-amber">
+                                                <i class="fa-solid fa-file-lines me-1"></i>
+                                                {{ plaza.numero_expediente }}
+                                            </span>
+                                        {% else %}
+                                            <span class="text-muted small">Sin expediente</span>
+                                        {% endif %}
+                                    </td>
+
+                                    <!-- 3.4.5️⃣ Usuario vinculado (idtbl_usuarios + numero_cuenta) -->
+                                    <td>
+                                        {% if plaza.idtbl_usuarios %}
+                                            <div class="fw-semibold small">
+                                                <i class="fa-solid fa-id-badge me-1 text-slate-600"></i>
+                                                Usuario #{{ plaza.idtbl_usuarios }}
+                                            </div>
+                                            {% if plaza.numero_cuenta %}
+                                                <div class="text-muted small">
+                                                    Cuenta: {{ plaza.numero_cuenta }}
+                                                </div>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="text-muted small">No asignado</span>
+                                        {% endif %}
+                                    </td>
+
+                                    <!-- 3.4.6️⃣ Proveedor asociado -->
+                                    <td>
+                                        {% if plaza.proveedor_nombre %}
+                                            <div class="fw-semibold small">
+                                                <i class="fa-solid fa-building me-1 text-indigo-500"></i>
+                                                {{ plaza.proveedor_nombre }}
+                                            </div>
+                                            {% if plaza.idtbl_proveedores %}
+                                                <div class="text-muted small">
+                                                    ID proveedor: {{ plaza.idtbl_proveedores }}
+                                                </div>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="text-muted small">Sin proveedor</span>
+                                        {% endif %}
+                                    </td>
+
+                                    <!-- 3.4.7️⃣ Fechas de la plaza (inicio / fin) -->
+                                    <td class="small">
+                                        {% if plaza.fecha_inicio %}
+                                            <div>
+                                                <i class="fa-regular fa-calendar-check me-1 text-emerald-600"></i>
+                                                Inicio: {{ plaza.fecha_inicio }}
+                                            </div>
+                                        {% endif %}
+                                        {% if plaza.fecha_fin %}
+                                            <div>
+                                                <i class="fa-regular fa-calendar-xmark me-1 text-rose-500"></i>
+                                                Fin: {{ plaza.fecha_fin }}
+                                            </div>
+                                        {% endif %}
+                                        {% if not plaza.fecha_inicio and not plaza.fecha_fin %}
+                                            <span class="text-muted small">Sin fechas</span>
+                                        {% endif %}
+                                    </td>
+
+                                    <!-- 3.4.8️⃣ Expedientes de solicitud (inicio / fin) -->
+                                    <td class="small">
+                                        {% if plaza.exp_solicitud %}
+                                            <div>
+                                                <i class="fa-solid fa-envelope-open-text me-1 text-sky-600"></i>
+                                                {{ plaza.exp_solicitud }}
+                                            </div>
+                                        {% endif %}
+                                        {% if plaza.exp_solicitud_fin %}
+                                            <div>
+                                                <i class="fa-solid fa-circle-check me-1 text-emerald-600"></i>
+                                                {{ plaza.exp_solicitud_fin }}
+                                            </div>
+                                        {% endif %}
+                                        {% if not plaza.exp_solicitud and not plaza.exp_solicitud_fin %}
+                                            <span class="text-muted small">Sin datos</span>
+                                        {% endif %}
+                                    </td>
+
+                                    <!-- 3.4.9️⃣ Inventario asociado (idtbl_inventario, texto genérico) -->
+                                    <td>
+                                        {% if plaza.idtbl_inventario %}
+                                            <span class="badge-soft badge-soft-green">
+                                                <i class="fa-solid fa-cubes-stacked me-1"></i>
+                                                Inventario #{{ plaza.idtbl_inventario }}
+                                            </span>
+                                        {% else %}
+                                            <span class="text-muted small">N/A</span>
+                                        {% endif %}
+                                    </td>
+
+                                    <!-- 3.4.🔟 Estado de la plaza (simple: según fecha_fin) -->
+                                    <td>
+                                        {% if plaza.fecha_fin %}
+                                            <span class="pill-status off">
+                                                <i class="fa-solid fa-circle-xmark"></i>
+                                                Finalizada
+                                            </span>
+                                        {% else %}
+                                            <span class="pill-status">
+                                                <i class="fa-solid fa-circle-dot"></i>
+                                                Activa / en curso
+                                            </span>
+                                        {% endif %}
+                                    </td>
+
+                                    <!-- 3.4.1️⃣1️⃣ Acciones (editar + histórico de plaza) -->
+                                    <td class="text-end">
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            {# Editar plaza (blueprint rio_torio_plazas_bp) #}
+                                            <a href="{{ url_for('rio_torio_plazas_bp.editar_plaza_rio_torio',
+                                                                id_plaza=plaza.idtbl_plazas) }}"
+                                               class="btn btn-soft"
+                                               title="Editar plaza">
+                                                <i class="fa-solid fa-pen-to-square"></i>
+                                            </a>
+
+                                            {# Histórico de esta plaza (detalle por idtbl_plazas) #}
+                                            <a href="{{ url_for('btn_rio_torio_historico_plazas_bp.rio_torio_historico_plazas',
+                                                                id_plaza=plaza.idtbl_plazas) }}"
+                                               class="btn btn-soft"
+                                               title="Histórico de esta plaza">
+                                                <i class="fa-solid fa-clock-rotate-left"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% else %}
+                                {# 3.4.1️⃣2️⃣ Fila vacía cuando no hay plazas en la BD #}
+                                <tr>
+                                    <td colspan="11" class="text-center text-muted py-4">
+                                        <i class="fa-regular fa-folder-open me-2"></i>
+                                        No hay plazas registradas todavía.
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- =========================================================
+                     3.5️⃣ FOOTER INFORMATIVO
+                     ========================================================= -->
+                <div class="footer-small d-flex justify-content-between align-items-center">
+                    <span>
+                        <i class="fa-regular fa-circle-question me-1"></i>
+                        Haz clic en <strong>“Nueva plaza”</strong> para dar de alta una posición en RÍO / TORIO,
+                        o en <strong>“Histórico de esta plaza”</strong> para revisar sus asignaciones.
+                    </span>
+                    <span class="d-none d-sm-inline">
+                        <i class="fa-solid fa-shield-halved me-1"></i>
+                        Módulo de parking · {{ usuario_actual.rol if usuario_actual.is_authenticated and usuario_actual.rol else 'Perfil' }}
+                    </span>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- =========================================================================
+     4️⃣ SCRIPTS (BOOTSTRAP + BUSCADOR LOCAL)
+     ========================================================================= -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+        crossorigin="anonymous"></script>
+
+<script>
+    // 4.1️⃣ Buscador muy simple en cliente: filtra filas de la tabla por texto
+    document.addEventListener("DOMContentLoaded", function() {
+        const input = document.getElementById("searchPlazas");
+        const table = document.getElementById("tablaPlazas");
+
+        if (!input || !table) return;
+
+        input.addEventListener("input", function() {
+            const term = this.value.toLowerCase().trim();
+            const rows = table.querySelectorAll("tbody tr");
+
+            rows.forEach(row => {
+                const text = row.innerText.toLowerCase();
+                row.style.display = text.includes(term) ? "" : "none";
+            });
+        });
+    });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,557 @@
+{# ============================================================
+   templates/parquin/gestionar_camiones.html
+   🚚 GESTIÓN DE CAMIONES POR USUARIO
+   ------------------------------------------------------------
+   💡 PROPÓSITO:
+   - Seleccionar un usuario del parquin.
+   - Ver y editar sus camiones en una tabla:
+       • Marca (desplegable, ampliable con “Nueva marca”).
+       • Modelo (desplegable dependiente, ampliable con “Nuevo modelo”).
+       • Matrícula.
+       • Activo.
+   - Ver, opcionalmente, TODOS los camiones del proveedor del usuario.
+   - Guardar todo por AJAX sin recargar la página.
+   ============================================================ #}
+
+{% extends "base.html" %}  {# 🧱 Heredamos layout y estilos comunes #}
+
+{# ============================================================
+   🧩 SECCIÓN 1: BLOQUE DE CONTENIDO PRINCIPAL
+   ============================================================ #}
+{% block content %}  {# 🚪 Inicio del contenido específico de esta vista #}
+
+<div class="container mt-3">  {# 📦 Contenedor Bootstrap con margen superior #}
+
+  {# ----------------------------------------------------------
+     1.1 SUBSECCIÓN: CABECERA (TÍTULO + VOLVER)
+     ---------------------------------------------------------- #}
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h1 class="h4 mb-1">🚚 Gestión de camiones por usuario</h1>  {# 🏷️ Título principal #}
+      <p class="text-muted small mb-0">
+        Selecciona un usuario y edita sus camiones (marca, modelo, matrícula y estado).
+      </p>  {# 📝 Descripción breve de la pantalla #}
+    </div>
+
+    <div>
+      <a href="{{ url_for('panel_parquin_bp.panel_parquin') }}"
+   class="btn btn-sm btn-outline-secondary">
+  ⬅️ Volver al panel
+   </a> {# 🔙 Botón para regresar al panel principal del parquin #}
+    </div>
+  </div>
+
+  {# ----------------------------------------------------------
+     1.2 SUBSECCIÓN: CONTROLES SUPERIORES
+     - Combo de usuario.
+     - Botones de alta de filas y guardar.
+     - Botones para crear nuevas marcas/modelos.
+     - Botón para ver todos los camiones del proveedor del usuario.
+     ---------------------------------------------------------- #}
+  <div class="card mb-3">  {# 🧾 Tarjeta que agrupa controles de cabecera #}
+    <div class="card-body py-2">
+
+      <div class="row g-2 align-items-end">  {# 📐 Fila de controles con separación pequeña #}
+
+        {# 👤 Combo de usuario + botones de nuevas marcas/modelos #}
+        <div class="col-md-6">
+          <label class="form-label mb-1 small">👤 Usuario de parquin</label>  {# 🏷️ Etiqueta del combo de usuario #}
+          <select id="selUsuario" class="form-select form-select-sm">
+            <option value="">(Selecciona un usuario)</option>  {# 🔽 Opción inicial vacía #}
+          </select>
+
+          <div class="mt-1 d-flex flex-wrap gap-1 small">  {# 🎛️ Botones pequeños para alta de marca/modelo #}
+            <button id="btnNuevaMarca"
+                    type="button"
+                    class="btn btn-xs btn-outline-secondary btn-sm">
+              ➕ Nueva marca
+            </button>  {# ➕ Lanza diálogo para crear marca (y modelo inicial opcional) #}
+
+            <button id="btnNuevoModelo"
+                    type="button"
+                    class="btn btn-xs btn-outline-secondary btn-sm">
+              ➕ Nuevo modelo
+            </button>  {# ➕ Lanza diálogo para crear modelo para la marca seleccionada #}
+          </div>
+        </div>
+
+        {# 🔘 Botones generales: ver camiones del proveedor, añadir fila y guardar #}
+        <div class="col-md-6">
+          <div class="d-flex justify-content-end gap-2">
+            <button id="btnVerCamionesProveedor"
+                    type="button"
+                    class="btn btn-sm btn-outline-info">
+              🔍 Ver camiones del proveedor
+            </button>  {# 🔍 Muestra todos los camiones del proveedor del usuario seleccionado #}
+
+            <button id="btnAgregarFila"
+                    type="button"
+                    class="btn btn-sm btn-outline-primary">
+              ➕ Añadir camión
+            </button>  {# ➕ Añade una fila nueva vacía en la tabla #}
+
+            <button id="btnGuardar"
+                    type="button"
+                    class="btn btn-sm btn-success">
+              💾 Guardar cambios
+            </button>  {# 💾 Envía todos los datos de la tabla al backend #}
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  {# ----------------------------------------------------------
+     1.3 SUBSECCIÓN: TABLA DE CAMIONES
+     - Cabecera fija.
+     - Cuerpo gestionado por JavaScript (filas dinámicas).
+     ---------------------------------------------------------- #}
+  <div class="card">
+    <div class="card-body p-2">
+
+      <div class="table-responsive">
+        <table id="tblCamiones"
+               class="table table-sm table-bordered align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th style="width: 25%;">🏷️ Marca</th>       {# 🔽 Combo de marca por fila #}
+              <th style="width: 25%;">🧩 Modelo</th>      {# 🔽 Combo de modelo dependiente de la marca #}
+              <th style="width: 25%;">🚚 Matrícula</th>   {# ✏️ Input de texto para matrícula #}
+              <th style="width: 10%;">✅ Activo</th>      {# ☑️ Checkbox activo/inactivo #}
+              <th style="width: 15%;">⚙️ Acciones</th>    {# 🗑️ Botón eliminar fila #}
+            </tr>
+          </thead>
+          <tbody>
+            {# 🔁 Las filas se crean vía JS usando datos del backend #}
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+
+</div>  {# 🔚 Fin del container principal #}
+
+{# ============================================================
+   🧩 SECCIÓN 2: SCRIPT – LÓGICA DE LA PANTALLA (SOLO JS)
+   ============================================================ #}
+<script>
+  console.log("🔥 gestionar_camiones.html cargado");  // 🐞 Marca que el script se carga
+
+  // --------------------------------------------------------
+  // 2.1 SUBSECCIÓN: ENDPOINTS DEL BACKEND (BLUEPRINT)
+  // --------------------------------------------------------
+  const URL_USUARIOS         = "{{ url_for('gestionar_camiones_bp.lista_usuarios') }}";           // 👤 Lista de usuarios
+  const URL_CAMIONES         = "{{ url_for('gestionar_camiones_bp.lista_camiones_usuario') }}";   // 🚚 Camiones por usuario
+  const URL_CAMIONES_PROV    = "{{ url_for('gestionar_camiones_bp.lista_camiones_proveedor') }}"; // 🔍 Camiones del proveedor
+  const URL_MARCAS           = "{{ url_for('gestionar_camiones_bp.lista_marcas') }}";             // 🏷️ Lista de marcas
+  const URL_MODELOS          = "{{ url_for('gestionar_camiones_bp.lista_modelos_por_marca') }}";  // 🧩 Modelos por marca
+  const URL_NUEVA_MARCA      = "{{ url_for('gestionar_camiones_bp.nueva_marca') }}";              // ➕ Alta marca
+  const URL_NUEVO_MODELO     = "{{ url_for('gestionar_camiones_bp.nuevo_modelo') }}";             // ➕ Alta modelo
+  const URL_GUARDAR_CAMIONES = "{{ url_for('gestionar_camiones_bp.guardar_camiones_usuario') }}"; // 💾 Guardar camiones
+
+  // --------------------------------------------------------
+  // 2.2 SUBSECCIÓN: REFERENCIAS A ELEMENTOS DEL DOM
+  // --------------------------------------------------------
+  const selUsuario     = document.getElementById("selUsuario");      // 👤 Combo de usuario
+  const tblCamiones    = document.getElementById("tblCamiones");     // 📋 Tabla completa
+  const tbodyCamiones  = tblCamiones.querySelector("tbody");         // 📋 Cuerpo de la tabla
+
+  const btnAgregarFila = document.getElementById("btnAgregarFila");  // ➕ Botón añadir fila
+  const btnGuardar     = document.getElementById("btnGuardar");      // 💾 Botón guardar
+  const btnVerCamProv  = document.getElementById("btnVerCamionesProveedor"); // 🔍 Botón ver camiones del proveedor
+
+  const btnNuevaMarca  = document.getElementById("btnNuevaMarca");   // ➕ Botón alta marca
+  const btnNuevoModelo = document.getElementById("btnNuevoModelo");  // ➕ Botón alta modelo
+
+  // 🗂️ Array global donde guardamos todas las marcas (id, nombre, remolque)
+  let todasLasMarcas = [];
+
+  // --------------------------------------------------------
+  // 2.3 SUBSECCIÓN: HELPERS GENERALES DE FETCH (GET/POST JSON)
+  // --------------------------------------------------------
+  async function getJSON(url) {
+    const resp = await fetch(url);               // 🌐 Llamada GET a la URL
+    if (!resp.ok) throw new Error("HTTP " + resp.status);
+    return await resp.json();                    // 📦 Devolvemos el JSON parseado
+  }
+
+  async function postJSON(url, data) {
+    const resp = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });                                          // 🌐 Llamada POST con body JSON
+    if (!resp.ok) throw new Error("HTTP " + resp.status);
+    return await resp.json();                    // 📦 Devolvemos respuesta JSON
+  }
+
+  // --------------------------------------------------------
+  // 2.4 SUBSECCIÓN: ARRANQUE INICIAL (DOMContentLoaded)
+  // --------------------------------------------------------
+  document.addEventListener("DOMContentLoaded", async () => {
+    try {
+      await cargarUsuarios();  // 👤 Rellenar combo de usuarios
+      await cargarMarcas();    // 🏷️ Cargar catálogo de marcas en memoria
+
+      // ⛓️ Enlazar eventos
+      selUsuario.addEventListener("change", onUsuarioChange);           // 🔁 Cambiar usuario → recarga tabla
+      btnAgregarFila.addEventListener("click", onAgregarFilaClick);     // ➕ Añadir fila
+      btnGuardar.addEventListener("click", onGuardarClick);             // 💾 Guardar
+      btnVerCamProv.addEventListener("click", onVerCamionesProveedorClick); // 🔍 Ver camiones proveedor
+
+      btnNuevaMarca.addEventListener("click", onNuevaMarcaClick);       // ➕ Alta marca
+      btnNuevoModelo.addEventListener("click", onNuevoModeloClick);     // ➕ Alta modelo
+    } catch (err) {
+      console.error("Error al iniciar gestionar_camiones:", err);
+      alert("Error al cargar la pantalla de camiones.");
+    }
+  });
+
+  // --------------------------------------------------------
+  // 2.5 SUBSECCIÓN: CARGAR USUARIOS PARA EL COMBO SUPERIOR
+  // --------------------------------------------------------
+  async function cargarUsuarios() {
+    console.log("🔁 cargarUsuarios()");
+    const data = await getJSON(URL_USUARIOS);       // 📥 Pedimos JSON de usuarios
+    console.log("📥 usuarios JSON:", data);
+    const usuarios = data.usuarios || [];
+
+    // Reset del combo
+    selUsuario.innerHTML = '<option value="">(Selecciona un usuario)</option>';
+
+    // Crear opciones
+    usuarios.forEach(u => {
+      const opt = document.createElement("option");
+      opt.value = u.id;           // 🔑 idtbl_usuarios
+      opt.textContent = u.nombre; // 🏷️ "Proveedor · Cuenta X"
+      selUsuario.appendChild(opt);
+    });
+  }
+
+  // --------------------------------------------------------
+  // 2.6 SUBSECCIÓN: CARGAR MARCAS EN MEMORIA
+  // --------------------------------------------------------
+  async function cargarMarcas() {
+    const data = await getJSON(URL_MARCAS);
+    todasLasMarcas = data.marcas || [];  // 🗂️ Guardamos marcas (id, nombre, remolque)
+  }
+
+  // Helper para rellenar un <select> de marca concreto
+  function rellenarSelectMarca(selMarca, idSeleccionada) {
+    selMarca.innerHTML = '<option value="">(Marca)</option>';
+    todasLasMarcas.forEach(m => {
+      const opt = document.createElement("option");
+      opt.value = m.id;
+      opt.textContent = m.nombre;
+      if (idSeleccionada && String(idSeleccionada) === String(m.id)) {
+        opt.selected = true;
+      }
+      selMarca.appendChild(opt);
+    });
+  }
+
+  // --------------------------------------------------------
+  // 2.7 SUBSECCIÓN: CAMBIO DE USUARIO → CARGAR SUS CAMIONES
+  // --------------------------------------------------------
+  async function onUsuarioChange() {
+    const usuarioId = selUsuario.value;
+    tbodyCamiones.innerHTML = "";  // 🧹 Limpiamos la tabla
+
+    if (!usuarioId) return;        // ⛔ Si no hay usuario, no hacemos nada
+
+    try {
+      const data = await getJSON(URL_CAMIONES + "?idtbl_gestores=" + encodeURIComponent(usuarioId));
+      const camiones = data.camiones || [];
+      camiones.forEach(c => {
+        const fila = crearFilaCamion(c);      // 🧱 Creamos fila por cada camión
+        tbodyCamiones.appendChild(fila);
+      });
+    } catch (err) {
+      console.error("Error al cargar camiones:", err);
+      alert("Error al cargar los camiones del usuario.");
+    }
+  }
+
+  // --------------------------------------------------------
+  // 2.8 SUBSECCIÓN: CREAR UNA FILA DE CAMIÓN EN LA TABLA
+  // --------------------------------------------------------
+  function crearFilaCamion(datos) {
+    const d = datos || {};
+    const tr = document.createElement("tr");
+    tr.dataset.idcamion = d.idcamion || "";   // 🏷️ Guardamos ID camión (si existe)
+
+    // 1) MARCA (select)
+    const tdMarca = document.createElement("td");
+    const selMarca = document.createElement("select");
+    selMarca.className = "form-select form-select-sm";
+    rellenarSelectMarca(selMarca, d.idmarca);  // 🏷️ Rellenamos opciones + seleccionamos la suya
+    tdMarca.appendChild(selMarca);
+    tr.appendChild(tdMarca);
+
+    // 2) MODELO (select dependiente de marca)
+    const tdModelo = document.createElement("td");
+    const selModelo = document.createElement("select");
+    selModelo.className = "form-select form-select-sm";
+    selModelo.innerHTML = '<option value="">(Modelo)</option>';
+    tdModelo.appendChild(selModelo);
+    tr.appendChild(tdModelo);
+
+    // 3) MATRÍCULA (input texto)
+    const tdMatricula = document.createElement("td");
+    const inputMatricula = document.createElement("input");
+    inputMatricula.type = "text";
+    inputMatricula.className = "form-control form-control-sm";
+    inputMatricula.value = d.matricula || "";
+    tdMatricula.appendChild(inputMatricula);
+    tr.appendChild(tdMatricula);
+
+    // 4) ACTIVO (checkbox)
+    const tdActivo = document.createElement("td");
+    tdActivo.className = "text-center";
+    const chkActivo = document.createElement("input");
+    chkActivo.type = "checkbox";
+    chkActivo.className = "form-check-input";
+    chkActivo.checked = (d.activo === undefined || d.activo === null) ? true : Boolean(d.activo);
+    tdActivo.appendChild(chkActivo);
+    tr.appendChild(tdActivo);
+
+    // 5) ACCIONES (botón eliminar)
+    const tdAcciones = document.createElement("td");
+    tdAcciones.className = "text-center";
+    const btnBorrar = document.createElement("button");
+    btnBorrar.type = "button";
+    btnBorrar.className = "btn btn-sm btn-outline-danger";
+    btnBorrar.textContent = "🗑️";
+    btnBorrar.title = "Eliminar fila";
+    btnBorrar.addEventListener("click", () => tr.remove());
+    tdAcciones.appendChild(btnBorrar);
+    tr.appendChild(tdAcciones);
+
+    // Cuando cambie la marca, recargamos modelos de esa marca
+    selMarca.addEventListener("change", async () => {
+      await cargarModelosEnSelect(selModelo, selMarca.value, null);
+    });
+
+    // Si ya traíamos marca del backend, cargamos sus modelos
+    if (d.idmarca) {
+      cargarModelosEnSelect(selModelo, d.idmarca, d.idmodelo);
+    }
+
+    return tr;
+  }
+
+  // --------------------------------------------------------
+  // 2.9 SUBSECCIÓN: CARGAR MODELOS PARA UNA MARCA EN UN SELECT
+  // --------------------------------------------------------
+  async function cargarModelosEnSelect(selModelo, marcaId, idModeloSeleccionado) {
+    selModelo.innerHTML = '<option value="">(Modelo)</option>';
+    if (!marcaId) return;
+
+    try {
+      const data = await getJSON(URL_MODELOS + "?marca_id=" + encodeURIComponent(marcaId));
+      const modelos = data.modelos || [];
+      modelos.forEach(mo => {
+        const opt = document.createElement("option");
+        opt.value = mo.id;
+        opt.textContent = mo.nombre;
+        if (idModeloSeleccionado && String(idModeloSeleccionado) === String(mo.id)) {
+          opt.selected = true;
+        }
+        selModelo.appendChild(opt);
+      });
+    } catch (err) {
+      console.error("Error al cargar modelos:", err);
+      alert("Error al cargar modelos de la marca.");
+    }
+  }
+
+  // --------------------------------------------------------
+  // 2.10 SUBSECCIÓN: AÑADIR UNA FILA NUEVA VACÍA
+  // --------------------------------------------------------
+  function onAgregarFilaClick() {
+    const fila = crearFilaCamion({});  // ➕ Fila sin datos (camión nuevo)
+    tbodyCamiones.appendChild(fila);
+  }
+
+  // --------------------------------------------------------
+  // 2.11 SUBSECCIÓN: ALTA DE NUEVA MARCA (+ MODELO OPCIONAL)
+  // --------------------------------------------------------
+  async function onNuevaMarcaClick() {
+    const nombreMarca = prompt("Nombre de la nueva marca de camión:");
+    if (!nombreMarca) return;
+
+    const modeloInicial = prompt("Modelo inicial para esta marca (opcional):") || "";
+
+    try {
+      const resp = await postJSON(URL_NUEVA_MARCA, {
+        nombre_marca: nombreMarca,
+        modelo_inicial: modeloInicial,
+        remolque: null,
+      });
+
+      if (!resp.ok) {
+        alert("No se pudo crear la marca: " + (resp.error || "error desconocido"));
+        return;
+      }
+
+      // Recargamos marcas en memoria
+      await cargarMarcas();
+
+      // Si hay filas, usamos la última como “contexto” y seleccionamos la nueva marca ahí
+      if (tbodyCamiones.rows.length > 0) {
+        const ultimaFila = tbodyCamiones.rows[tbodyCamiones.rows.length - 1];
+        const selMarca = ultimaFila.querySelector("td:nth-child(1) select");
+        const selModelo = ultimaFila.querySelector("td:nth-child(2) select");
+
+        if (selMarca) {
+          rellenarSelectMarca(selMarca, resp.id_marca);
+        }
+        if (selModelo && resp.id_modelo) {
+          await cargarModelosEnSelect(selModelo, resp.id_marca, resp.id_modelo);
+        }
+      }
+
+      alert("Marca creada correctamente.");
+    } catch (err) {
+      console.error("Error al crear marca:", err);
+      alert("Error al crear la nueva marca.");
+    }
+  }
+
+  // --------------------------------------------------------
+  // 2.12 SUBSECCIÓN: ALTA DE NUEVO MODELO PARA MARCA SELECCIONADA
+  // --------------------------------------------------------
+  async function onNuevoModeloClick() {
+    // Buscamos la última fila que tenga una marca seleccionada
+    const filas = Array.from(tbodyCamiones.querySelectorAll("tr"));
+    const filasConMarca = filas.filter(tr => {
+      const selMarca = tr.querySelector("td:nth-child(1) select");
+      return selMarca && selMarca.value;
+    });
+
+    if (filasConMarca.length === 0) {
+      alert("Primero selecciona una marca en alguna fila de la tabla.");
+      return;
+    }
+
+    const filaObjetivo = filasConMarca[filasConMarca.length - 1];
+    const selMarca = filaObjetivo.querySelector("td:nth-child(1) select");
+    const selModelo = filaObjetivo.querySelector("td:nth-child(2) select");
+    const marcaId = Number(selMarca.value);
+
+    const nombreModelo = prompt("Nombre del nuevo modelo para la marca seleccionada:");
+    if (!nombreModelo) return;
+
+    try {
+      const resp = await postJSON(URL_NUEVO_MODELO, {
+        marca_id: marcaId,
+        nombre_modelo: nombreModelo,
+      });
+
+      if (!resp.ok) {
+        alert("No se pudo crear el modelo: " + (resp.error || "desconocido"));
+        return;
+      }
+
+      // Recargamos modelos de esa marca en el select de la fila objetivo
+      await cargarModelosEnSelect(selModelo, marcaId, resp.id_modelo);
+
+      alert("Modelo creado correctamente.");
+    } catch (err) {
+      console.error("Error al crear modelo:", err);
+      alert("Error al crear el nuevo modelo.");
+    }
+  }
+
+  // --------------------------------------------------------
+  // 2.13 SUBSECCIÓN: GUARDAR TODOS LOS CAMIONES DEL USUARIO
+  // --------------------------------------------------------
+  async function onGuardarClick() {
+    const usuarioId = selUsuario.value;
+    if (!usuarioId) {
+      alert("Selecciona un usuario antes de guardar.");
+      return;
+    }
+
+    const filas = Array.from(tbodyCamiones.querySelectorAll("tr"));
+    const camiones = filas.map(tr => {
+      const idcamion = tr.dataset.idcamion || null;
+      const selMarca = tr.querySelector("td:nth-child(1) select");
+      const selModelo = tr.querySelector("td:nth-child(2) select");
+      const inputMatricula = tr.querySelector("td:nth-child(3) input");
+      const chkActivo = tr.querySelector("td:nth-child(4) input[type='checkbox']");
+
+      return {
+        idcamion: idcamion ? Number(idcamion) : null,
+        idmarca: selMarca.value ? Number(selMarca.value) : null,
+        idmodelo: selModelo.value ? Number(selModelo.value) : null,
+        matricula: inputMatricula.value,
+        activo: chkActivo.checked ? 1 : 0,
+      };
+    });
+
+    try {
+      const resp = await postJSON(URL_GUARDAR_CAMIONES, {
+        idtbl_gestores: Number(usuarioId),
+        camiones: camiones,
+      });
+
+      if (!resp.ok) {
+        alert("Error al guardar camiones: " + (resp.error || "desconocido"));
+        return;
+      }
+
+      alert("Camiones guardados correctamente.");
+      await onUsuarioChange();  // 🔁 Recargar lista para reflejar nuevos IDs
+    } catch (err) {
+      console.error("Error al guardar camiones:", err);
+      alert("Error al guardar los camiones.");
+    }
+  }
+
+  // --------------------------------------------------------
+  // 2.14 SUBSECCIÓN: VER TODOS LOS CAMIONES DEL PROVEEDOR
+  // --------------------------------------------------------
+  async function onVerCamionesProveedorClick() {
+    const usuarioId = selUsuario.value;
+    if (!usuarioId) {
+      alert("Selecciona primero un usuario del parquin.");
+      return;
+    }
+
+    try {
+      // 🧹 Limpiamos la tabla antes de mostrar los resultados
+      tbodyCamiones.innerHTML = "";
+
+      // 🌐 Pedimos al backend todos los camiones del proveedor de ese usuario
+      const url = URL_CAMIONES_PROV + "?idtbl_gestores=" + encodeURIComponent(usuarioId);
+      const data = await getJSON(url);
+      const camiones = data.camiones || [];
+
+      if (camiones.length === 0) {
+        alert("Este proveedor no tiene camiones registrados.");
+        return;
+      }
+
+      // 🔁 Pintamos todas las filas usando crearFilaCamion
+      camiones.forEach(c => {
+        const fila = crearFilaCamion({
+          idcamion:  c.idcamion,
+          idmarca:   c.idmarca,
+          idmodelo:  c.idmodelo,
+          matricula: c.matricula,
+          activo:    c.activo,
+        });
+        tbodyCamiones.appendChild(fila);
+      });
+    } catch (err) {
+      console.error("Error al cargar camiones del proveedor:", err);
+      alert("Error al cargar los camiones del proveedor.");
+    }
+  }
+</script>
+
+{% endblock %}  {# 🔚 Fin del bloque content #}
+

@@ -1,0 +1,423 @@
+{% extends "base.html" %}
+
+{% block title %}
+Validación contenedor
+{% endblock %}
+
+{% block content %}
+
+{# 1️⃣ Estilos específicos de la pantalla #}
+<style>
+  .pantalla-validacion {
+    display: grid;
+    grid-template-columns: 55% 45%;
+    gap: 16px;
+    height: 88vh;
+  }
+
+  .panel-pdf {
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .panel-form {
+    overflow: hidden;
+    height: 100%;
+    padding: 4px;
+    font-size: 0.78rem;
+  }
+
+  .panel-form h6 {
+    font-size: 0.78rem;
+    margin-top: 4px;
+    margin-bottom: 2px;
+  }
+
+  .panel-form label {
+    font-size: 0.68rem;
+    margin-bottom: 1px;
+  }
+
+  .panel-form .form-control,
+  .panel-form .form-select {
+    font-size: 0.78rem;
+    padding: 1px 4px;
+    height: calc(1.3em + 0.25rem);
+  }
+
+  .panel-form textarea {
+    height: 36px;
+    font-size: 0.78rem;
+  }
+
+  .panel-form .row.g-1 {
+    --bs-gutter-x: 0.25rem;
+    --bs-gutter-y: 0.25rem;
+  }
+
+  .panel-form .botonera {
+    margin-top: 6px;
+  }
+
+  .panel-form .btn-sm {
+    padding: 1px 6px;
+    font-size: 0.75rem;
+  }
+
+  .pantalla-validacion .btn-group.btn-group-sm .btn {
+    padding: 1px 6px;
+    font-size: 0.75rem;
+  }
+
+  .pantalla-validacion .text-muted.small {
+    font-size: 0.72rem;
+  }
+</style>
+
+<div class="container-fluid mt-3">
+
+  {# 2️⃣ Cabecera general de la página #}
+  <h1 class="h5 mb-3">📦 Validación manual de contenedor</h1>
+
+  <div class="d-flex justify-content-between align-items-center mt-2 mb-2">
+
+    {# 2.1 Navegación entre pendientes #}
+    <div class="btn-group btn-group-sm" role="group">
+      <a class="btn btn-outline-secondary"
+         href="{{ url_for('contenedor_pendientes_validacion_bp.listar_pendientes', i=indice-1) }}">⬅</a>
+      <a class="btn btn-outline-secondary"
+         href="{{ url_for('contenedor_pendientes_validacion_bp.listar_pendientes', i=indice+1) }}">➡</a>
+    </div>
+
+    {# 2.2 Resumen de registro actual #}
+    <div class="text-muted small text-center">
+      Registro {{ indice + 1 }} de {{ total_pendientes }}<br>
+      ID control: {{ datos.get('idtbl_control_contenedores', '-') }}<br>
+      Documento: {{ pendiente.nombre_pdf }}
+    </div>
+
+    {# 2.3 Fechas + botón volver a pantalla anterior #}
+    <div class="d-flex flex-column align-items-end gap-1">
+      <div class="small text-end text-muted">
+        F. colocación: {{ datos.get('fecha_colocacion', '-') }}<br>
+        </div>
+      <button type="button"
+              class="btn btn-outline-secondary btn-sm"
+              onclick="history.back()">
+        Volver a la pantalla anterior
+      </button>
+    </div>
+
+  </div>
+
+  {# 3️⃣ Layout principal: visor PDF + formulario #}
+  <div class="pantalla-validacion">
+
+    {# 3.1 Panel izquierdo: visor PDF #}
+    <div class="panel-pdf">
+
+      {# 3.1.1 Barra de control del visor #}
+      <div class="d-flex justify-content-between align-items-center px-2 py-1 border-bottom">
+        <div class="btn-group btn-group-sm" role="group">
+          <button type="button" class="btn btn-outline-secondary" onclick="paginaAnterior()">⬅ pág.</button>
+          <button type="button" class="btn btn-outline-secondary" onclick="paginaSiguiente()">pág. ➡</button>
+        </div>
+        <span class="small text-muted">Página <span id="paginaActual">1</span></span>
+      </div>
+
+      {# 3.1.2 Iframe visor PDF #}
+      <div class="pdf">
+        <iframe id="visorPDF"
+                src="{{ url_for('btn_contenedores_listar_pendientes_bp.serve_pdf',
+                                filename=pendiente.nombre_pdf) }}"
+                type="application/pdf"
+                width="100%"
+                height="100%"></iframe>
+      </div>
+
+    </div>
+    {# fin panel-pdf #}
+
+    {# 3.2 Panel derecho: formulario de validación #}
+    <div class="panel-form">
+
+      {# 3.2.1 Formulario completo #}
+      <form method="POST"
+            action="{{ url_for('contenedor_pendientes_validacion_bp.guardar_validacion',
+                              id=pendiente.idtbl_contenedores_pendientes, i=indice) }}">
+
+        {# 3.2.1.1 Datos administrativos #}
+        <h6 class="mb-1">Datos administrativos</h6>
+        <div class="row g-1 mb-1">
+          <div class="col-5">
+            <label class="form-label form-label-sm mb-1">Proveedor</label>
+            <select class="form-select form-select-sm" name="idtbl_proveedores">
+              {% for p in proveedores %}
+                <option value="{{ p.idtbl_proveedores }}"
+                  {% if pendiente.idtbl_proveedores == p.idtbl_proveedores %}selected{% endif %}>
+                  {{ p.nombre_razon_social }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-3">
+            <label class="form-label form-label-sm mb-1">Expediente</label>
+            <input type="text" class="form-control form-control-sm"
+                   name="numero_expediente"
+                   value="{{ datos.get('numero_expediente', '') }}">
+          </div>
+          <div class="col-2">
+            <label class="form-label form-label-sm mb-1">Solicitud</label>
+            <input type="text" class="form-control form-control-sm"
+                   name="numero_solicitud"
+                   value="{{ datos.get('numero_solicitud', '') }}">
+          </div>
+          <div class="col-2">
+            <label class="form-label form-label-sm mb-1">Coloc.</label>
+            <input type="text" class="form-control form-control-sm"
+                   name="numero_colocacion"
+                   value="{{ datos.get('numero_colocacion', '') }}">
+          </div>
+        </div>
+
+        {# 3.2.1.2 Ubicación #}
+        <h6 class="mb-1 mt-1">Ubicación</h6>
+        <div class="row g-1 mb-1">
+          <div class="col-4">
+            <label class="form-label form-label-sm mb-1">Tipo vía</label>
+            <select class="form-select form-select-sm" name="idtbl_tipos_de_vias" id="tipo_via">
+              {% for tipo in tipos_vias %}
+                <option value="{{ tipo.idtbl_tipos_de_vias }}"
+                  {% if datos.get('idtbl_tipos_de_vias') == tipo.idtbl_tipos_de_vias %}selected{% endif %}>
+                  {{ tipo.tipos_de_vias }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-8">
+            <label class="form-label form-label-sm mb-1">Calle</label>
+            <select class="form-select form-select-sm" name="idtbl_calles" id="calle">
+              {% for calle in calles %}
+                <option value="{{ calle.idtbl_calles }}"
+                  {% if datos.get('idtbl_calles') == calle.idtbl_calles %}selected{% endif %}>
+                  {{ calle.calles }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        {# 3.2.1.3 Solicitante #}
+        <h6 class="mb-1 mt-1">Solicitante</h6>
+        <div class="mb-1">
+          <label class="form-label form-label-sm mb-1">Nombre</label>
+          <input type="text" class="form-control form-control-sm"
+                 name="nombre_solicitante"
+                 value="{{ datos.get('nombre_solicitante', '') }}">
+        </div>
+        <div class="row g-1 mb-1">
+          <div class="col-6">
+            <label class="form-label form-label-sm mb-1">NIF</label>
+            <input type="text" class="form-control form-control-sm"
+                   name="nif"
+                   value="{{ datos.get('nif', '') }}">
+          </div>
+          <div class="col-6">
+            <label class="form-label form-label-sm mb-1">Teléfono</label>
+            <input type="text" class="form-control form-control-sm"
+                   name="telefono"
+                   value="{{ datos.get('telefono', '') }}">
+          </div>
+        </div>
+
+        {# 3.2.1.4 Datos técnicos #}
+        <h6 class="mb-1 mt-1">Datos técnicos</h6>
+        <div class="row g-1 mb-1">
+          <div class="col-6">
+            <label class="form-label form-label-sm mb-1">CSV inst.</label>
+            <input type="text" class="form-control form-control-sm"
+                   name="csv"
+                   value="{{ datos.get('csv', '') }}">
+          </div>
+          <div class="col-6">
+            <label class="form-label form-label-sm mb-1">CSV retirada</label>
+            <input type="text" class="form-control form-control-sm"
+                   name="csv_retirada"
+                   value="{{ datos.get('csv_retirada', '') }}">
+          </div>
+        </div>
+        <div class="row g-1 mb-1">
+          <div class="col-6">
+            <label class="form-label form-label-sm mb-1">Dimensión</label>
+            <select class="form-select form-select-sm" name="idtbl_dimensiones">
+              {% for d in dimensiones %}
+                <option value="{{ d.idtbl_dimensiones }}"
+                  {% if datos.get('idtbl_dimensiones') == d.idtbl_dimensiones %}selected{% endif %}>
+                  {{ d.nombre }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-6">
+            <label class="form-label form-label-sm mb-1">Gestor</label>
+            <select class="form-select form-select-sm" name="idtbl_gestores">
+              {% for g in gestores %}
+                <option value="{{ g.idtbl_gestores }}"
+                  {% if datos.get('idtbl_gestores') == g.idtbl_gestores %}selected{% endif %}>
+                  {{ g.nombre_gestor }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="mb-1">
+          <label class="form-label form-label-sm mb-1">Observaciones</label>
+          <textarea class="form-control form-control-sm" name="observaciones" rows="2">{{ datos.get('observaciones', '') }}</textarea>
+        </div>
+
+        {# 3.2.1.5 Fechas #}
+        <h6 class="mb-1 mt-1">Fechas</h6>
+        <div class="row g-1 mb-1">
+          <div class="col-6">
+            <label class="form-label form-label-sm mb-1">Colocación</label>
+            <input type="date" class="form-control form-control-sm"
+                   name="fecha_colocacion"
+                   value="{{ datos.get('fecha_colocacion', '') }}">
+          </div>
+          <div class="col-6">
+            <label class="form-label form-label-sm mb-1">Colocación</label>
+            <input type="date" class="form-control form-control-sm"
+                   name="fecha_colocacion"
+                   value="{{ datos.get('fecha_colocacion', '') }}">
+          </div>
+        </div>
+        <div class="row g-1 mb-1">
+          <div class="col-6">
+            <label class="form-label form-label-sm mb-1">Retirada</label>
+            <input type="date" class="form-control form-control-sm"
+                   name="fecha_retirada"
+                   value="{{ datos.get('fecha_retirada', '') }}">
+          </div>
+          <div class="col-6">
+            <label class="form-label form-label-sm mb-1">Firma inicial</label>
+            <input type="date" class="form-control form-control-sm"
+                   name="fecha_firma_inicial"
+                   value="{{ datos.get('fecha_firma_inicial', '') }}">
+          </div>
+        </div>
+        <div class="row g-1 mb-1">
+          <div class="col-6">
+            <label class="form-label form-label-sm mb-1">F. subida inst.</label>
+            <input type="date" class="form-control form-control-sm"
+                   name="fecha_subida_instalacion"
+                   value="{{ datos.get('fecha_subida_instalacion', '') }}">
+          </div>
+          <div class="col-6">
+            <label class="form-label form-label-sm mb-1">F. subida retirada</label>
+            <input type="date" class="form-control form-control-sm"
+                   name="fecha_subida_retirada"
+                   value="{{ datos.get('fecha_subida_retirada', '') }}">
+          </div>
+        </div>
+
+        {# 3.2.1.6 GPS #}
+        <h6 class="mb-1 mt-1">GPS</h6>
+        <div class="row g-1 mb-1">
+          <div class="col-6">
+            <label class="form-label form-label-sm mb-1">Latitud</label>
+            <input type="text" class="form-control form-control-sm"
+                   name="latitud"
+                   value="{{ datos.get('latitud', '') }}">
+          </div>
+          <div class="col-6">
+            <label class="form-label form-label-sm mb-1">Longitud</label>
+            <input type="text" class="form-control form-control-sm"
+                   name="longitud"
+                   value="{{ datos.get('longitud', '') }}">
+          </div>
+        </div>
+        <div class="row g-1 mb-1">
+          <div class="col-4">
+            <label class="form-label form-label-sm mb-1">Precisión</label>
+            <input type="number" class="form-control form-control-sm"
+                   name="precision_gps"
+                   value="{{ datos.get('precision_gps', '') }}">
+          </div>
+          <div class="col-4">
+            <label class="form-label form-label-sm mb-1">Prec. OK</label>
+            {% set gps_ok = datos.get('gps_precision_ok') %}
+            <select class="form-select form-select-sm" name="gps_precision_ok">
+              <option value="0" {% if not gps_ok %}selected{% endif %}>No</option>
+              <option value="1" {% if gps_ok %}selected{% endif %}>Sí</option>
+            </select>
+          </div>
+          <div class="col-4">
+            <label class="form-label form-label-sm mb-1">Nivel cal.</label>
+            <input type="text" class="form-control form-control-sm"
+                   name="gps_nivel_calidad"
+                   value="{{ datos.get('gps_nivel_calidad', '') }}">
+          </div>
+        </div>
+        <div class="mb-1">
+          <label class="form-label form-label-sm mb-1">Origen GPS</label>
+          <input type="text" class="form-control form-control-sm"
+                 name="gps_origen"
+                 value="{{ datos.get('gps_origen', 'direccion_pdf') }}">
+        </div>
+
+        {# 3.2.2 Botonera final #}
+        <div class="botonera">
+          <button class="btn btn-success btn-sm" type="submit">✅ Validar</button>
+          <a href="{{ url_for('contenedor_pendientes_validacion_bp.listar_pendientes', i=indice) }}"
+             class="btn btn-outline-secondary btn-sm">
+            Cancelar
+          </a>
+        </div>
+
+      </form>
+
+    </div>
+    {# fin panel-form #}
+
+  </div>
+  {# fin layout principal #}
+
+</div>
+{# fin container #}
+
+{# 4️⃣ JavaScript: PDF + actualización de calles #}
+<script>
+let pagina = 1;
+
+function actualizarPDF() {
+  const visor = document.getElementById("visorPDF");
+  const base = "{{ url_for('btn_contenedores_listar_pendientes_bp.serve_pdf',
+                           filename=pendiente.nombre_pdf) }}";
+  visor.src = base + "#page=" + pagina;
+  document.getElementById("paginaActual").innerText = pagina;
+}
+
+function paginaSiguiente() { pagina++; actualizarPDF(); }
+function paginaAnterior() { if (pagina > 1){ pagina--; actualizarPDF(); } }
+
+document.getElementById("tipo_via").addEventListener("change", function() {
+  const tipoId = this.value;
+  fetch(`/calles_por_tipo/${tipoId}`)
+    .then(res => res.json())
+    .then(data => {
+      const calleSelect = document.getElementById("calle");
+      calleSelect.innerHTML = "";
+      data.forEach(c => {
+        const opt = document.createElement("option");
+        opt.value = c.id;
+        opt.text = c.nombre;
+        calleSelect.appendChild(opt);
+      });
+    });
+});
+</script>
+
+{% endblock %}

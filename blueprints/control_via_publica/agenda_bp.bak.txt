@@ -1,0 +1,211 @@
+"""
+blueprints/control_via_publica/agenda_bp.py
+
+Vista principal de la agenda de vía pública (control_via_publica).
+
+Responsabilidades:
+    1) Calcular el rango de fechas según la vista seleccionada (día / semana / mes),
+       usando una fecha de referencia (fecha_ref) navegable.
+    2) Leer filtros desde la query string (tipo de vía, calle, tipos de evento).
+    3) Cargar datos de:
+        - Tipos de vía (helpers_vias.cargar_tipos_via).
+        - Calles del municipio de Ávila (id_municipio = 395) filtradas por tipo de vía.
+        - Tipos de evento (tbl_tipos_evento_via_publica).
+    4) Preparar un contexto sencillo para agenda/agenda_principal.html.
+
+Notas:
+    - La parte de eventos se deja con lista vacía (eventos = []), lista para enchufar
+      agenda_core.backend_agenda.obtener_agenda_general más adelante.
+"""
+
+from datetime import datetime, timedelta
+
+from flask import Blueprint, render_template, request
+from services.helpers import login_required, rol_required
+
+# 0. Helpers específicos de vías/calles
+from blueprints.helpers.helpers_vias import (
+    cargar_tipos_via,
+    cargar_calles,
+)
+
+# 0.b Helper genérico de BD
+from db import ejecutar_query
+
+# 0.c Configuración fija de la agenda
+ID_MUNICIPIO_AVILA = 395
+
+
+# =============================================================================
+# 1. Blueprint y ruta principal
+# =============================================================================
+
+agenda_bp = Blueprint(
+    "agenda_bp",
+    __name__,
+    url_prefix="/control_via_publica/agenda",
+)
+
+
+@agenda_bp.route("/")
+@login_required
+@rol_required("super_admin", "gestor")
+def agenda_principal():
+    """
+    1.0 Vista principal de la agenda de vía pública.
+
+    Entradas (request.args):
+        - vista: "dia" | "semana" | "mes" (opcional, por defecto "semana").
+        - fecha_ref: YYYY-MM-DD (opcional, por defecto hoy).
+        - id_tipo_via: int opcional, identificador de tipo de vía.
+        - id_calle: int opcional, identificador de calle.
+        - codigos_tipo: lista de códigos de tipos de evento (checkbox múltiple).
+
+    Salidas para la plantilla:
+        - fecha_desde, fecha_hasta: rango de fechas de la vista.
+        - fecha_ref: fecha base de la navegación.
+        - prev_ref, next_ref: fechas de referencia anterior/siguiente.
+        - filtros: dict con vista, id_tipo_via, id_calle, codigos_tipo.
+        - tipos_via: lista de dicts con tipos de vía.
+        - calles: lista de dicts con calles filtradas por Ávila + tipo de vía.
+        - tipos_evento: lista de dicts {codigo, nombre_publico, color_hex}.
+        - eventos: lista de dicts con eventos (vacío por ahora).
+    """
+
+    # -------------------------------------------------------------------------
+    # 1.1 Vista temporal (dia / semana / mes) y fecha de referencia
+    # -------------------------------------------------------------------------
+    vista = (request.args.get("vista") or "semana").lower()
+
+    # Leer fecha_ref (YYYY-MM-DD); si no viene o es inválida, usar hoy
+    fecha_ref_str = request.args.get("fecha_ref")
+    if fecha_ref_str:
+        try:
+            fecha_ref = datetime.strptime(fecha_ref_str, "%Y-%m-%d").date()
+        except ValueError:
+            fecha_ref = datetime.today().date()
+    else:
+        fecha_ref = datetime.today().date()
+
+    if vista == "dia":
+        # Día exacto: [fecha_ref, fecha_ref]
+        fecha_desde = datetime.combine(fecha_ref, datetime.min.time())
+        fecha_hasta = datetime.combine(fecha_ref, datetime.max.time())
+
+        # Navegación: día anterior / siguiente
+        prev_ref = fecha_ref - timedelta(days=1)
+        next_ref = fecha_ref + timedelta(days=1)
+
+    elif vista == "mes":
+        # Primer día del mes de fecha_ref
+        primer_dia_mes = fecha_ref.replace(day=1)
+        fecha_desde = datetime.combine(primer_dia_mes, datetime.min.time())
+        # Rango aproximado de 30 días
+        fecha_hasta = fecha_desde + timedelta(days=30)
+
+        # Mes anterior (primer día del mes anterior)
+        prev_ref = (primer_dia_mes - timedelta(days=1)).replace(day=1)
+        # Mes siguiente (primer día del mes siguiente)
+        next_ref = (primer_dia_mes + timedelta(days=32)).replace(day=1)
+
+    else:  # vista "semana" (por defecto)
+        # Semana a partir de fecha_ref: [fecha_ref, fecha_ref + 7]
+        fecha_desde = datetime.combine(fecha_ref, datetime.min.time())
+        fecha_hasta = fecha_desde + timedelta(days=7)
+
+        # Semana anterior / siguiente (mover 7 días la referencia)
+        prev_ref = fecha_ref - timedelta(days=7)
+        next_ref = fecha_ref + timedelta(days=7)
+
+    # -------------------------------------------------------------------------
+    # 1.2 Filtros de vía/calle y tipos de evento
+    # -------------------------------------------------------------------------
+    id_tipo_via = request.args.get("id_tipo_via", type=int)
+    id_calle = request.args.get("id_calle", type=int)
+    codigos_tipo = request.args.getlist("codigos_tipo") or []
+
+    filtros = {
+        "vista": vista,
+        "id_tipo_via": id_tipo_via,
+        "id_calle": id_calle,
+        "codigos_tipo": codigos_tipo,
+    }
+
+    # -------------------------------------------------------------------------
+    # 1.3 Tipos de vía (helpers_vias)
+    # -------------------------------------------------------------------------
+    # cargar_tipos_via(texto) devuelve dicts con al menos:
+    #   - idtbl_tipos_de_vias
+    #   - tipos_de_vias
+    tipos_via = cargar_tipos_via(texto="")
+
+    # -------------------------------------------------------------------------
+    # 1.4 Calles (municipio Ávila = ID_MUNICIPIO_AVILA)
+    # -------------------------------------------------------------------------
+    # Estrategia:
+    #   - Si NO hay id_tipo_via → calles = [] (solo "Todas").
+    #   - Si hay id_tipo_via → usar helpers_vias.cargar_calles.
+    if id_tipo_via:
+        calles = cargar_calles(
+            id_municipio=ID_MUNICIPIO_AVILA,
+            id_tipo_via=id_tipo_via,
+            texto="",
+        )
+    else:
+        calles = []
+
+    # -------------------------------------------------------------------------
+    # 1.5 Tipos de evento (desde BD)
+    # -------------------------------------------------------------------------
+    tipos_evento_raw = ejecutar_query(
+        """
+        SELECT
+            idtbl_tipos_evento,
+            codigo,
+            nombre_publico,
+            color_hex
+        FROM tbl_tipos_evento_via_publica
+        ORDER BY nombre_publico
+        """,
+        (),
+        nombre_bd="control_via_publica",
+    )
+
+    tipos_evento = [
+        {
+            "codigo": t["codigo"],
+            "nombre_publico": t["nombre_publico"],
+            "color_hex": t["color_hex"] or "#64748b",
+        }
+        for t in tipos_evento_raw
+    ]
+
+    # -------------------------------------------------------------------------
+    # 1.6 Eventos (preparado para conectar con agenda_core)
+    # -------------------------------------------------------------------------
+    # Ejemplo futuro:
+    #
+    #   from agenda_core.backend_agenda import obtener_agenda_general
+    #   if codigos_tipo:
+    #       eventos = obtener_agenda_general(fecha_desde, fecha_hasta, codigos_tipo)
+    #   else:
+    #       eventos = obtener_agenda_general(fecha_desde, fecha_hasta)
+    #
+    eventos = []
+
+    # -------------------------------------------------------------------------
+    # 1.7 Render de la plantilla
+    # -------------------------------------------------------------------------
+    return render_template(
+        "agenda/agenda_principal.html",
+        fecha_desde=fecha_desde,
+        fecha_hasta=fecha_hasta,
+        fecha_ref=fecha_ref,
+        prev_ref=prev_ref,
+        next_ref=next_ref,
+        filtros=filtros,
+        tipos_evento=tipos_evento,
+        tipos_via=tipos_via,
+        calles=calles,
+        eventos=eventos,
+    )

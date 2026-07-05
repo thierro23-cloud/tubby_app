@@ -1,0 +1,7 @@
+Tu naming ahora es MUY bueno porque:
+
+TPL_ → sabes que es template
+
+PARQUIN_ → sabes el módulo
+
+PANEL / GESTIONAR / PLANO → sabes la pantalla

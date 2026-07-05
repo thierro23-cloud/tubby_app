@@ -1,0 +1,198 @@
+{# ============================================================================
+   0️⃣ PLANTILLA: control_obras/control_via_publica.html
+   ============================================================================
+   OBJETIVO:
+     - Mostrar un listado tabular de todos los registros de tbl_control_via_publica.
+     - Permitir crear nuevos registros.
+     - Permitir editar registros existentes (SIN eliminar).
+     - Incluir un filtro para ver solo controles sin fecha de fin.
+   DATOS QUE ESPERA:
+     - control_via_publica → lista de dicts con los campos del SELECT.
+     - solo_abiertos       → bool para marcar el checkbox de filtro.
+   ============================================================================ #}
+
+{% extends "base.html" %}
+{% from "macros.html" import flash_messages %}
+
+{% block title %}Control Vía Pública{% endblock %}
+
+{% block content %}
+
+    {# =========================================================================
+       1️⃣ CABECERA: Título + Filtro + Botón "Nuevo"
+       ========================================================================= #}
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            {# 1.1 🏷 Título principal #}
+            <h1 class="h2 mb-0">
+                <i class="fas fa-clipboard-check text-primary me-2"></i>
+                Control de Vía Pública
+            </h1>
+
+            {# 1.2 🔍 Filtro: checkbox para mostrar solo abiertos (sin fecha_fin) #}
+            <form method="GET" class="mt-2 d-inline-block">
+                <div class="form-check form-switch">
+                    <input class="form-check-input"
+                           type="checkbox"
+                           id="solo_abiertos"
+                           name="solo_abiertos"
+                           value="1"
+                           {% if solo_abiertos %}checked{% endif %}
+                           onchange="this.form.submit()">
+                    <label class="form-check-label" for="solo_abiertos">
+                        Solo controles sin fecha de finalización
+                    </label>
+                </div>
+            </form>
+        </div>
+
+        {# 1.3 ➕ Botón "Nuevo registro" (lleva al formulario de alta) #}
+        <a href="{{ url_for('control_via_publica_bp.control_via_publica_nuevo') }}" 
+           class="btn btn-primary">
+            <i class="fas fa-plus me-1"></i>
+            Nuevo registro
+        </a>
+    </div>
+
+    {# =========================================================================
+       2️⃣ MENSAJES FLASH (éxito, error, avisos)
+       ========================================================================= #}
+    {{ flash_messages() }}
+
+    {# =========================================================================
+       3️⃣ TABLA DE CONTROL DE VÍA PÚBLICA
+       =========================================================================
+       - Recorre la lista "control_via_publica" enviada desde la vista.
+       - Muestra nombres reales (obra, gestor) gracias a los JOIN del SELECT.
+       - Solo ofrece acción de "Editar"; no hay botón de eliminar.
+       ========================================================================= #}
+    <div class="table-responsive">
+        <table class="table table-striped table-hover">
+            <thead class="table-dark">
+                <tr>
+                    <th>ID</th>
+                    <th>Obra</th>
+                    <th>Fecha</th>
+                    <th>Gestor</th>
+                    <th>Agente</th>
+                    <th class="text-center">Vallas</th>
+                    <th class="text-center">Materiales</th>
+                    <th class="text-center">Silos</th>
+                    <th class="text-center">Andamios</th>
+                    <th class="text-center">Grúas</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {# 3.1 🧾 Comprobamos si hay registros en "control_via_publica" #}
+                {% if control_via_publica %}
+                    {# 3.2 🔁 Recorremos cada registro (i) #}
+                    {% for i in control_via_publica %}
+                    <tr>
+                        {# 3.2.1 🔑 ID del control de vía pública #}
+                        <td>
+                            <strong>#{{ i.idtbl_control_via_publica }}</strong>
+                        </td>
+
+                        {# 3.2.2 🏗 Obra: nombre_obra por JOIN; si no, idtbl_obras #}
+                        <td>
+                            {% if i.nombre_obra %}
+                                {{ i.nombre_obra }}
+                            {% else %}
+                                {{ i.idtbl_obras }}
+                            {% endif %}
+                        </td>
+
+                        {# 3.2.3 📅 Fecha de inspección #}
+                        <td>
+                            {{ i.fecha_inspeccion or '-' }}
+                        </td>
+
+                        {# 3.2.4 👤 Gestor: nombre_gestor, o id, o '-' #}
+                        <td>
+                            {{ i.nombre_gestor or i.idtbl_gestores or '-' }}
+                        </td>
+
+                        {# 3.2.5 👮 Agente #}
+                        <td>
+                            {{ i.n_agente1 or '-' }}
+                        </td>
+
+                        {# 3.2.6 🚧 Vallas #}
+                        <td class="text-center">
+                            {% if i.vallas == 1 %}
+                                ✅ {{ i.vallas_metros or '' }}m
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+
+                        {# 3.2.7 🧱 Materiales de construcción #}
+                        <td class="text-center">
+                            {% if i.materiales_de_construccion == 1 %}
+                                ✅ {{ i.materiales_metros or '' }}m
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+
+                        {# 3.2.8 🛢 Silos #}
+                        <td class="text-center">
+                            {% if i.silos == 1 %}
+                                ✅ {{ i.silos_metros or '' }}m
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+
+                        {# 3.2.9 🪜 Andamios #}
+                        <td class="text-center">
+                            {% if i.andamios == 1 %}
+                                ✅ {{ i.andamios_metros or '' }}m
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+
+                        {# 3.2.10 🏗 Grúas #}
+                        <td class="text-center">
+                            {% if i.gruas == 1 %}
+                                ✅ {{ i.gruas_metros or '' }}m
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+
+                        {# 3.2.11 ✏️ Acciones (solo editar, sin eliminar) #}
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                {# ✏️ Editar: lleva a /control_via_publica/editar/<id> #}
+                                <a href="{{ url_for('control_via_publica_bp.control_via_publica_editar',
+                                                   id_control=i.idtbl_control_via_publica) }}"
+                                   class="btn btn-outline-primary"
+                                   title="Editar">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+
+                {% else %}
+                    {# 3.3 🚫 Caso sin registros: mensaje amigable + CTA crear #}
+                    <tr>
+                        <td colspan="11" class="text-center py-5 text-muted">
+                            <i class="fas fa-search fa-3x mb-3 opacity-50"></i>
+                            <p>No hay registros de control de vía pública</p>
+                            <a href="{{ url_for('control_via_publica_bp.control_via_publica_nuevo') }}"
+                               class="btn btn-primary">
+                                Crear primer registro
+                            </a>
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}

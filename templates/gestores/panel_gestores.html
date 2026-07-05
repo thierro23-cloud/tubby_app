@@ -1,0 +1,381 @@
+{# =============================================================================
+   0️⃣ ESQUEMA GENERAL · PANEL GESTORES
+   =============================================================================
+   OBJETIVO
+   --------
+   ▸ Plantilla Jinja2 para el panel de inicio de los Gestores.
+   ▸ Debe ser accesible (visualmente) para usuarios con rol:
+       · Gestor
+       · Super_admin
+     (la restricción real de acceso se controla en la vista de Flask, no aquí).
+   ▸ Presenta tarjetas (cards) de acceso rápido a módulos clave:
+       · Control de obras / vía pública
+       ▸ Otros módulos que quieras ir añadiendo (aparcamientos, expedientes…)
+
+   ESTRUCTURA
+   ----------
+ 1️⃣ Herencia de base.html
+  2️⃣ Bloque <title>
+  3️⃣ Bloque de contenido:
+       3.1 Estilos específicos del panel (inline CSS)
+       3.2 Envoltura general del panel (g-shell)
+       3.3 Cabecera (título + usuario)
+       3.4 Tarjetas de módulos
+           3.4.1 Control de obras / vía pública
+           3.4.2 Otros módulos (placeholder)
+       3.5 Pie de panel (información adicional)
+   ============================================================================= #}
+
+{# 1️⃣ HERENCIA DE LA PLANTILLA BASE #}
+{% extends "base.html" %}
+
+{# 2️⃣ TÍTULO DE LA PESTAÑA DEL NAVEGADOR #}
+{% block title %}Panel Gestores{% endblock %}
+
+{# 3️⃣ CONTENIDO PRINCIPAL DEL PANEL #}
+{% block content %}
+
+  {# 3.1 🎨 ESTILOS ESPECÍFICOS DEL PANEL GESTORES #}
+  <style>
+    /* 3.1.1 🎨 Paleta de colores y radios globales del panel de gestores */
+    :root {
+      --g-primary: #0369a1;
+      --g-primary-dark: #075985;
+      --g-bg: #0b1120;
+      --g-card-bg: #ffffff;
+      --g-text-main: #020617;
+      --g-text-muted: #6b7280;
+      --g-border-soft: #e5e7eb;
+      --g-radius-lg: 16px;
+      --g-radius-md: 10px;
+    }
+
+    /* 3.1.2 🧱 Contenedor principal del panel */
+    .g-shell {
+      max-width: 1000px;
+      margin: 0 auto;
+      min-height: 70vh;
+      display: flex;
+      flex-direction: column;
+      padding: 8px;
+      color: #fff;
+    }
+
+    /* 3.1.3 🧱 Cabecera: título + badge de usuario */
+    .g-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .g-header-title {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .g-header-title h1 {
+      margin: 0;
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+
+    .g-header-title span {
+      font-size: 0.75rem;
+      color: #bae6fd;
+    }
+
+    /* 3.1.4 🪪 “Píldora” de usuario (Gestor / Admin) */
+    .g-user-pill {
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: rgba(15,23,42,0.6);
+      border: 1px solid rgba(148,163,184,0.7);
+      font-size: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .g-user-badge {
+      width: 20px;
+      height: 20px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, #06b6d4, #0284c7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+    }
+
+    /* 3.1.5 🧩 Cuerpo principal del panel (fondo oscuro) */
+    .g-content {
+      background: rgba(15,23,42,0.9);
+      border-radius: 18px;
+      padding: 12px;
+      box-shadow: 0 16px 35px rgba(15,23,42,0.8);
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .g-section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+
+    .g-section-header h2 {
+      margin: 0;
+      font-size: 1rem;
+    }
+
+    .g-section-header small {
+      color: #9ca3af;
+      font-size: 0.75rem;
+    }
+
+    /* 3.1.6 🧱 Grid de tarjetas (cards) */
+    .g-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 8px;
+    }
+
+    .g-card {
+      background: var(--g-card-bg);
+      border-radius: var(--g-radius-lg);
+      padding: 10px;
+      border: 1px solid var(--g-border-soft);
+      box-shadow: 0 8px 20px rgba(15,23,42,0.12);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .g-card-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+
+    .g-card-icon {
+      width: 30px;
+      height: 30px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      background: rgba(8,47,73,0.08);
+      color: var(--g-primary);
+    }
+
+    .g-card-main-title {
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: var(--g-text-main);
+    }
+
+    .g-card-subtitle {
+      font-size: 0.72rem;
+      color: var(--g-text-muted);
+    }
+
+    .g-card-body-text {
+      font-size: 0.76rem;
+      color: var(--g-text-muted);
+      margin: 2px 0 6px 0;
+    }
+
+    /* 3.1.7 🏷️ Chips de información (etiquetas) */
+    .g-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: #e0f2fe;
+      color: #0f172a;
+      font-size: 0.7rem;
+      margin-right: 4px;
+      margin-top: 2px;
+    }
+
+    /* 3.1.8 🔘 Botones de cada tarjeta */
+    .g-card-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 6px;
+    }
+
+    .g-btn {
+      flex: 1 1 48%;
+      padding: 6px 8px;
+      border-radius: var(--g-radius-md);
+      border: none;
+      cursor: pointer;
+      font-size: 0.76rem;
+      text-align: center;
+      background: var(--g-primary);
+      color: #fff;
+      transition: background 0.15s ease, transform 0.1s ease;
+    }
+
+    .g-btn.secondary {
+      background: #e5e7eb;
+      color: #111827;
+    }
+
+    .g-btn.disabled {
+      background: #e5e7eb;
+      color: #9ca3af;
+      cursor: not-allowed;
+      opacity: 0.7;
+    }
+
+    .g-btn:hover:not(.disabled) {
+      background: var(--g-primary-dark);
+      transform: translateY(-1px);
+    }
+
+    .g-btn.secondary:hover:not(.disabled) {
+      background: #d1d5db;
+    }
+
+    /* 3.1.9 📎 Pie del panel */
+    .g-footer {
+      margin-top: 6px;
+      font-size: 0.7rem;
+      color: #9ca3af;
+      text-align: right;
+    }
+
+    .g-footer a {
+      color: #9ca3af;
+      text-decoration: none;
+    }
+
+    .g-footer a:hover {
+      text-decoration: underline;
+    }
+
+    /* 3.1.10 📱 Ajustes responsive */
+    @media (max-width: 576px) {
+      .g-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: .5rem;
+      }
+      .g-footer {
+        text-align: left;
+      }
+    }
+  </style>
+
+  {# 3.2 🧱 ENVOLTURA GENERAL DEL  #}
+  <div class="g-shell">
+
+    {# 3.3 🧱 CABECERA DEL PANEL GESTORES #}
+    <header class="g-header">
+      <div class="g-header-title">
+        <h1>Panel Gestores</h1>
+        <span>Herramientas de gestión y control</span>
+      </div>
+
+      {# Nota: Lo verán gestores y super_admin según la lógica de la vista. #}
+      <div class="g-user-pill">
+        <div class="g-user-badge">G</div>
+        <span>Acceso panel Gestores</span>
+      </div>
+    </header>
+
+    {# 3.4 🎛 CUERPO PRINCIPAL: TARJETAS DE MÓDULOS #}
+    <main class="g-content">
+      <div class="g-section-header">
+        <h2>🧩 Módulos disponibles</h2>
+        <small>Selecciona el módulo de gestión al que quieres acceder</small>
+      </div>
+
+      <div class="g-cards-grid">
+
+        {# 3.4.1 🏗️ CONTROL DE OBRAS / VÍA PÚBLICA
+           -------------------------------------------------------------
+           ▸ Para gestores suele ser el módulo principal.
+           ▸ endpoint ajustable según tu blueprint real.
+           Ejemplo: 'control_contenedores_bp.panel_control_via_publica'
+           ------------------------------------------------------------- #}
+        <article class="g-card">
+          <div>
+            <div class="g-card-header">
+              <div class="g-card-icon">🏗️</div>
+              <div>
+                <div class="g-card-main-title">Control de obras</div>
+                <div class="g-card-subtitle">Obras, licencias y ocupación de vía</div>
+              </div>
+            </div>
+            <p class="g-card-body-text">
+              Acceso al módulo de gestión de obras, licencias y ocupación de vía
+              pública para coordinación con Policía Local y Urbanismo.
+            </p>
+            <div>
+              <span class="g-chip">📍 Ocupación vía</span>
+              <span class="g-chip">📑 Licencias</span>
+            </div>
+          </div>
+          <div class="g-card-buttons">
+            <a
+              class="g-btn"
+              href="{{ url_for('control_contenedores_bp.panel_control_via_publica') }}"
+            >
+              Ir a control de vía pública
+            </a>
+          </div>
+        </article>
+
+        {# 3.4.2 📊 OTRO MÓDULO (PLACEHOLDER)
+           -------------------------------------------------------------
+           ▸ Ejemplo para futuros módulos de gestión (estadísticas, informes…)
+           ▸ De momento solo muestra “Próximamente”.
+           ------------------------------------------------------------- #}
+        <article class="g-card">
+          <div>
+            <div class="g-card-header">
+              <div class="g-card-icon">📊</div>
+              <div>
+                <div class="g-card-main-title">Informes y estadísticas</div>
+                <div class="g-card-subtitle">Análisis y reportes de actividad</div>
+              </div>
+            </div>
+            <p class="g-card-body-text">
+              Acceso futuro a paneles de informes, estadísticas y reportes de
+              actividad de obras, ocupaciones y otros servicios.
+            </p>
+            <div>
+              <span class="g-chip">📈 Estadísticas</span>
+              <span class="g-chip">📄 Informes</span>
+            </div>
+          </div>
+          <div class="g-card-buttons">
+            <button class="g-btn secondary disabled" type="button">
+              Próximamente
+            </button>
+          </div>
+        </article>
+
+      </div> {# /g-cards-grid #}
+    </main>
+
+    {# 3.5 📎 PIE DEL PANEL #}
+    <footer class="g-footer">
+      <span>Panel Gestores · Acceso permitido a perfiles de Gestor y Super Admin.</span>
+    </footer>
+
+  </div> {# /g-shell #}
+
+{% endblock %}

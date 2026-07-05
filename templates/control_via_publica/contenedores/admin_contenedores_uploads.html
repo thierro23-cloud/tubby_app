@@ -1,0 +1,41 @@
+{# templates/control_via_publica/contenedores/admin_contenedores_uploads.html #}
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Subir PDFs de contenedores</title>
+</head>
+<body>
+  <h1>Subir PDFs de contenedores</h1>
+
+  {# Botón para volver a la página anterior o a una ruta segura #}
+  <p>
+    <a href="{{ request.referrer or url_for('btn_contenedores_listar_carpetas_bp.btn_contenedores_listar_carpetas') }}">
+      ← Volver
+    </a>
+  </p>
+
+  <!--
+    Formulario para subir uno o varios PDFs de contenedores.
+
+    - action:
+        usa el endpoint del blueprint btn_contenedores_admin_uploads_bp
+        función: subir_pdf_contenedores
+    - method:
+        POST
+    - enctype:
+        multipart/form-data (obligatorio para ficheros)
+  -->
+  <form action="{{ url_for('btn_contenedores_admin_uploads_bp.subir_pdf_contenedores') }}"
+        method="post"
+        enctype="multipart/form-data">
+    <label for="files">Selecciona uno o varios PDFs:</label><br>
+    <input type="file"
+           id="files"
+           name="files"
+           multiple
+           accept="application/pdf"><br><br>
+    <button type="submit">Subir</button>
+  </form>
+</body>
+</html>

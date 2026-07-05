@@ -1,0 +1,19 @@
+from flask import Blueprint, redirect, url_for
+from flask_login import login_required
+from services.helpers import rol_required
+
+modulo_comunes_proveedores_bp = Blueprint(
+    "modulo_comunes_proveedores_bp",
+    __name__,
+    url_prefix="/comunes/proveedores",
+    template_folder="templates",
+)
+
+# 👇 Marca: este módulo es el que DEFINE el blueprint
+ES_BLUEPRINT_RAIZ = True
+
+@modulo_comunes_proveedores_bp.route("/", methods=["GET"])
+@login_required
+@rol_required("gestor", "super_admin")
+def modulo_comunes_proveedores():
+    ...

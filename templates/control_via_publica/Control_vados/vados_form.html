@@ -1,0 +1,711 @@
+{# =============================================================================
+  PLANTILLA: VADOS · FORMULARIO DE ALTA / EDICIÓN (PANTALLA PREVIA DE GESTIÓN)
+  RUTA: templates/control_via_publica/control_vados/vados_form.html
+===============================================================================
+  INTRODUCCIÓN GENERAL
+  --------------------
+  Esta plantilla Jinja2 construye la PANTALLA PREVIA de gestión para crear o
+  editar vados en la aplicación de control de vía pública. No es todavía el alta
+  definitiva: en esta vista se preparan, revisan y guardan los datos básicos del
+  vado antes de su alta final en el sistema.
+
+  OBJETIVOS DE ESTA PANTALLA
+  --------------------------
+  - Permitir crear o editar la FICHA BÁSICA del vado:
+      • Tipo de vía y calle (sobre el municipio fijo de Ávila).
+      • Municipio fijo: siempre Ávila (no editable ni enviado en el formulario).
+      • Titular / proveedor, con doble buscador (NIF o nombre) en el frontend.
+      • Puerta / número de portal.
+      • Superficie y anchura.
+      • Observaciones generales (nuevo campo que sustituye a los campos OT).
+  - Mostrar el número de vado de forma SOLO INFORMATIVA:
+      • En edición: se ve el numero_vado actual (solo lectura, en gris).
+      • En alta: se muestra un mensaje indicando que se asignará automáticamente
+        en el proceso de alta definitiva (no se envía número al servidor).
+  - Mejorar la experiencia de usuario con un formulario visualmente agradable
+    (tarjeta centrada, colores suaves y mensajes claros).
+
+  LÓGICA DE SERVIDOR ASOCIADA
+  ---------------------------
+  La lógica de servidor está gestionada por el blueprint:
+      btn_vados_form_bp  (archivo: btn_vados_form_bp.py)
+
+  RUTAS RELACIONADAS EN EL BLUEPRINT
+  ----------------------------------
+  - GET  /vados/form/nuevo
+        • Muestra el formulario vacío (pantalla previa) para preparar un nuevo vado.
+        • La variable "modo" llega con el valor "nuevo".
+        • La variable "vado" será None.
+
+  - GET  /vados/form/editar/<idtbl_vados>
+        • Muestra el formulario cargando los datos actuales del vado.
+        • La variable "modo" llega con el valor "editar".
+        • La variable "vado" contiene los campos del vado (dict).
+
+  - POST /vados/form/guardar
+        • Procesa el formulario previo (alta/edición de la ficha básica).
+        • Decide si es alta o edición según exista o no "idtbl_vados" en el POST.
+        • El número de vado NO se lee del formulario en esta fase; lo gestiona
+          el backend de forma automática.
+
+  DATOS QUE LLEGAN DESDE EL SERVIDOR (CONTEXT)
+  --------------------------------------------
+  - modo:
+      • "nuevo"  → formulario vacío / pantalla previa de alta.
+      • "editar" → formulario cargado con datos del vado existente.
+
+  - vado:
+      • dict con los campos del vado cuando modo == "editar".
+      • None cuando modo == "nuevo".
+
+  - tipos_de_vias:
+      • Lista de dicts con tipos de vía (idtbl_tipos_de_vias, Tipo_Via).
+      • Se usa para rellenar el <select> de tipo de vía.
+
+  - calles:
+      • Lista de dicts con calles del municipio correspondiente (Ávila).
+      • Cada elemento incluye idtbl_calles, idtbl_tipos_de_vias, Nombre_Calle.
+
+  - proveedores:
+      • Lista de dicts con proveedores/titulares:
+          - idtbl_proveedores
+          - NIF
+          - Nombre_Razon_Social
+      • Se usa para el <select> de titular, con buscador por NIF y por nombre
+        en el frontend (sin peticiones extra al servidor).
+
+  NOTA IMPORTANTE SOBRE GESTORES (idtbl_gestores)
+  -----------------------------------------------
+  - El idtbl_gestores NO se pide en este formulario.
+  - El blueprint lo rellena automáticamente con el usuario autenticado (g.user),
+    y se almacena en la tabla de vados como responsable del cambio.
+
+  CAMPOS OT ELIMINADOS Y NUEVO CAMPO OBSERVACIONES
+  ------------------------------------------------
+  - Los antiguos campos relacionados con la OT:
+      • Desc_OT
+      • Via_OT
+      • NIF_SP_OT
+      • Nombre_SP_OT
+    dejan de utilizarse en esta pantalla previa de gestión.
+  - En su lugar se introduce un único campo "observaciones" (textarea) para
+    concentrar toda la información adicional relevante que antes se repartía
+    entre esos campos OT.
+
+  ESQUEMA GENERAL DE LA PLANTILLA
+  -------------------------------
+  1) Hereda de base.html y define el título de la página.
+  2) Envuelve todo el contenido dentro de {% block content %} ... {% endblock %}.
+  3) Aplica estilos específicos (tarjeta, colores, etc.) solo para este formulario.
+  4) Muestra una cabecera que indica si se está creando o editando un vado.
+  5) Dibuja el formulario de vado con los siguientes bloques:
+      5.1 Campo oculto idtbl_vados (solo edición).
+      5.2 Número de vado informativo (readonly, no se puede tocar).
+      5.3 Tipo de vía (select obligatorio).
+      5.4 Calle (select obligatorio).
+      5.5 Municipio fijo (texto “Ávila”, no editable ni enviado).
+      5.6 Titular / proveedor con doble buscador (NIF / nombre) en cliente.
+      5.7 Puerta / número de portal.
+      5.8 Observaciones (nuevo campo que sustituye los campos OT).
+      5.9 Superficie y anchura (campos numéricos libres).
+  6) Incluye un script JavaScript para filtrar dinámicamente el select de
+     proveedores según el NIF o el nombre introducido (campos excluyentes).
+
+============================================================================= #}
+
+{# ============================================================================
+  1. HERENCIA DE PLANTILLA BASE Y TÍTULO
+  - Se extiende de base.html para reutilizar la estructura general del sitio.
+  - El título de la pestaña se construye a partir del modo (Nuevo / Editar).
+============================================================================= #}
+{% extends "base.html" %}
+
+{% block title %}{{ modo | title }} vado{% endblock %}
+
+{# ============================================================================
+  2. BLOQUE PRINCIPAL DE CONTENIDO (TODO LO VISIBLE EN LA PÁGINA)
+  - Aquí se incluye todo lo que verá el usuario: estilos, cabecera y formulario.
+============================================================================= #}
+{% block content %}
+
+{# ============================================================================
+  3. ESTILOS ESPECÍFICOS DEL FORMULARIO DE VADOS
+  - Dan un aspecto moderno, con tarjetas, sombras y colores suaves.
+  - No afectan a otras plantillas porque solo se inyectan aquí.
+============================================================================= #}
+<style>
+  body {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #111827;
+    min-height: 100vh;
+  }
+
+  /* Contenedor principal centrado y con ancho máximo para que no se abra demasiado */
+  .vados-wrapper {
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .card-funca {
+    border-radius: 0.85rem;
+    border: none;
+    background: #ffffff;
+    box-shadow: 0 16px 32px rgba(0, 0, 0, 0.18);
+    overflow: hidden;
+  }
+
+  .card-funca-header {
+    padding: 1rem 1.5rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+  }
+
+  .card-funca-header h2 {
+    font-size: 1.4rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .card-funca-header p {
+    font-size: 0.9rem;
+  }
+
+  .card-funca-body {
+    padding: 1.5rem;
+  }
+
+  .form-label-funca {
+    font-weight: 600;
+    color: #4c1d95;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.35rem;
+    font-size: 0.9rem;
+  }
+
+  .form-control-funca,
+  .form-select-funca {
+    border-radius: 0.65rem;
+    border: 2px solid #e9d5ff;
+    padding: 0.55rem 0.85rem;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+  }
+
+  .form-control-funca:focus,
+  .form-select-funca:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+    outline: none;
+  }
+
+  .btn-funca-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 0.6rem 1.5rem;
+    border-radius: 0.7rem;
+    font-weight: 600;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  }
+
+  .btn-funca-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.6);
+  }
+
+  .btn-funca-secondary {
+    background: #f3f4f6;
+    color: #4c1d95;
+    border: 2px solid #e9d5ff;
+    padding: 0.6rem 1.3rem;
+    border-radius: 0.7rem;
+    font-weight: 600;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .btn-funca-secondary:hover {
+    background: #e9d5ff;
+    transform: translateY(-1px);
+  }
+
+  .info-box {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border-radius: 0.65rem;
+    padding: 0.9rem 1rem;
+    margin-bottom: 1rem;
+    border: 2px solid #f59e0b;
+    font-size: 0.9rem;
+  }
+
+  .info-box-icon {
+    font-size: 1.5rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .required-badge {
+    background: #ef4444;
+    color: white;
+    padding: 0.1rem 0.45rem;
+    border-radius: 0.5rem;
+    font-size: 0.65rem;
+    font-weight: 600;
+    margin-left: 0.3rem;
+  }
+
+  .helper-text {
+    color: #78716c;
+    font-size: 0.8rem;
+    margin-top: 0.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+
+  /* Ajuste de columnas en pantallas medianas: que no se alargue demasiado en vertical */
+  @media (min-width: 992px) {
+    .campo-ancho-3 {
+      flex: 0 0 25%;
+      max-width: 25%;
+    }
+    .campo-ancho-4 {
+      flex: 0 0 33.3333%;
+      max-width: 33.3333%;
+    }
+    .campo-ancho-6 {
+      flex: 0 0 50%;
+      max-width: 50%;
+    }
+  }
+</style>
+{# ============================================================================
+  4. CONTENEDOR PRINCIPAL DE LA PÁGINA
+  - Incluye la tarjeta que agrupa cabecera y formulario de vados.
+============================================================================= #}
+<div class="container py-5">
+  <div class="row mb-4">
+    <div class="col-12">
+
+      {# 4.1 Tarjeta principal con cabecera y cuerpo #}
+      <div class="card-funca">
+
+        {# 4.1.1 Cabecera con título y mensaje según el modo (nuevo/editar) #}
+        <div class="card-funca-header text-center">
+          <h2 class="mb-2">
+            <i class="bi bi-signpost-2-fill"></i>
+            {{ modo | title }} Vado
+            <i class="bi bi-signpost-2-fill"></i>
+          </h2>
+          <p class="mb-0">
+            {% if modo == "nuevo" %}
+              🎉 Pantalla previa para preparar un vado nuevo.
+            {% else %}
+              ✏️ Pantalla previa para revisar y editar este vado.
+            {% endif %}
+          </p>
+        </div>
+
+        {# 4.1.2 Cuerpo de la tarjeta, con info y formulario #}
+        <div class="card-funca-body">
+
+          {# 4.1.2.1 Caja informativa con instrucciones generales para el usuario #}
+          <div class="info-box mb-4">
+            <div class="info-box-icon">
+              <i class="bi bi-lightbulb-fill"></i>
+            </div>
+            <p class="mb-1">
+              Completa los campos obligatorios marcados con
+              <span class="required-badge">OBLIGATORIO</span>.
+            </p>
+            <p class="mb-0">
+              Esta pantalla es un paso previo de gestión: el número de vado se
+              asignará automáticamente en el proceso de alta definitiva.
+            </p>
+          </div>
+
+          {# =========================================================================
+            5. FORMULARIO PRINCIPAL DE VADOS (PANTALLA PREVIA)
+            - Envío por POST a btn_vados_form_bp.vado_guardar.
+            - En edición, incluye el idtbl_vados oculto.
+          ========================================================================= #}
+          <form method="post" action="{{ url_for('btn_vados_form_bp.vado_guardar') }}">
+
+            {# 5.1 Campo oculto: idtbl_vados (solo existe en modo "editar") #}
+            {% if vado %}
+              <input type="hidden" name="idtbl_vados" value="{{ vado.idtbl_vados }}">
+            {% endif %}
+
+            <div class="row g-4">
+
+              {# 5.2 CAMPO INFORMATIVO: Número de vado (no editable, no obligatorio, sin name) #}
+              <div class="col-md-4">
+                <label class="form-label-funca">
+                  Número de vado
+                </label>
+
+                {% if vado %}
+                  {# En edición: mostrar el número actual en gris, solo lectura #}
+                  <input
+                    type="text"
+                    class="form-control-funca"
+                    value="{{ vado.numero_vado }}"
+                    readonly
+                    style="background-color: #e5e7eb; color: #6b7280; cursor: not-allowed;"
+                  >
+                {% else %}
+                  {# En alta previa: mensaje indicando que se asignará automáticamente #}
+                  <input
+                    type="text"
+                    class="form-control-funca"
+                    value="Se asignará automáticamente en el alta definitiva"
+                    readonly
+                    style="background-color: #e5e7eb; color: #6b7280; cursor: not-allowed;"
+                  >
+                {% endif %}
+
+                <div class="helper-text">
+                  <i class="bi bi-info-circle-fill"></i>
+                  Este número es solo informativo en esta pantalla previa de gestión.
+                </div>
+              </div>
+
+              {# 5.3 CAMPO: Tipo de vía (select obligatorio con tipos_de_vias) #}
+              <div class="col-md-4">
+                <label class="form-label-funca" for="idtbl_tipos_de_vias">
+                  Tipo de vía
+                  <span class="required-badge">OBLIGATORIO</span>
+                </label>
+                <select
+                  class="form-select-funca"
+                  id="idtbl_tipos_de_vias"
+                  name="idtbl_tipos_de_vias"
+                  required
+                >
+                  <option value="">Selecciona tipo de vía…</option>
+                  {% for tipo in tipos_de_vias %}
+                    <option
+                      value="{{ tipo.idtbl_tipos_de_vias }}"
+                      {% if vado and vado.idtbl_tipos_de_vias == tipo.idtbl_tipos_de_vias %}selected{% endif %}
+                    >
+                      {{ tipo.Tipo_Via }}
+                    </option>
+                  {% endfor %}
+                </select>
+                <div class="helper-text">
+                  <i class="bi bi-signpost"></i>
+                  Ejemplos: CALLE, AVENIDA, PLAZA, etc.
+                </div>
+              </div>
+
+              {# 5.4 CAMPO: Calle (select obligatorio con calles del municipio de Ávila) #}
+              <div class="col-md-4">
+                <label class="form-label-funca" for="idtbl_calles">
+                  Calle
+                  <span class="required-badge">OBLIGATORIO</span>
+                </label>
+                <select
+                  class="form-select-funca"
+                  id="idtbl_calles"
+                  name="idtbl_calles"
+                  required
+                >
+                  <option value="">Selecciona una calle…</option>
+                  {% for calle in calles %}
+                    <option
+                      value="{{ calle.idtbl_calles }}"
+                      data-tipo-via="{{ calle.idtbl_tipos_de_vias }}"
+                      {% if vado and vado.idtbl_calles == calle.idtbl_calles %}selected{% endif %}
+                    >
+                      {{ calle.Nombre_Calle }}
+                    </option>
+                  {% endfor %}
+                </select>
+                <div class="helper-text">
+                  <i class="bi bi-geo-alt-fill"></i>
+                  Calles disponibles en el municipio de Ávila.
+                </div>
+              </div>
+
+              {# 5.5 CAMPO FIJO: Municipio (siempre Ávila, no editable ni enviado) #}
+              <div class="col-md-4">
+                <label class="form-label-funca">
+                  Municipio
+                </label>
+                <input
+                  type="text"
+                  class="form-control-funca"
+                  value="Ávila"
+                  readonly
+                  style="background-color: #e5e7eb; color: #6b7280; cursor: not-allowed;"
+                >
+                <div class="helper-text">
+                  <i class="bi bi-building"></i>
+                  El municipio es siempre <strong>Ávila</strong> en esta pantalla previa; no es editable.
+                </div>
+              </div>
+
+              {# 5.6 CAMPO: Titular / proveedor con buscador por NIF y Nombre (campos excluyentes) #}
+              <div class="col-12">
+                <label class="form-label-funca">
+                  Titular / proveedor
+                </label>
+
+                {# 5.6.1 Buscadores de proveedor: NIF y nombre (no simultáneos) #}
+                <div class="row g-2 mb-2">
+                  <div class="col-md-6">
+                    <label class="form-label-funca" for="filtro_proveedor_nif">
+                      Buscar por NIF
+                    </label>
+                    <input
+                      type="text"
+                      class="form-control-funca"
+                      id="filtro_proveedor_nif"
+                      placeholder="Ej: 6581160D"
+                    >
+                  </div>
+
+                  <div class="col-md-6">
+                    <label class="form-label-funca" for="filtro_proveedor_nombre">
+                      Buscar por nombre
+                    </label>
+                    <input
+                      type="text"
+                      class="form-control-funca"
+                      id="filtro_proveedor_nombre"
+                      placeholder="Ej: NOMBRE O RAZÓN SOCIAL"
+                    >
+                  </div>
+                </div>
+
+                {# 5.6.2 Select de proveedores: se envía idtbl_proveedores en el POST #}
+                <select
+                  class="form-select-funca"
+                  id="idtbl_proveedores"
+                  name="idtbl_proveedores"
+                >
+                  <option value="">Sin titular asignado…</option>
+                  {% for p in proveedores %}
+                    <option
+                      value="{{ p.idtbl_proveedores }}"
+                      data-nif="{{ p.NIF | upper }}"
+                      data-nombre="{{ p.Nombre_Razon_Social | upper }}"
+                      {% if vado and vado.idtbl_proveedores == p.idtbl_proveedores %}selected{% endif %}
+                    >
+                      {{ p.NIF }} · {{ p.Nombre_Razon_Social }}
+                    </option>
+                  {% endfor %}
+                </select>
+
+                <div class="helper-text">
+                  <i class="bi bi-person-badge"></i>
+                  Escribe en NIF <strong>o</strong> en nombre (el otro campo se vacía solo). El select se filtra con lo que escribas.
+                </div>
+              </div>
+
+              {# 5.7 CAMPO: Puerta / número de portal #}
+              <div class="col-md-4">
+                <label class="form-label-funca" for="Puerta">
+                  Puerta / número de portal
+                </label>
+                <input
+                  type="text"
+                  class="form-control-funca"
+                  id="Puerta"
+                  name="Puerta"
+                  value="{{ vado.Puerta if vado else '' }}"
+                  placeholder="Ej: 12B"
+                >
+              </div>
+
+              {# 5.8 CAMPO: Observaciones (nuevo campo que sustituye a los campos OT) #}
+              <div class="col-md-12">
+                <label class="form-label-funca" for="observaciones">
+                  Observaciones
+                </label>
+                <textarea
+                  class="form-control-funca"
+                  id="observaciones"
+                  name="observaciones"
+                  rows="3"
+                  placeholder="Comentarios adicionales sobre el vado, motivo del alta, referencias, etc."
+                >{{ vado.observaciones if vado and vado.observaciones is not none else '' }}</textarea>
+                <div class="helper-text">
+                  <i class="bi bi-chat-square-text"></i>
+                  Usa este campo para cualquier información relevante que antes se repartía en la OT.
+                </div>
+              </div>
+
+              {# 5.9 CAMPOS: Superficie y anchura (datos físicos del vado) #}
+              <div class="col-md-3">
+                <label class="form-label-funca" for="superficie">
+                  Superficie (m²)
+                </label>
+                <input
+                  type="text"
+                  class="form-control-funca"
+                  id="superficie"
+                  name="superficie"
+                  value="{{ vado.superficie if vado and vado.superficie is not none else '' }}"
+                  placeholder="Ej: 10,50"
+                >
+              </div>
+
+              <div class="col-md-3">
+                <label class="form-label-funca" for="anchura">
+                  Anchura (m)
+                </label>
+                <input
+                  type="text"
+                  class="form-control-funca"
+                  id="anchura"
+                  name="anchura"
+                  value="{{ vado.anchura if vado and vado.anchura is not none else '' }}"
+                  placeholder="Ej: 3,50"
+                >
+              </div>
+
+            </div> {# FIN .row g-4 #}
+
+            {# 5.10 BOTONES DE ACCIÓN: Guardar ficha previa / Volver #}
+            <div class="mt-4 d-flex gap-3">
+              <button type="submit" class="btn-funca-primary">
+                {% if modo == "nuevo" %}
+                  Guardar ficha previa del vado
+                {% else %}
+                  Guardar cambios en la ficha previa
+                {% endif %}
+              </button>
+
+              {# Botón de volver: apunta al formulario nuevo; se puede ajustar a un listado #}
+              <a href="{{ url_for('btn_vados_form_bp.btn_vado_form_nuevo') }}" class="btn-funca-secondary">
+                <i class="bi bi-arrow-left-circle"></i>
+                Volver
+              </a>
+            </div>
+
+          </form>
+
+        </div> {# FIN .card-funca-body #}
+      </div>   {# FIN .card-funca #}
+
+    </div> {# FIN .col-12 #}
+  </div>   {# FIN .row #}
+</div>     {# FIN .container #}
+
+{# =============================================================================
+  6. SCRIPT: FILTRO DE PROVEEDORES POR NIF O NOMBRE (CAMPOS EXCLUYENTES)
+===============================================================================
+  DESCRIPCIÓN
+  -----------
+  - Este script implementa el filtrado dinámico del <select> de proveedores.
+  - Utiliza dos campos de texto:
+      • filtro_proveedor_nif     → búsqueda por NIF.
+      • filtro_proveedor_nombre  → búsqueda por nombre / razón social.
+  - El comportamiento es excluyente:
+      • Si el usuario escribe en el campo de NIF, se limpia automáticamente el
+        campo de nombre.
+      • Si el usuario escribe en el campo de nombre, se limpia automáticamente
+        el campo de NIF.
+  - El filtrado se realiza completamente en el navegador:
+      • No se envían peticiones al servidor.
+      • Se usan los atributos data-nif y data-nombre que lleva cada opción.
+
+  FUNCIONAMIENTO DETALLADO
+  ------------------------
+  1) Al escribir en uno de los campos, se ejecuta aplicarFiltro(desde):
+      - "desde" indica el origen del evento ("nif" o "nombre").
+      - Se leen los valores de los inputs y se normalizan a mayúsculas.
+      - Se limpia el otro campo para que solo haya un criterio activo.
+
+  2) La función recorre todas las opciones del <select>:
+      - La opción con value="" ("Sin titular asignado…") permanece siempre visible.
+      - Para cada opción:
+          • Se recuperan nif = data-nif y nombre = data-nombre.
+          • Se comprueba si contienen el texto buscado (indexOf).
+      - Solo se muestran las opciones cuyas cadenas contienen el texto buscado.
+
+  3) Selección automática:
+      - Si se encuentra al menos una opción que cumple el filtro:
+          • Se guarda como primeraCoincidencia.
+          • Al final, se asigna su value al <select>, dejándola seleccionada.
+
+  4) Envío de datos:
+      - El formulario envía únicamente name="idtbl_proveedores".
+      - El backend sigue leyendo el mismo campo que antes, sin necesidad de cambios.
+
+============================================================================= #}
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const inputNif = document.getElementById('filtro_proveedor_nif');
+    const inputNombre = document.getElementById('filtro_proveedor_nombre');
+    const selectProv = document.getElementById('idtbl_proveedores');
+
+    if (!inputNif || !inputNombre || !selectProv) {
+      return;
+    }
+
+    function aplicarFiltro(desde) {
+      let textoNif = inputNif.value.trim().toUpperCase();
+      let textoNombre = inputNombre.value.trim().toUpperCase();
+
+      if (desde === 'nif') {
+        // Si el evento viene del campo NIF, se limpia el campo nombre
+        inputNombre.value = '';
+        textoNombre = '';
+      } else if (desde === 'nombre') {
+        // Si el evento viene del campo nombre, se limpia el campo NIF
+        inputNif.value = '';
+        textoNif = '';
+      }
+
+      let primeraCoincidencia = null;
+
+      for (let i = 0; i < selectProv.options.length; i++) {
+        const opt = selectProv.options[i];
+
+        // La opción vacía ("Sin titular asignado…") siempre debe permanecer visible
+        if (opt.value === '') {
+          opt.style.display = '';
+          continue;
+        }
+
+        const nif = (opt.getAttribute('data-nif') || '').toUpperCase();
+        const nombre = (opt.getAttribute('data-nombre') || '').toUpperCase();
+
+        const coincideNif = !textoNif || nif.indexOf(textoNif) !== -1;
+        const coincideNombre = !textoNombre || nombre.indexOf(textoNombre) !== -1;
+
+        if (coincideNif && coincideNombre) {
+          opt.style.display = '';
+          if (!primeraCoincidencia) {
+            primeraCoincidencia = opt;
+          }
+        } else {
+          opt.style.display = 'none';
+        }
+      }
+
+      // Si hay alguna coincidencia, se selecciona automáticamente la primera
+      if (primeraCoincidencia) {
+        selectProv.value = primeraCoincidencia.value;
+      }
+    }
+
+    // Eventos de entrada: llaman a aplicarFiltro indicando el origen
+    inputNif.addEventListener('input', () => aplicarFiltro('nif'));
+    inputNombre.addEventListener('input', () => aplicarFiltro('nombre'));
+  });
+</script>
+
+{# ============================================================================
+  7. FIN DEL BLOQUE PRINCIPAL DE CONTENIDO
+  - Cierre del {% block content %} requerido por la herencia de base.html.
+============================================================================= #}
+{% endblock %}

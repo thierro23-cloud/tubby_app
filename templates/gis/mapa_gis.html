@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>GIS Municipal</title>
+
+<!-- 🔹 Estilos de Leaflet y MarkerCluster -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css"/>
+
+<!-- 🔹 Librerías de Leaflet y MarkerCluster -->
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
+
+<style>
+/* 🔹 Altura del mapa: casi toda la ventana del castillo */
+#map { height: 95vh; }
+</style>
+</head>
+
+<body>
+<!-- 🔹 Título mágico del mapa -->
+<h3>🏛️ GIS Municipal Profesional</h3>
+
+<!-- 🔹 Contenedor donde vivirá nuestro mapa mágico -->
+<div id="map"></div>
+
+<script>
+// 🔹 Creamos el mapa como si fuera un pergamino mágico
+var map = L.map('map').setView([39.4699, -0.3763], 12); 
+// 39.4699, -0.3763 → posición central del ayuntamiento
+// 12 → nivel de zoom, como acercar la lupa
+
+// 🔹 Añadimos el suelo del mapa (OpenStreetMap)
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+// Cada cuadradito del mapa se carga automáticamente, como fichas de puzzle
+
+// 🔹 Cluster: caja mágica para que muchos puntos no se amontonen
+var markers = L.markerClusterGroup();
+// Esto ayuda a manejar cientos o miles de iconos sin que el mapa se colapse
+
+// 🔹 Definimos los iconos mágicos de cada cosa del inventario
+var iconos = {
+    farola: L.icon({iconUrl:'/static/icons/farola.png', iconSize:[28,28]}), // farola como lámpara mágica
+    banco: L.icon({iconUrl:'/static/icons/banco.png', iconSize:[28,28]}),   // banco como asiento del parque
+    camara: L.icon({iconUrl:'/static/icons/camara.png', iconSize:[28,28]})  // cámara como ojo que vigila
+};
+
+// 🔹 Traemos los datos del inventario desde nuestro hechizo API
+fetch("/api/gis/inventario")
+.then(r => r.json())
+.then(data => {
+    // 🔹 Para cada objeto del inventario
+    data.forEach(o => {
+        // 🔹 Elegimos el icono correcto según el tipo
+        var icono = iconos[o.tipo] || iconos.banco; // si no encuentra tipo, ponemos banco
+
+        // 🔹 Creamos un marcador mágico en el mapa
+        var m = L.marker([o.lat, o.lng], {icon: icono});
+
+        // 🔹 Abrimos un mensaje mágico cuando el niño hace clic en el marcador
+        m.bindPopup(`
+            <b>${o.nombre}</b><br>
+            Tipo: ${o.tipo}<br>
+            Estado: ${o.estado}<br>
+            Calle: ${o.calle}
+        `);
+
+        // 🔹 Añadimos este marcador a la caja de clusters
+        markers.addLayer(m);
+    });
+
+    // 🔹 Finalmente, añadimos todos los marcadores al mapa
+    map.addLayer(markers);
+});
+</script>
+</body>
+</html>

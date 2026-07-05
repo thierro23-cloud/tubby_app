@@ -1,0 +1,200 @@
+{# =============================================================================
+   🧱 rio_torio_usuarios_plazas.html – PLAZAS POR USUARIO DE PARQUIN (RÍO TORÍO)
+   =============================================================================
+   UBICACIÓN:
+   ----------
+   - templates/parquin/rio_torio/rio_torio_usuarios_plazas.html
+
+   RELACIÓN CON BLUEPRINT:
+   -----------------------
+   - Blueprint: blueprints/parquin/btn_rio_torio_usuarios_plazas_bp.py
+   - Vista:     btn_rio_torio_usuarios_plazas_bp.btn_rio_torio_usuarios_plazas
+   - Render:    return render_template(
+                    "parquin/rio_torio/rio_torio_usuarios_plazas.html",
+                    usuarios_parquin=usuarios_parquin,
+                    usuario_seleccionado=usuario_seleccionado,
+                    plazas_usuario=plazas_usuario,
+                )
+
+   RELACIÓN CON LISTADO PRINCIPAL:
+   --------------------------------
+   - Listado de usuarios:
+        templates/parquin/rio_torio/rio_torio_listar_usuarios.html
+   - Vista de listado:
+        btn_rio_torio_listar_usuarios_bp.btn_rio_torio_listar_usuarios
+   - Desde el listado, el enlace “Ver plazas” deberá apuntar a este blueprint.
+
+   VARIABLES QUE LLEGAN DEL BACKEND:
+   ---------------------------------
+   - usuarios_parquin:
+        Lista de usuarios del parquin Río Torío (para el select).
+        Cada elemento `u` debe tener:
+          · u.idtbl_usuarios
+          · u.nombre_proveedor
+          · u.numero_cuenta (opcional)
+
+   - usuario_seleccionado:
+        ID del usuario seleccionado (int o string convertible a int),
+        puede ser None si no se ha filtrado.
+
+   - plazas_usuario:
+        Lista de plazas del usuario seleccionado; cada elemento `p` con:
+          · p.idtbl_plazas
+          · p.codigo_plazas
+          · p.fila
+          · p.proveedor
+          · p.proveedor_nif
+          · p.numero_cuenta
+          · p.fecha_inicio
+          · p.observaciones
+
+   ESQUEMA DE ESTA PLANTILLA:
+   --------------------------
+   SECCIÓN 0. Extender base.html y título
+   SECCIÓN 1. Cabecera principal
+   SECCIÓN 2. Filtro de usuarios (select + botones)
+   SECCIÓN 3. Resultado de plazas
+   SECCIÓN 4. Estilos específicos
+   ============================================================================= #}
+
+{% extends "base.html" %}
+
+{# SECCIÓN 0. TÍTULO DE LA PESTAÑA DEL NAVEGADOR #}
+{% block title %}Plazas por usuario · Río Torío{% endblock %}
+
+{% block content %}
+
+{# SECCIÓN 1. CABECERA PRINCIPAL #}
+<div class="pt-3 pb-2 mb-3 border-bottom">
+  <h1 class="h2 mb-1">🅿️ Plazas por usuario de parquin (Río Torío)</h1>
+  <p class="text-muted mb-0">
+    Selecciona un usuario del parquin para ver las plazas que tiene asignadas.
+  </p>
+</div>
+
+{# SECCIÓN 2. FILTRO DE USUARIOS #}
+<div class="card mb-3 shadow-sm">
+  <div class="card-body">
+    <form method="GET" class="row g-3 align-items-end">
+
+      <div class="col-md-4">
+        <label for="idtbl_usuarios" class="form-label">
+          👥 Usuario de parquin
+        </label>
+
+        <select
+          id="idtbl_usuarios"
+          name="idtbl_usuarios"
+          class="form-select"
+          required
+        >
+          <option value="">-- Selecciona un usuario --</option>
+
+          {# 
+            - Recorre todos los usuarios del parquin.
+            - Marca como selected el que coincide con usuario_seleccionado.
+          #}
+          {% for u in usuarios_parquin %}
+            <option
+              value="{{ u.idtbl_usuarios }}"
+              {% if usuario_seleccionado and usuario_seleccionado|int == u.idtbl_usuarios %}selected{% endif %}
+            >
+              {{ u.nombre_proveedor }} – Usuario #{{ u.idtbl_usuarios }}
+              {% if u.numero_cuenta %}
+                (Cuenta: {{ u.numero_cuenta }})
+              {% endif %}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-3">
+        <button type="submit" class="btn btn-primary w-100">
+          🔍 Filtrar plazas
+        </button>
+      </div>
+
+      <div class="col-md-3">
+        {# Limpia filtro → misma vista sin parámetros #}
+        <a href="{{ url_for('btn_rio_torio_usuarios_plazas_bp.btn_rio_torio_usuarios_plazas') }}"
+           class="btn btn-outline-secondary w-100">
+          🧹 Limpiar filtro
+        </a>
+      </div>
+
+      {# Opcional: botón para volver al listado principal de usuarios Río Torío #}
+      <div class="col-md-2">
+        <a href="{{ url_for('btn_rio_torio_listar_usuarios_bp.btn_rio_torio_listar_usuarios') }}"
+           class="btn btn-secondary w-100">
+          ↩ Volver a usuarios
+        </a>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+{# SECCIÓN 3. RESULTADO DE PLAZAS #}
+<div class="card shadow-sm">
+  <div class="card-body">
+    <h5 class="card-title mb-3">
+      📋 Plazas asignadas
+    </h5>
+
+    {# 3.1 Caso sin usuario seleccionado #}
+    {% if not usuario_seleccionado %}
+      <p class="text-muted mb-0">
+        Selecciona un usuario en el desplegable superior y pulsa
+        <strong>“Filtrar plazas”</strong> para ver sus plazas.
+      </p>
+
+    {# 3.2 Caso con usuario seleccionado #}
+    {% else %}
+      {% if plazas_usuario %}
+        <div class="table-responsive">
+          <table class="table table-striped table-hover align-middle mb-0">
+            <thead class="table-dark">
+              <tr>
+                <th>ID plaza</th>
+                <th>Código</th>
+                <th>Fila</th>
+                <th>Proveedor</th>
+                <th>NIF</th>
+                <th>Nº cuenta</th>
+                <th>Fecha inicio</th>
+                <th>Observaciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for p in plazas_usuario %}
+                <tr>
+                  <td><strong>#{{ p.idtbl_plazas }}</strong></td>
+                  <td>{{ p.codigo_plazas }}</td>
+                  <td>{{ p.fila }}</td>
+                  <td>{{ p.proveedor or '—' }}</td>
+                  <td>{{ p.proveedor_nif or '—' }}</td>
+                  <td>{{ p.numero_cuenta or '—' }}</td>
+                  <td>{{ p.fecha_inicio or '—' }}</td>
+                  <td>{{ p.observaciones or '' }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="text-muted mb-0">
+          Este usuario no tiene ninguna plaza asignada actualmente.
+        </p>
+      {% endif %}
+    {% endif %}
+  </div>
+</div>
+
+{# SECCIÓN 4. ESTILOS ESPECÍFICOS #}
+<style>
+  .card-title {
+    font-weight: 600;
+  }
+</style>
+
+{% endblock %}

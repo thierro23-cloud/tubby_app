@@ -1,0 +1,211 @@
+/* ============================================================================
+   1. ESTILOS GENERALES PARA PLANES DE PROTECCIÓN (INVENTARIO)
+   ----------------------------------------------------------------------------
+   - Este archivo da estilo al listado tipo Excel y a la ficha de pieza
+     con formularios y fotos.
+   ========================================================================== */
+
+/* ============================================================================
+   2. CARD ESTILO EXCEL (LISTADO)
+   ========================================================================== */
+
+.excel-card {
+  background: linear-gradient(135deg, #f8fafc 0%, #f3f4f6 40%, #ffffff 100%);
+  border-radius: 14px;
+}
+
+.excel-card-header {
+  background: radial-gradient(circle at top left, #e0f2fe 0, #eff6ff 40%, transparent 70%);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+/* ============================================================================
+   3. TABLA ESTILO EXCEL
+   ========================================================================== */
+
+.excel-table-wrapper {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.excel-table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.excel-table thead.excel-thead {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: linear-gradient(180deg, #e5e7eb 0%, #d1d5db 100%);
+  box-shadow: 0 1px 0 rgba(148, 163, 184, 0.4);
+}
+
+.excel-table thead th {
+  padding: 0.6rem 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.6);
+}
+
+.excel-table tbody tr:nth-child(even) {
+  background-color: rgba(249, 250, 251, 0.8);
+}
+
+.excel-table tbody tr:hover {
+  background: linear-gradient(90deg, #eff6ff 0%, #eef2ff 60%, #f9fafb 100%);
+}
+
+/* ============================================================================
+   4. TAGS DE PRIORIDAD (P1, P2, ...)
+   ========================================================================== */
+
+.prioridad-badge {
+  min-width: 2.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* Ajusta estos colores según tus prioridades reales */
+.prioridad-1 {
+  background: linear-gradient(135deg, #f97373, #ef4444);
+  color: #fff;
+}
+.prioridad-2 {
+  background: linear-gradient(135deg, #fb923c, #f97316);
+  color: #fff;
+}
+.prioridad-3 {
+  background: linear-gradient(135deg, #facc15, #eab308);
+  color: #fff;
+}
+.prioridad-4,
+.prioridad-5 {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #fff;
+}
+
+/* ============================================================================
+   5. TAGS DE ESTADO (bueno, regular, malo, desconocido)
+   ========================================================================== */
+
+.estado-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border: 1px solid transparent;
+}
+
+/* Ejemplos: adapta a tus estados reales */
+.estado-bueno {
+  background-color: #ecfdf3;
+  color: #166534;
+  border-color: #bbf7d0;
+}
+.estado-regular {
+  background-color: #fffbeb;
+  color: #92400e;
+  border-color: #fed7aa;
+}
+.estado-malo {
+  background-color: #fef2f2;
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+.estado-desconocido {
+  background-color: #f9fafb;
+  color: #6b7280;
+  border-color: #e5e7eb;
+}
+
+/* ============================================================================
+   6. FICHA DE PIEZA (CARD PRINCIPAL)
+   ========================================================================== */
+
+.piece-card {
+  border-radius: 16px;
+  background: radial-gradient(circle at top left, #eef2ff 0, #ffffff 55%);
+}
+
+.piece-card-header {
+  border-bottom: 1px solid rgba(148, 163, 184, 0.35);
+  background: linear-gradient(120deg, #e0f2fe, #eef2ff);
+}
+
+/* ============================================================================
+   7. TABS SUAVES (Pestañas del formulario)
+   ========================================================================== */
+
+.nav-tabs-soft .nav-link {
+  border-radius: 999px;
+  margin-right: 0.35rem;
+  padding: 0.35rem 0.9rem;
+  font-size: 0.85rem;
+  color: #6b7280;
+  border: none;
+}
+
+.nav-tabs-soft .nav-link:hover {
+  background-color: #e5e7eb;
+  color: #374151;
+}
+
+.nav-tabs-soft .nav-link.active {
+  background: linear-gradient(135deg, #3b82f6, #6366f1);
+  color: #ffffff;
+}
+
+/* ============================================================================
+   8. CAMPOS DE FORMULARIO SUAVES
+   ========================================================================== */
+
+.form-control-soft {
+  border-radius: 10px;
+  border-color: #e5e7eb;
+  background-color: #f9fafb;
+}
+
+.form-control-soft:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.15);
+}
+
+/* ============================================================================
+   9. TARJETAS DE MEDIOS (FOTOS / PLANO)
+   ========================================================================== */
+
+.media-card {
+  border-radius: 16px;
+  background: linear-gradient(145deg, #f9fafb, #eef2ff);
+}
+
+.media-card-header {
+  border-bottom: 1px solid rgba(148, 163, 184, 0.3);
+  background: linear-gradient(135deg, #e0f2fe, #e5e7eb);
+}
+
+.media-frame {
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: radial-gradient(circle at top, #e0f2fe, #f9fafb);
+  padding: 4px;
+  cursor: zoom-in;
+}
+
+.media-placeholder {
+  border-radius: 14px;
+  padding: 2rem 1rem;
+  background: repeating-linear-gradient(
+    45deg,
+    #f3f4f6,
+    #f3f4f6 10px,
+    #e5e7eb 10px,
+    #e5e7eb 20px
+  );
+  color: #6b7280;
+  text-align: center;
+}

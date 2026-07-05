@@ -1,0 +1,625 @@
+{# =============================================================================
+📅 AGENDA DE VÍA PÚBLICA · SUPER ADMIN (VERSIÓN PRODUCCIÓN)
+============================================================================= #}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Agenda vía pública · Super Admin</title>
+
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: #0f172a;
+            color: #e5e7eb;
+        }
+        
+        .agenda-root {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .agenda-header {
+            padding: 16px;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.35);
+            background: linear-gradient(90deg, rgba(15, 23, 42, 0.96), rgba(15, 23, 42, 0.92));
+        }
+        
+        .agenda-header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        
+        .agenda-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+        
+        .agenda-subtitle {
+            font-size: 0.85rem;
+            color: #9ca3af;
+            margin-top: 4px;
+        }
+        
+        .agenda-nav-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(15, 23, 42, 0.6);
+            padding: 10px 16px;
+            border-radius: 8px;
+            border: 1px solid rgba(75, 85, 99, 0.5);
+        }
+        
+        .nav-btn {
+            background: #1e293b;
+            border: 1px solid #475569;
+            color: #e5e7eb;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .nav-btn:hover {
+            background: #334155;
+            border-color: #64748b;
+        }
+        
+        .nav-date-display {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #3b82f6;
+            min-width: 280px;
+            text-align: center;
+        }
+        
+        .stats-summary {
+            font-size: 0.85rem;
+            color: #9ca3af;
+            margin-top: 8px;
+        }
+        
+        .agenda-main {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            min-height: 0;
+        }
+        
+        .agenda-filters {
+            padding: 16px;
+            border-right: 1px solid rgba(55, 65, 81, 0.9);
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(15, 23, 42, 0.94));
+            overflow-y: auto;
+        }
+        
+        .filter-section {
+            margin-bottom: 20px;
+        }
+        
+        .filter-section-title {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: #9ca3af;
+            margin-bottom: 8px;
+        }
+        
+        .filter-block {
+            border-radius: 8px;
+            border: 1px solid rgba(55, 65, 81, 0.9);
+            padding: 12px;
+            background: linear-gradient(145deg, rgba(15, 23, 42, 0.98), rgba(15, 23, 42, 0.96));
+        }
+        
+        .filter-label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        
+        .filter-select {
+            width: 100%;
+            padding: 8px;
+            border-radius: 6px;
+            border: 1px solid rgba(75, 85, 99, 0.9);
+            background: #020617;
+            color: #e5e7eb;
+            font-size: 0.85rem;
+            margin-bottom: 10px;
+        }
+        
+        .filter-select:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .view-buttons {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+        
+        .view-btn {
+            padding: 8px;
+            border-radius: 6px;
+            border: 1px solid rgba(75, 85, 99, 0.9);
+            background: #020617;
+            color: #e5e7eb;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .view-btn.active {
+            border-color: #3b82f6;
+            background: rgba(59, 130, 246, 0.2);
+            color: #60a5fa;
+        }
+        
+        .checkbox-list {
+            max-height: 240px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+        
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            font-size: 0.8rem;
+        }
+        
+        .checkbox-item input[type="checkbox"] {
+            cursor: pointer;
+        }
+        
+        .color-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: 1px solid rgba(15, 23, 42, 0.9);
+        }
+        
+        .agenda-events {
+            padding: 16px;
+            overflow-y: auto;
+        }
+        
+        .event-card {
+            border-radius: 10px;
+            border: 1px solid rgba(55, 65, 81, 0.9);
+            margin-bottom: 12px;
+            padding: 12px;
+            background: radial-gradient(circle at top left, rgba(59, 130, 246, 0.15), transparent 60%),
+                        linear-gradient(145deg, rgba(15, 23, 42, 0.98), rgba(15, 23, 42, 0.96));
+            transition: transform 0.2s;
+        }
+        
+        .event-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(59, 130, 246, 0.5);
+        }
+        
+        .event-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        
+        .event-type-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            background: rgba(15, 23, 42, 0.96);
+            border: 1px solid rgba(148, 163, 184, 0.4);
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        
+        .event-dates {
+            font-size: 0.75rem;
+            color: #9ca3af;
+        }
+        
+        .event-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        
+        .event-detail {
+            font-size: 0.8rem;
+            color: #9ca3af;
+            margin-top: 4px;
+        }
+        
+        .event-detail strong {
+            color: #e5e7eb;
+        }
+        
+        .event-origin {
+            font-size: 0.7rem;
+            color: #6b7280;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid rgba(55, 65, 81, 0.5);
+        }
+        
+        .no-events {
+            text-align: center;
+            padding: 40px;
+            color: #9ca3af;
+            font-size: 0.9rem;
+        }
+        
+        .btn-apply {
+            margin-top: 10px;
+            width: 100%;
+            padding: 8px;
+            border-radius: 6px;
+            border: 1px solid rgba(75, 85, 99, 0.9);
+            background: #1e293b;
+            color: #e5e7eb;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-apply:hover {
+            background: #334155;
+            border-color: #64748b;
+        }
+    </style>
+</head>
+
+<body>
+<div class="agenda-root">
+
+<!-- ENCABEZADO CON NAVEGACIÓN TEMPORAL -->
+<header class="agenda-header">
+    <div class="agenda-header-top">
+        <div>
+            <div class="agenda-title">📅 Agenda vía kkkkk</div>
+            <div class="agenda-subtitle">Super Admin · Vista consolidada de eventos en la ciudad</div>
+        </div>
+        
+        <!-- CONTROLES DE NAVEGACIÓN TEMPORAL + ACCESO A RECURRENCIAS -->
+        <div class="agenda-nav-controls">
+            <button class="nav-btn" onclick="navigateTime('prev')">
+                ◀ Anterior
+            </button>
+            
+            <div class="nav-date-display">
+                {{ fecha_desde.strftime('%d/%m/%Y') }} — {{ fecha_hasta.strftime('%d/%m/%Y') }}
+            </div>
+            
+            <button class="nav-btn" onclick="navigateTime('next')">
+                Siguiente ▶
+            </button>
+            
+            <button class="nav-btn" onclick="navigateTime('today')">
+                📍 Hoy
+            </button>
+            
+            <!-- ACCESO A RECURRENCIAS -->
+            <a href="{{ url_for('agenda_recurrencias_bp.ar_listar_recurrencias') }}" 
+               class="nav-btn"
+               style="text-decoration: none; background: #3b82f6; border-color: #2563eb;">
+                <i class="fas fa-calendar-repeat"></i> Recurrencias
+            </a>
+        </div>
+    </div>
+    
+    <div class="stats-summary">
+        Vista: <strong>{{ filtros.vista|upper }}</strong> · 
+        {{ eventos|length }} eventos encontrados
+    </div>
+</header>
+
+    <!-- CUERPO PRINCIPAL -->
+    <main class="agenda-main">
+
+        <!-- COLUMNA IZQUIERDA: FILTROS -->
+        <aside class="agenda-filters">
+            
+            <!-- FILTRO: VISTA TEMPORAL -->
+            <div class="filter-section">
+                <div class="filter-section-title">Rango de tiempo</div>
+                <div class="filter-block">
+                    <div class="view-buttons">
+                        <button 
+                            class="view-btn {% if filtros.vista == 'dia' %}active{% endif %}"
+                            onclick="changeView('dia')"
+                        >
+                            Día
+                        </button>
+                        <button 
+                            class="view-btn {% if filtros.vista == 'semana' %}active{% endif %}"
+                            onclick="changeView('semana')"
+                        >
+                            Semana
+                        </button>
+                        <button 
+                            class="view-btn {% if filtros.vista == 'mes' %}active{% endif %}"
+                            onclick="changeView('mes')"
+                        >
+                            Mes
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FILTRO: TIPO DE VÍA Y CALLE -->
+            <div class="filter-section">
+                <div class="filter-section-title">Filtrar por calle</div>
+                <div class="filter-block">
+                    <label class="filter-label" for="tipo_via">Tipo de vía</label>
+                    <select id="tipo_via" class="filter-select" onchange="cargarCallesPorTipo()">
+                        <option value="">Todas</option>
+                        {% for tv in tipos_via %}
+                        <option 
+                            value="{{ tv.idtbl_tipos_de_vias }}"
+                            {% if filtros.id_tipo_via == tv.idtbl_tipos_de_vias %}selected{% endif %}
+                        >
+                            {{ tv.tipos_de_vias }}
+                        </option>
+                        {% endfor %}
+                    </select>
+
+                    <label class="filter-label" for="calle">Calle</label>
+                    <select id="calle" class="filter-select">
+                        <option value="">Todas</option>
+                        {% for c in calles %}
+                        <option 
+                            value="{{ c.idtbl_calles }}"
+                            {% if filtros.id_calle == c.idtbl_calles %}selected{% endif %}
+                        >
+                            {{ c.calles }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    
+                    <button class="btn-apply" onclick="applyFilters()">
+                        Aplicar filtros de calle
+                    </button>
+                </div>
+            </div>
+
+            <!-- FILTRO: TIPOS DE EVENTO -->
+            <div class="filter-section">
+                <div class="filter-section-title">Tipos de evento</div>
+                <div class="filter-block">
+                    <div class="checkbox-list">
+                        {% for t in tipos_evento %}
+                        <label class="checkbox-item">
+                            <input 
+                                type="checkbox" 
+                                class="tipo-evento-check"
+                                value="{{ t.codigo }}"
+                                {% if t.codigo in filtros.codigos_tipo %}checked{% endif %}
+                            >
+                            <span 
+                                class="color-dot"
+                                style="background-color: {{ t.color_hex or '#64748b' }};"
+                            ></span>
+                            <span>{{ t.nombre_publico or t.codigo }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                    
+                    <button class="btn-apply" onclick="applyFilters()">
+                        Aplicar tipos de evento
+                    </button>
+                </div>
+            </div>
+
+        </aside>
+
+        <!-- COLUMNA DERECHA: LISTA DE EVENTOS -->
+        <section class="agenda-events">
+            {% if eventos %}
+                {% for e in eventos %}
+                <article class="event-card">
+                    <div class="event-header">
+                        <div class="event-type-badge">
+                            <span 
+                                class="color-dot"
+                                style="background-color: {{ e.color_hex or '#64748b' }};"
+                            ></span>
+                            <span>{{ e.nombre_tipo_evento or e.codigo_tipo_evento }}</span>
+                        </div>
+                        <div class="event-dates">
+                            {{ e.fecha_inicio }}
+                            {% if e.fecha_fin %} → {{ e.fecha_fin }}{% endif %}
+                        </div>
+                    </div>
+
+                    <div class="event-title">{{ e.nombre_calle }}</div>
+                    
+                    {% if e.titulo %}
+                        <div class="event-detail">
+                            <strong>{{ e.titulo }}</strong>
+                        </div>
+                    {% endif %}
+
+                    {% if e.descripcion %}
+                        <div class="event-detail">{{ e.descripcion }}</div>
+                    {% endif %}
+
+                    {% if e.numero_via_desde or e.numero_via_hasta %}
+                        <div class="event-detail">
+                            Tramo: <strong>{{ e.numero_via_desde or '?' }} – {{ e.numero_via_hasta or '?' }}</strong>
+                        </div>
+                    {% endif %}
+
+                    {% if e.sentido %}
+                        <div class="event-detail">
+                            Sentido: <strong>{{ e.sentido }}</strong>
+                        </div>
+                    {% endif %}
+
+                    {% if e.observaciones_tramo %}
+                        <div class="event-detail">{{ e.observaciones_tramo }}</div>
+                    {% endif %}
+
+                    {% if e.origen_tabla and e.origen_id %}
+                        <div class="event-origin">
+                            Origen: {{ e.origen_tabla }} (ID {{ e.origen_id }})
+                        </div>
+                    {% endif %}
+                </article>
+                {% endfor %}
+            {% else %}
+                <div class="no-events">
+                    ℹ️ No hay eventos para los filtros seleccionados
+                </div>
+            {% endif %}
+        </section>
+
+    </main>
+
+</div>
+
+<!-- JAVASCRIPT -->
+<script>
+    // Configuración desde backend
+    const CONFIG = {
+        vista: "{{ filtros.vista }}",
+        fecha_ref: "{{ fecha_ref }}",
+        prev_ref: "{{ prev_ref }}",
+        next_ref: "{{ next_ref }}",
+        id_tipo_via: {{ filtros.id_tipo_via or 'null' }},
+        id_calle: {{ filtros.id_calle or 'null' }},
+        codigos_tipo: {{ filtros.codigos_tipo|tojson }}
+    };
+
+    /**
+     * Navega en el tiempo según la vista actual
+     */
+    function navigateTime(direction) {
+        const params = new URLSearchParams(window.location.search);
+        
+        let nuevaFechaRef;
+        
+        if (direction === 'prev') {
+            nuevaFechaRef = CONFIG.prev_ref;
+        } else if (direction === 'next') {
+            nuevaFechaRef = CONFIG.next_ref;
+        } else if (direction === 'today') {
+            const hoy = new Date();
+            nuevaFechaRef = hoy.toISOString().split('T')[0];
+        }
+        
+        if (nuevaFechaRef) {
+            params.set('fecha_ref', nuevaFechaRef);
+        }
+        
+        window.location.search = params.toString();
+    }
+
+    /**
+     * Cambia la vista (día/semana/mes)
+     */
+    function changeView(nuevaVista) {
+        const params = new URLSearchParams(window.location.search);
+        params.set('vista', nuevaVista);
+        window.location.search = params.toString();
+    }
+
+    /**
+     * Carga calles por tipo de vía usando AJAX
+     */
+    function cargarCallesPorTipo() {
+        const idTipoVia = document.getElementById('tipo_via').value;
+        const selectCalle = document.getElementById('calle');
+        
+        // Limpiar opciones
+        selectCalle.innerHTML = '<option value="">Todas</option>';
+        
+        if (!idTipoVia) {
+            return;
+        }
+        
+        const idMunicipio = 395; // Ávila
+        const url = `/helpers_vias/calles?id_municipio=${idMunicipio}&id_tipo_via=${idTipoVia}`;
+        
+        fetch(url, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(resp => resp.json())
+        .then(data => {
+            if (!data.ok) {
+                console.error('Error cargando calles:', data.error);
+                return;
+            }
+            
+            const calles = data.calles || [];
+            calles.forEach(c => {
+                const option = document.createElement('option');
+                option.value = c.idtbl_calles;
+                option.textContent = c.calles;
+                selectCalle.appendChild(option);
+            });
+        })
+        .catch(err => {
+            console.error('Error en fetch de calles:', err);
+        });
+    }
+
+    /**
+     * Aplica todos los filtros
+     */
+    function applyFilters() {
+        const params = new URLSearchParams(window.location.search);
+        
+        // Vista y fecha
+        params.set('vista', CONFIG.vista);
+        params.set('fecha_ref', CONFIG.fecha_ref);
+        
+        // Tipo de vía
+        const tipoVia = document.getElementById('tipo_via').value;
+        if (tipoVia) {
+            params.set('id_tipo_via', tipoVia);
+        } else {
+            params.delete('id_tipo_via');
+        }
+        
+        // Calle
+        const calle = document.getElementById('calle').value;
+        if (calle) {
+            params.set('id_calle', calle);
+        } else {
+            params.delete('id_calle');
+        }
+        
+        // Tipos de evento
+        params.delete('codigos_tipo');
+        const checkboxes = document.querySelectorAll('.tipo-evento-check:checked');
+        checkboxes.forEach(cb => {
+            params.append('codigos_tipo', cb.value);
+        });
+        
+        window.location.search = params.toString();
+    }
+</script>
+
+</body>
+</html>

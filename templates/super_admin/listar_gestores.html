@@ -1,0 +1,266 @@
+{# templates/super_admin/listar_gestores.html #}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Gestores – Super Admin</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    :root {
+      --primary: #1e3c72;
+      --primary-dark: #162a4d;
+      --bg: #0f172a;
+      --card-bg: #ffffff;
+      --text-main: #0f172a;
+      --text-muted: #6b7280;
+      --border-soft: #e5e7eb;
+      --radius-lg: 18px;
+      --radius-md: 10px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: radial-gradient(circle at top left, #1e40af 0, #0f172a 40%, #020617 100%);
+      color: #fff;
+    }
+    .app-shell {
+      max-width: 1000px;
+      margin: 0 auto;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding: 8px;
+    }
+    .app-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .app-title h1 {
+      margin: 0;
+      font-size: 1.25rem;
+    }
+    .app-title span {
+      font-size: 0.8rem;
+      color: #cbd5f5;
+    }
+    .user-pill {
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: rgba(15,23,42,0.6);
+      border: 1px solid rgba(148,163,184,0.7);
+      font-size: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .user-badge {
+      width: 20px;
+      height: 20px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+    }
+    .app-content {
+      background: rgba(15,23,42,0.95);
+      border-radius: 18px;
+      padding: 12px;
+      box-shadow: 0 16px 30px rgba(15,23,42,0.8);
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    .section-header h2 {
+      margin: 0;
+      font-size: 1rem;
+    }
+    .section-header small {
+      color: #9ca3af;
+      font-size: 0.75rem;
+    }
+    .toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+      font-size: 0.8rem;
+    }
+    .toolbar a {
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: #e5e7eb;
+      color: #111827;
+      text-decoration: none;
+      font-size: 0.78rem;
+    }
+    .toolbar a:hover {
+      background: #d1d5db;
+    }
+    .table-wrapper {
+      background: #020617;
+      border-radius: 12px;
+      padding: 8px;
+      border: 1px solid rgba(148,163,184,0.3);
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.78rem;
+    }
+    thead {
+      background: rgba(15,23,42,0.9);
+      color: #e5e7eb;
+    }
+    th, td {
+      padding: 6px 8px;
+      border-bottom: 1px solid rgba(148,163,184,0.2);
+      text-align: left;
+      white-space: nowrap;
+    }
+    tbody tr:hover {
+      background: rgba(15,23,42,0.5);
+    }
+    .badge-activo {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 6px;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      background: rgba(22,163,74,0.15);
+      color: #4ade80;
+    }
+    .badge-inactivo {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 6px;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      background: rgba(220,38,38,0.15);
+      color: #fca5a5;
+    }
+    .actions {
+      display: flex;
+      gap: 4px;
+    }
+    .btn-link {
+      padding: 2px 6px;
+      border-radius: 999px;
+      border: none;
+      font-size: 0.7rem;
+      cursor: pointer;
+      text-decoration: none;
+      background: #e5e7eb;
+      color: #111827;
+    }
+    .btn-link:hover {
+      background: #d1d5db;
+    }
+    .app-footer {
+      margin-top: 8px;
+      font-size: 0.7rem;
+      color: #9ca3af;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+<div class="app-shell">
+
+  <!-- 🧱 CABECERA -->
+  <header class="app-header">
+    <div class="app-title">
+      <h1>Gestores</h1>
+      <span>Listado de gestores (bd_tbl_comunes)</span>
+    </div>
+    <div class="user-pill">
+      <div class="user-badge">SA</div>
+      <span>Super Admin</span>
+    </div>
+  </header>
+
+  <!-- 🎛 CONTENIDO -->
+  <main class="app-content">
+    <div class="section-header">
+      <h2>Gestores registrados</h2>
+      <small>Total: {{ gestores|length }}</small>
+    </div>
+
+    <!-- 🔧 Barra superior: volver + nuevo -->
+    <div class="toolbar">
+      <a href="{{ url_for('super_admin_bp.super_admin') }}">⬅ Volver al panel</a>
+      <a href="{{ url_for('super_admin_bp.nuevo_gestor') }}">➕ Nuevo gestor</a>
+    </div>
+
+    <!-- 📋 Tabla de gestores -->
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Nombre completo</th>
+            <th>Email</th>
+            <th>DNI</th>
+            <th>Teléfono</th>
+            <th>Nº profesional</th>
+            <th>Activo</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for g in gestores %}
+          <tr>
+            <td>{{ g.idtbl_gestores }}</td>
+            <td>{{ g.nombre }} {{ g.apellido1 }} {{ g.apellido2 }}</td>
+            <td>{{ g.email }}</td>
+            <td>{{ g.DNI }}</td>
+            <td>{{ g.telefono }}</td>
+            <td>{{ g.numero_profesional }}</td>
+            <td>
+              {% if g.activo %}
+                <span class="badge-activo">Activo</span>
+              {% else %}
+                <span class="badge-inactivo">Inactivo</span>
+              {% endif %}
+            </td>
+
+            <!-- 🎯 ACCIONES: aquí va el botón Editar con url_for -->
+            <td>
+              <div class="actions">
+                <button class="btn-link" type="button"
+                        onclick="window.location.href='{{ url_for('super_admin_bp.editar_gestor', gestor_id=g.idtbl_gestores) }}'">
+                  ✏️ Editar
+                </button>
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <footer class="app-footer">
+    Gestión de gestores – bd_tbl_comunes
+  </footer>
+
+</div>
+</body>
+</html>
+
+</html>

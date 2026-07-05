@@ -1,0 +1,136 @@
+{# =============================================================================
+   templates/gestores/index.html
+   LISTADO DE GESTORES · CON HERENCIA DE base.html
+   -----------------------------------------------------------------------------
+   ▸ Muestra tabla de gestores (acceso restringido superadmin/gestores)
+   ▸ Botón "Nuevo / Buscar" arriba
+   ▸ Acciones por fila: Editar ✏️ · Eliminar 🗑️
+   ▸ Botón abajo para volver al panel de super admin
+   ============================================================================= #}
+
+{% extends "base.html" %}
+
+{# 🏷️ SECCIÓN 1 · TÍTULO DE LA PESTAÑA #}
+{% block title %}Gestores - Listado{% endblock %}
+
+{# 📦 SECCIÓN 2 · CONTENIDO PRINCIPAL #}
+{% block content %}
+
+  {# 🎨 2.1 · ESTILOS LIGEROS PARA LA TABLA Y BOTONES #}
+  <style>
+    .gestores-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    .gestores-title {
+      margin: 0;
+      font-size: 1.4rem;
+    }
+    .gestores-actions-top {
+      display: flex;
+      gap: .5rem;
+      flex-wrap: wrap;
+    }
+    .tabla-gestores {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .9rem;
+    }
+    .tabla-gestores th,
+    .tabla-gestores td {
+      border: 1px solid #dee2e6;
+      padding: .4rem .6rem;
+    }
+    .tabla-gestores th {
+      background-color: #f8f9fa;
+    }
+    .btn-sm {
+      font-size: .8rem;
+      padding: .25rem .5rem;
+    }
+    .gestores-footer-actions {
+      margin-top: 1rem;
+      display: flex;
+      justify-content: flex-end;
+      gap: .5rem;
+      flex-wrap: wrap;
+    }
+  </style>
+
+  {# 🧱 2.2 · CABECERA DEL MÓDULO #}
+  <div class="gestores-header">
+    <h2 class="gestores-title">👨‍💼 Listado de Gestores</h2>
+    <div class="gestores-actions-top">
+      {# 🔍 Botón BUSCAR gestores #}
+      <a href="{{ url_for('gestores_bp.buscar_gestores') }}"
+         class="btn btn-outline-secondary btn-sm">
+        🔍 Buscar
+      </a>
+      {# ➕ Botón NUEVO gestor #}
+      <a href="{{ url_for('gestores_bp.nuevo_gestor') }}"
+         class="btn btn-success btn-sm">
+        ➕ Nuevo gestor
+      </a>
+    </div>
+  </div>
+
+  {# 📋 2.3 · TABLA DE GESTORES #}
+  <div class="table-responsive">
+    <table class="tabla-gestores">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Nombre / Razón social</th>
+          <th>Email</th>
+          <th style="width: 140px;">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for g in gestores %}
+        <tr>
+          <td>{{ g.idtbl_gestores }}</td>
+          <td>{{ g.nombre_razon_social }}</td>
+          <td>{{ g.email }}</td>
+          <td>
+            {# ✏️ EDITAR: pasa el ID como parámetro de URL #}
+            <a href="{{ url_for('gestores_bp.editar_gestor',
+                                id_gestor=g.idtbl_gestores) }}"
+               class="btn btn-primary btn-sm">
+              ✏️ Editar
+            </a>
+
+            {# 🗑️ ELIMINAR: se recomienda POST → usar pequeño form inline #}
+            <form action="{{ url_for('gestores_bp.eliminar_gestor',
+                                     id_gestor=g.idtbl_gestores) }}"
+                  method="post"
+                  style="display:inline;">
+              <button type="submit"
+                      class="btn btn-danger btn-sm"
+                      onclick="return confirm('¿Eliminar este gestor?');">
+                🗑️ Eliminar
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="4" class="text-center">
+            No hay gestores registrados.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {# 🔁 2.4 · BOTONES DE PIE (VOLVER AL PANEL SUPER ADMIN) #}
+  <div class="gestores-footer-actions">
+    <a href="{{ url_for('super_admin_bp.super_admin') }}"
+       class="btn btn-outline-secondary btn-sm">
+      ⬅️ Volver al panel Super Admin
+    </a>
+  </div>
+
+{% endblock %}

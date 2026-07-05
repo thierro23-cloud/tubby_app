@@ -1,0 +1,76 @@
+{# ============================================================================ #}
+{#                                                                              #}
+{#  🧭 SELECTOR DINÁMICO DE DIRECCIÓN                                           #}
+{#  ---------------------------------------------------------------------------- #}
+{#  ✔ Reutilizable en cualquier formulario                                     #}
+{#  ✔ Selectores dependientes dinámicos                                        #}
+{#  ✔ Compatible con edición                                                    #}
+{#                                                                              #}
+{#  🔐 Edición protegida visualmente por rol                                   #}
+{#                                                                              #}
+{#  USO:                                                                        #}
+{#     {% include "helpers_vias/_selector_direccion_dinamico.html" %}          #}
+{# ============================================================================ #}
+
+{# ======================== 🔐 CONTROL DE PERMISOS =========================== #}
+{% set puede_editar = current_user.rol in ['super_admin', 'gestor'] %}
+{# ============================================================================ #}
+
+
+{# ============================================================================ #}
+{# 🟦 SECCIÓN 1 · PROVINCIA                                                     #}
+{# ============================================================================ #}
+<div class="mb-2">
+
+    <label class="form-label small">🌍 Provincia</label>
+
+    <select id="provincia_select"
+            class="form-select form-select-sm"
+            {% if not puede_editar %} disabled {% endif %}>
+        <option value="">-- Seleccionar provincia --</option>
+
+        {% for prov in provincias %}
+            <option value="{{ prov.id }}">{{ prov.nombre }}</option>
+        {% endfor %}
+
+    </select>
+</div>
+
+
+{# ============================================================================ #}
+{# 🟧 SECCIÓN 2 · MUNICIPIO (DEPENDIENTE)                                       #}
+{# ============================================================================ #}
+<div class="mb-2">
+
+    <label class="form-label small">🏘️ Municipio</label>
+
+    <select id="municipio_select"
+            class="form-select form-select-sm"
+            disabled>
+        <option value="">-- Seleccionar municipio --</option>
+    </select>
+
+</div>
+
+
+{# ============================================================================ #}
+{# 🟥 SECCIÓN 3 · CALLE (DEPENDIENTE)                                           #}
+{# ============================================================================ #}
+<div class="mb-2">
+
+    <label class="form-label small">🚏 Calle</label>
+
+    <select id="calle_select"
+            name="idtbl_calles"
+            class="form-select form-select-sm"
+            disabled>
+        <option value="">-- Seleccionar calle --</option>
+    </select>
+
+</div>
+
+
+{# ============================================================================ #}
+{# 📜 SECCIÓN 4 · SCRIPT JS (CARGA DINÁMICA)                                   #}
+{# ============================================================================ #}
+<script src="{{ url_for('static', filename='js/helpers_vias_dinamico.js') }}"></script>

@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container mt-4">
+
+    <h2>🚀 Crear elemento</h2>
+
+    <form method="POST">
+
+        <div class="mb-3">
+            <label>Tipo</label>
+            <select name="tipo" id="tipo" class="form-select">
+                <option value="panel">Panel</option>
+                <option value="modulo">Módulo</option>
+                <option value="btn">Botón</option>
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label>Nombre</label>
+            <input type="text" name="nombre" class="form-control" required>
+        </div>
+
+        <div class="mb-3" id="modulo_div" style="display:none;">
+            <label>Módulo (solo botón)</label>
+            <input type="text" name="modulo" class="form-control">
+        </div>
+
+        <button class="btn btn-dark">Crear</button>
+
+    </form>
+
+</div>
+
+<script>
+document.getElementById("tipo").addEventListener("change", function() {
+    document.getElementById("modulo_div").style.display =
+        this.value === "btn" ? "block" : "none";
+});
+</script>
+
+{% endblock %}

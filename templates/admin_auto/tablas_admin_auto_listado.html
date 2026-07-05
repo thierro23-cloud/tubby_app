@@ -1,0 +1,198 @@
+{# =============================================================================
+   📋 ADMIN AUTO · LISTADO DINÁMICO
+   Archivo: templates/admin_auto/tablas_admin_auto_listado.html
+   =============================================================================
+   FUNCIÓN DE ESTA PANTALLA
+   ------------------------
+   Muestra un listado genérico (tabla HTML) de la tabla indicada por:
+
+     - schema : nombre del esquema/base de datos
+     - tabla  : nombre de la tabla dentro de ese esquema
+
+   Esta plantilla se usa cuando el super_admin pulsa:
+     📋 "Listar" en el selector de tablas.
+
+   Recibe desde tablas_admin_auto_bp.tablas_admin_auto_listado:
+     - schema    : string
+     - tabla     : string
+     - columnas  : lista de nombres de columna
+     - datos     : lista de dicts (cada dict representa una fila)
+     - q         : texto de búsqueda (todavía no aplicado en SQL)
+============================================================================= #}
+
+{% extends "base.html" %}
+
+{% block title %}Listado · {{ schema }}.{{ tabla }}{% endblock %}
+
+{% block content %}
+
+{# ============================================================================
+   🎨 ESTILOS ESPECÍFICOS PARA EL LISTADO
+   ----------------------------------------------------------------------------
+   - Fondo más claro que el selector, para que la vista de listado sea
+     más "tranquila" visualmente.
+   - Usa tarjetas suaves y tabla Bootstrap.
+============================================================================ #}
+<style>
+  /* Fondo general suave en tonos gris-azulados */
+  body {
+    background: linear-gradient(145deg, #e5e7eb 0%, #d1d5db 40%, #e5e7eb 100%);
+    color: #111827;
+  }
+
+  .card-listado {
+    border-radius: 0.75rem;
+    border: 1px solid rgba(148, 163, 184, 0.4);
+    background: #f9fafb;
+    box-shadow: 0 14px 24px rgba(15, 23, 42, 0.18);
+  }
+
+  .card-listado-header {
+    border-bottom: 1px solid rgba(148, 163, 184, 0.35);
+    padding: 0.9rem 1.2rem;
+    background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+  }
+
+  .badge-schema-soft {
+    background: rgba(59, 130, 246, 0.08);
+    color: #1d4ed8;
+    border-radius: 999px;
+    padding: 0.2rem 0.7rem;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .table thead th {
+    background-color: #111827;
+    color: #f9fafb;
+    border-color: #1f2937;
+  }
+
+  .table tbody tr:nth-child(even) {
+    background-color: #f3f4f6;
+  }
+
+  .table-hover tbody tr:hover {
+    background-color: #e5e7eb;
+  }
+
+  .pill-schema-tabla {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    background-color: #e0f2fe;
+    color: #1d4ed8;
+    font-size: 0.8rem;
+  }
+
+  .pill-schema-tabla code {
+    background: transparent;
+    padding: 0;
+    font-size: 0.8rem;
+  }
+
+  .search-input-listado {
+    max-width: 260px;
+  }
+</style>
+
+<div class="container py-4">
+
+  {# --------------------------------------------------------------------------
+     CABECERA DEL LISTADO
+     ---------------------------------------------------------------------------
+     - Muestra el título "Listado dinámico".
+     - Indica qué tabla se está listando (schema.tabla).
+     - Ofrece un botón para volver al selector.
+  --------------------------------------------------------------------------- #}
+  <div class="row justify-content-center mb-3">
+    <div class="col-lg-11">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <h3 class="mb-1">Listado dinámico</h3>
+          <div class="pill-schema-tabla">
+            <span>Tabla:</span>
+            <code>{{ schema }}.{{ tabla }}</code>
+          </div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <span class="badge-schema-soft">Solo rol: super_admin</span>
+          <a href="{{ url_for('btn_tablas_admin_auto_bp.btn_tablas_admin_auto') }}"
+             class="btn btn-outline-secondary btn-sm">
+            ⬅ Volver al selector de tablas
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# --------------------------------------------------------------------------
+     TARJETA CON EL LISTADO
+  --------------------------------------------------------------------------- #}
+  <div class="row justify-content-center">
+    <div class="col-lg-11">
+      <div class="card card-listado">
+
+        <div class="card-listado-header d-flex justify-content-between align-items-center">
+          <div>
+            <h6 class="mb-0">Registros (primeros 50)</h6>
+            <small class="text-muted">
+              Vista genérica de datos. Para filtros avanzados se puede extender este módulo.
+            </small>
+          </div>
+          <form class="d-flex gap-1" method="get">
+            {# Campo de búsqueda (de momento no se aplica al SQL, solo lo preparamos) #}
+            <input type="hidden" name="schema" value="{{ schema }}">
+            <input type="hidden" name="tabla" value="{{ tabla }}">
+            <input type="text"
+                   name="q"
+                   value="{{ q }}"
+                   class="form-control form-control-sm search-input-listado"
+                   placeholder="Filtrar (pendiente de lógica SQL)">
+            <button type="submit" class="btn btn-sm btn-outline-primary">
+              🔍
+            </button>
+          </form>
+        </div>
+
+        <div class="card-body p-2">
+
+          {% if datos %}
+            <div class="table-responsive">
+              <table class="table table-sm table-striped table-hover align-middle mb-0">
+                <thead>
+                  <tr>
+                    {% for col in columnas %}
+                      <th scope="col">{{ col }}</th>
+                    {% endfor %}
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for fila in datos %}
+                    <tr>
+                      {% for col in columnas %}
+                        <td>{{ fila[col] }}</td>
+                      {% endfor %}
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% else %}
+            <p class="text-muted mb-0 p-3">
+              No hay datos que mostrar (la consulta devolvió 0 filas).
+            </p>
+          {% endif %}
+
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div> <!-- container -->
+
+{% endblock %}

@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<style>
+.page-upload {
+  max-width: 720px;
+  margin: 20px auto;
+  padding: 16px 20px;
+  border-radius: 12px;
+  background: #f9fafb;
+  box-shadow:
+    0 18px 40px rgba(15,23,42,0.09),
+    0 0 0 1px rgba(148,163,184,0.25);
+  border: 1px solid rgba(148,163,184,0.4);
+}
+.page-upload h1 {
+  margin-top: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.page-upload p {
+  margin: 4px 0 12px;
+  font-size: 13px;
+  color: #4b5563;
+}
+.upload-section {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1px dashed rgba(148,163,184,0.7);
+}
+label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: #6b7280;
+  display: block;
+  margin-bottom: 4px;
+}
+input[type="file"] {
+  display: block;
+  width: 100%;
+  padding: 6px 8px;
+  font-size: 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(148,163,184,0.8);
+  background: #f9fafb;
+}
+.btn-main {
+  appearance: none;
+  border: none;
+  border-radius: 999px;
+  padding: 6px 16px;
+  margin-top: 10px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  background: linear-gradient(135deg, #2563eb, #0ea5e9);
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow:
+    0 8px 18px rgba(37,99,235,0.45),
+    0 0 0 1px rgba(30,64,175,0.8);
+}
+.btn-main:hover {
+  background: linear-gradient(135deg, #1d4ed8, #0284c7);
+}
+.info-box,
+.error-box {
+  margin-top: 12px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+}
+.info-box {
+  background: #ecfdf5;
+  border: 1px solid #6ee7b7;
+  color: #065f46;
+}
+.error-box {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+}
+.result-box {
+  margin-top: 12px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #f8fafc;
+  border: 1px solid rgba(148,163,184,0.6);
+  font-size: 12px;
+  color: #111827;
+}
+.result-box ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
+}
+</style>
+
+<div class="page-upload">
+  <h1>📁 Importar portales con coordenadas</h1>
+  <p>
+    Sube un archivo CSV de portales (idtbl_calles, número_portal, latitud, longitud, ...)
+    para guardarlos en <code>tbl_calles_portales_geo</code>.
+  </p>
+
+  {# Mensajes del backend, si los pasas en el contexto #}
+  {% if error %}
+    <div class="error-box">
+      {{ error }}
+    </div>
+  {% endif %}
+
+  {% if info %}
+    <div class="info-box">
+      {{ info }}
+    </div>
+  {% endif %}
+
+  <div class="upload-section">
+    <form method="POST"
+          action="{{ url_for('calles_portales_geo_bp.subir_csv_portales') }}"
+          enctype="multipart/form-data">
+
+      <label for="archivo_csv">Archivo CSV de portales</label>
+      <input id="archivo_csv"
+             type="file"
+             name="archivo_csv"
+             accept=".csv"
+             required>
+
+      <button type="submit" class="btn-main">
+        ⬆ Subir e importar
+      </button>
+    </form>
+  </div>
+
+  {# Opcional: resumen de la última importación (rellenar en la vista) #}
+  {% if resumen %}
+    <div class="result-box">
+      <strong>Resultado de la importación:</strong>
+      <ul>
+        <li>Filas leídas: {{ resumen.filas_leidas }}</li>
+        <li>Filas insertadas: {{ resumen.insertadas }}</li>
+        <li>Filas actualizadas: {{ resumen.actualizadas }}</li>
+        <li>Filas con error: {{ resumen.errores }}</li>
+      </ul>
+    </div>
+  {% endif %}
+</div>
+
+{% endblock %}

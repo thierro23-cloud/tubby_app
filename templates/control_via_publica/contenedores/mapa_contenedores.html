@@ -1,0 +1,354 @@
+{# =============================================================================
+   🌐 PLANTILLA: mapa_contenedores.html
+   =============================================================================
+
+   SISTEMA DE VISUALIZACIÓN DE CONTENEDORES EN MAPA
+
+   Esta plantilla genera un mapa interactivo utilizando la librería
+   Leaflet.js.
+
+   Leaflet.js es una librería JavaScript especializada en crear mapas
+   interactivos en aplicaciones web.
+
+   El mapa utiliza como base cartográfica:
+
+   OpenStreetMap (mapa libre y gratuito).
+
+   =============================================================================
+   FUNCIONALIDADES PRINCIPALES
+   =============================================================================
+
+   🗺 Visualización de contenedores activos
+   📦 Iconos diferenciados según calidad del GPS
+   🖱 Posibilidad de mover contenedores manualmente
+   💾 Guardado automático de nuevas coordenadas
+
+   =============================================================================
+   SIGNIFICADO DE LOS ICONOS
+   =============================================================================
+
+   🟢 contenedor_verde
+      → posición fiable (GPS real o ajustado manualmente)
+
+   🔴 contenedor_rojo
+      → posición aproximada (calculada desde dirección)
+
+   =============================================================================
+   ÍNDICE DE LA PLANTILLA
+   =============================================================================
+
+   1️⃣ HERENCIA DE LA PLANTILLA BASE
+   2️⃣ CARGA DE LIBRERÍAS EXTERNAS
+   3️⃣ ESTILOS DEL MAPA
+   4️⃣ CONTENEDOR DEL MAPA
+   5️⃣ CREACIÓN DEL MAPA
+   6️⃣ CAPA BASE DEL MAPA
+   7️⃣ CONFIGURACIÓN DE ICONOS
+   8️⃣ CARGA DE DATOS DE CONTENEDORES
+   9️⃣ CREACIÓN DE MARCADORES
+   🔟 EVENTO DRAGEND (arrastre finalizado)
+   1️⃣1️⃣ GUARDADO DE NUEVAS COORDENADAS
+
+   =============================================================================
+#}
+
+
+
+{# =============================================================================
+   1️⃣ HERENCIA DE PLANTILLA BASE
+   ============================================================================= #}
+
+{% extends "base.html" %}
+
+<div class="container-fluid mt-3">
+
+  <div class="d-flex justify-content-between align-items-center mb-2">
+    <h1 class="h5 mb-0">🗺️ Mapa de contenedores (aprox. por calles)</h1>
+    <button type="button"
+            class="btn btn-outline-secondary btn-sm"
+            onclick="history.back()">
+      Volver a la pantalla anterior
+    </button>
+  </div>
+
+  {% if error %}
+    <div class="alert alert-danger alert-sm">{{ error }}</div>
+  {% endif %}
+
+  <div class="mb-2 small text-muted">
+    Geocodificación basada en dirección ({{ contenedores|length }} contenedores).
+  </div>
+
+  <div id="mapa_contenedores"></div>
+
+</div>
+
+
+{# =============================================================================
+   2️⃣ CARGA DE LIBRERÍAS EXTERNAS
+   =============================================================================
+
+   Librería Leaflet
+
+   Leaflet (librería de mapas interactivos) permite crear mapas dinámicos
+   utilizando JavaScript.
+#}
+
+<link
+rel="stylesheet"
+href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+/>
+
+<script
+src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+</script>
+
+
+
+{% block content %}
+
+
+
+{# =============================================================================
+   3️⃣ ESTILOS DEL MAPA
+   =============================================================================
+
+   CSS (Cascading Style Sheets / hojas de estilo) se utiliza para controlar
+   el aspecto visual del mapa.
+#}
+
+<style>
+
+#mapa_contenedores{
+
+height:80vh;
+
+border-radius:6px;
+
+border:1px solid #ccc;
+
+}
+
+</style>
+
+
+
+{# =============================================================================
+   4️⃣ CONTENEDOR DEL MAPA
+   =============================================================================
+
+   El mapa se renderiza dentro de este div.
+
+   "div" (division) es un contenedor HTML utilizado para agrupar contenido.
+#}
+
+<div class="container-fluid mt-3">
+
+<h1 class="h5 mb-3">
+
+🗺️ Mapa de contenedores activos
+
+</h1>
+
+<div id="mapa_contenedores"></div>
+
+</div>
+
+
+
+{# =============================================================================
+   5️⃣ CREACIÓN DEL MAPA
+   =============================================================================
+
+   JavaScript crea el mapa utilizando Leaflet.
+
+   setView()
+   significa establecer la vista inicial del mapa.
+
+   Coordenadas utilizadas:
+   📍 Ávila
+#}
+
+<script>
+
+var mapa = L.map('mapa_contenedores').setView(
+[
+{{ centro_lat }},
+{{ centro_lon }}
+],
+13
+);
+
+
+
+{# =============================================================================
+   6️⃣ CAPA BASE DEL MAPA
+   =============================================================================
+
+   tileLayer (capa de teselas)
+
+   Las teselas (tiles) son pequeñas imágenes que forman el mapa.
+#}
+
+L.tileLayer(
+'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+{
+maxZoom:19
+}
+).addTo(mapa);
+
+
+
+{# =============================================================================
+   7️⃣ CONFIGURACIÓN DE ICONOS
+   =============================================================================
+
+   icon (icono)
+
+   Representación gráfica del contenedor en el mapa.
+#}
+
+var iconoVerde = L.icon({
+
+iconUrl:"/static/imagen/contenedor_verde.png",
+
+iconSize:[32,32],
+
+iconAnchor:[16,32]
+
+});
+
+
+var iconoRojo = L.icon({
+
+iconUrl:"/static/imagen/contenedor_rojo.png",
+
+iconSize:[32,32],
+
+iconAnchor:[16,32]
+
+});
+
+
+
+{# =============================================================================
+   8️⃣ CARGA DE DATOS DE CONTENEDORES
+   =============================================================================
+
+   tojson
+
+   Convierte los datos enviados desde Flask en un objeto JavaScript.
+#}
+
+var contenedores = {{ contenedores | tojson }};
+
+
+
+{# =============================================================================
+   9️⃣ CREACIÓN DE MARCADORES
+   =============================================================================
+
+   marker (marcador)
+
+   Un marcador representa un punto en el mapa.
+#}
+
+contenedores.forEach(function(c){
+
+if(!c.latitud || !c.longitud) return;
+
+
+var icono = c.gps_aproximado ? iconoRojo : iconoVerde;
+
+
+var marcador = L.marker(
+[
+c.latitud,
+c.longitud
+],
+{
+icon:icono,
+draggable:true
+}
+).addTo(mapa);
+
+
+
+{# Popup (ventana emergente) #}
+
+marcador.bindPopup(
+
+"<b>Solicitud:</b> "+c.numero_solicitud+
+"<br><b>Proveedor:</b> "+c.proveedor+
+"<br><b>Dirección:</b> "+c.tipos_de_vias+" "+c.calles+
+"<br><b>Dimensión:</b> "+c.dimension
+
+);
+
+
+
+{# =============================================================================
+   🔟 EVENTO DRAGEND
+   =============================================================================
+
+   dragend (arrastre finalizado)
+
+   Este evento se ejecuta cuando el usuario termina de mover el marcador.
+#}
+
+marcador.on("dragend",function(e){
+
+var posicion = marcador.getLatLng();
+
+
+
+{# =============================================================================
+   1️⃣1️⃣ GUARDADO DE NUEVAS COORDENADAS
+   =============================================================================
+
+   fetch (petición HTTP desde JavaScript)
+
+   Envía los datos al backend para guardar las nuevas coordenadas.
+#}
+
+fetch("/mapa_contenedores/actualizar_gps_contenedor",{
+
+method:"POST",
+
+headers:{
+"Content-Type":"application/json"
+},
+
+body:JSON.stringify({
+
+numero_solicitud:c.numero_solicitud,
+
+latitud:posicion.lat,
+
+longitud:posicion.lng
+
+})
+
+})
+
+.then(response => response.json())
+
+.then(data => {
+
+console.log("GPS actualizado correctamente");
+
+});
+
+
+
+});
+
+
+
+});
+
+</script>
+
+
+
+{% endblock %}

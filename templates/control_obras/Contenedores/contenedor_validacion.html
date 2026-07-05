@@ -1,0 +1,202 @@
+<!-- =============================================================================
+🧠 FORMULARIO DE VALIDACIÓN (PRODUCCIÓN REAL)
+- Sin scroll
+- 50% pantalla
+- Colores suaves
+- Totalmente funcional con Flask
+============================================================================= -->
+
+<style>
+
+/* ================= GLOBAL ================= */
+body {
+    margin: 0;
+    font-family: Arial;
+    overflow: hidden;
+}
+
+/* ================= LAYOUT ================= */
+.layout {
+    display: flex;
+    height: 100vh;
+}
+
+/* ================= PDF ================= */
+.pdf {
+    width: 50%;
+    background: black;
+}
+
+/* ================= FORM ================= */
+.form {
+    width: 50%;
+    background: #eef3f8; /* 🎨 color suave profesional */
+    display: flex;
+    flex-direction: column;
+}
+
+/* ================= BLOQUES ================= */
+.bloque {
+    background: white;
+    margin: 5px;
+    padding: 6px;
+    border-left: 4px solid #3498db; /* 🎨 toque visual */
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+/* ================= CAMPOS ================= */
+.campo {
+    display: flex;
+    flex-direction: column;
+}
+
+.campo label {
+    font-size: 10px;
+}
+
+.campo input,
+.campo select {
+    height: 22px;
+    font-size: 11px;
+}
+
+/* tamaños reales */
+.sm { width: 110px; }
+.md { width: 160px; }
+.lg { width: 220px; }
+.csv { width: 350px; }
+
+/* ================= FOOTER ================= */
+.footer {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px;
+}
+
+button {
+    background: #3498db;
+    color: white;
+    border: none;
+    padding: 6px;
+}
+
+</style>
+
+<div class="layout">
+
+    <!-- PDF -->
+    <div class="pdf">
+        <iframe src="{{ pendiente.ruta_pdf }}" width="100%" height="100%"></iframe>
+    </div>
+
+    <!-- FORM -->
+    <form method="POST" class="form">
+
+        <!-- DOCUMENTO -->
+        <div class="bloque">
+            <div class="campo lg">
+                <label>Archivo</label>
+                <input value="{{ pendiente.nombre_pdf }}" readonly>
+            </div>
+        </div>
+
+        <!-- PROVEEDOR -->
+        <div class="bloque">
+
+            <div class="campo lg">
+                <label>Proveedor</label>
+                <select name="id_proveedor">
+                    {% for p in proveedores %}
+                    <option value="{{ p.idtbl_proveedores }}">{{ p.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="campo md">
+                <label>Nombre</label>
+                <input name="nombre_solicitante">
+            </div>
+
+            <div class="campo sm">
+                <label>NIF</label>
+                <input name="nif">
+            </div>
+
+        </div>
+
+        <!-- UBICACIÓN -->
+        <div class="bloque">
+
+            <div class="campo sm">
+                <label>Tipo vía</label>
+                <select name="idtbl_tipos_de_vias">
+                    {% for t in tipos_vias %}
+                    <option value="{{ t.idtbl_tipos_de_vias }}">{{ t.tipos_de_vias }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="campo lg">
+                <label>Calle</label>
+                <select name="idtbl_calles">
+                    {% for c in calles %}
+                    <option value="{{ c.idtbl_calles }}">{{ c.calles }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="campo sm">
+                <label>Lat</label>
+                <input name="latitud">
+            </div>
+
+            <div class="campo sm">
+                <label>Lon</label>
+                <input name="longitud">
+            </div>
+
+        </div>
+
+        <!-- ADMIN -->
+        <div class="bloque">
+
+            <div class="campo sm">
+                <label>Expediente</label>
+                <input name="numero_expediente">
+            </div>
+
+            <div class="campo sm">
+                <label>Solicitud</label>
+                <input name="numero_solicitud">
+            </div>
+
+            <div class="campo csv">
+                <label>CSV</label>
+                <input name="csv">
+            </div>
+
+        </div>
+
+        <!-- FOOTER (FLECHAS FUNCIONANDO) -->
+        <div class="footer">
+
+            <!-- ⬅ ANTERIOR -->
+            <a href="?i={{ indice - 1 }}">
+                <button type="button">⬅</button>
+            </a>
+
+            <!-- 💾 GUARDAR -->
+            <button type="submit">Guardar</button>
+
+            <!-- ➡ SIGUIENTE -->
+            <a href="?i={{ indice + 1 }}">
+                <button type="button">➡</button>
+            </a>
+
+        </div>
+
+    </form>
+
+</div>

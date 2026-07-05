@@ -1,0 +1,319 @@
+{# =============================================================================
+🔐 WIDGET DE PERMISOS POR BASE DE DATOS Y TABLA · SUPER ADMIN
+=============================================================================
+
+🎯 QUÉ HACE ESTE CÓDIGO:
+Este bloque permite gestionar permisos de acceso por rol a nivel de:
+👉 Base de datos (BD)
+👉 Tabla concreta dentro de esa BD
+
+✔ Flujo completo:
+1. Seleccionas una BD
+2. Se cargan sus tablas
+3. Seleccionas una tabla
+4. Se cargan sus permisos
+5. Marcas roles (checkboxes)
+6. Guardas → backend persiste permisos
+
+-------------------------------------------------------------------------------
+🧠 DE DÓNDE VIENE (BLUEPRINT):
+
+👉 Blueprint principal:
+   super_admin_bp
+
+👉 Ruta:
+   super_admin_bp.super_admin
+
+👉 Este mismo endpoint:
+   - Renderiza la vista
+   - Procesa el POST (guardar permisos)
+
+-------------------------------------------------------------------------------
+📦 VARIABLES QUE VIENEN DEL BACKEND:
+
+- bases_datos → lista de BDs
+- bd_seleccionada → BD actual
+- tablas → tablas de esa BD
+- tabla_seleccionada → tabla actual
+- permisos → dict con permisos activos
+
+Ejemplo:
+permisos = {
+  "gestor": True,
+  "policia": False
+}
+
+============================================================================= #}
+
+
+
+{# ======================= 0️⃣ CONTENEDOR VISUAL DEL WIDGET ================= #}
+
+<div class="permiso-widget">
+{# 🔹 Contenedor general del widget de permisos
+   🔹 Se le aplicará ancho/alto y estilo propio vía CSS #}
+
+
+
+  {# ======================= 1️⃣ CABECERA DEL BLOQUE ======================== #}
+
+  {# 👉 Simple título visual del widget #}
+  <h6 class="mb-2">🔐 Permisos por BD y tabla</h6>
+
+
+
+  {# ======================= 2️⃣ FORMULARIO PRINCIPAL ======================= #}
+
+  {# 👉 Todo el sistema funciona dentro de este form #}
+  <form method="post" action="{{ url_for('super_admin_bp.super_admin') }}">
+  {# 🔹 method="post" → envía datos al backend #}
+  {# 🔹 action → apunta al blueprint super_admin_bp #}
+
+
+
+    {# -----------------------------------------------------------------------
+    2.1 ACCIÓN OCULTA
+    -------------------------------------------------------------------------
+    👉 Indica al backend qué operación ejecutar
+    👉 Aquí: guardar_permisos
+    ----------------------------------------------------------------------- #}
+
+    <input type="hidden" name="accion" value="guardar_permisos">
+    {# 🔹 name="accion" → clave que leerá Flask #}
+    {# 🔹 value="guardar_permisos" → lógica backend detecta acción #}
+
+
+
+    {# ====================================================================== #}
+    {# 3️⃣ SELECCIÓN DE BASE DE DATOS                                        #}
+    {# ====================================================================== #}
+
+    <div class="mb-2">
+      {# 🔹 Contenedor del label + select de BD #}
+
+      <label class="form-label">Base de datos</label>
+      {# 🔹 Etiqueta para el select de BD #}
+
+      <select name="bd"
+              class="form-select form-select-sm"
+              onchange="this.form.submit()">
+      {# 🔹 name="bd" → nombre del campo que llega al backend #}
+      {# 🔹 class → estilos Bootstrap (select pequeño) #}
+      {# 🔹 onchange="this.form.submit()" → al cambiar BD, recarga el formulario #}
+
+        <option value="">-- seleccionar BD --</option>
+        {# 🔹 Opción por defecto, sin BD seleccionada #}
+
+        {% for bd in bases_datos %}
+        {# 🔁 Recorremos la lista de BDs que viene del backend (bases_datos) #}
+
+          <option value="{{ bd }}"
+                  {% if bd == bd_seleccionada %}selected{% endif %}>
+          {# 🔹 value → lo que se envía al backend #}
+          {# 🔹 selected → marca la BD actual al recargar la página #}
+
+            {{ bd }}
+            {# 🔹 Texto visible de la opción (nombre de la BD) #}
+          </option>
+
+        {% endfor %}
+
+      </select>
+    </div>
+
+
+
+    {# ====================================================================== #}
+    {# 4️⃣ SELECCIÓN DE TABLA (DEPENDE DE BD)                                #}
+    {# ====================================================================== #}
+
+    {% if bd_seleccionada %}
+    {# 🔹 Solo aparece si ya hay BD elegida #}
+
+      <div class="mb-2">
+        {# 🔹 Contenedor del select de tablas #}
+
+        <label class="form-label">Tabla</label>
+        {# 🔹 Etiqueta para el select de tabla #}
+
+        <select name="tabla"
+                class="form-select form-select-sm"
+                onchange="this.form.submit()">
+        {# 🔹 name="tabla" → nombre del campo de la tabla seleccionada #}
+        {# 🔹 onchange → recarga permisos al cambiar de tabla #}
+
+          <option value="">-- seleccionar tabla --</option>
+          {# 🔹 Opción por defecto sin tabla #}
+
+          {% for t in tablas %}
+          {# 🔁 Loop de tablas de la BD seleccionada #}
+
+            <option value="{{ t }}"
+                    {% if t == tabla_seleccionada %}selected{% endif %}>
+              {{ t }}
+              {# 🔹 Nombre de la tabla mostrado al usuario #}
+            </option>
+
+          {% endfor %}
+
+        </select>
+
+      </div>
+
+    {% endif %}
+
+
+
+    {# ====================================================================== #}
+    {# 5️⃣ PERMISOS POR TABLA                                                #}
+    {# ====================================================================== #}
+
+    {% if tabla_seleccionada %}
+    {# 🔹 Solo aparece si hay tabla seleccionada #}
+
+      <div class="mt-2 permiso-row">
+      {# 🔹 Contenedor de la fila de permisos (nombre tabla + checkboxes) #}
+
+
+
+        {# ---------------------------------------------------------
+        5.1 NOMBRE DE TABLA
+        ---------------------------------------------------------- #}
+        <div class="permiso-titulo">
+          {# 🔹 Muestra el nombre de la tabla actual en negrita #}
+          <b>{{ tabla_seleccionada }}</b>
+        </div>
+
+
+
+        {# ---------------------------------------------------------
+        5.2 CHECKBOXES DE ROLES
+        ---------------------------------------------------------- #}
+        <div class="permiso-opciones">
+        {# 🔹 Contenedor de todos los checkboxes de roles #}
+
+
+          {# 🔹 ROL GESTOR #}
+          <label class="permiso-pill">
+            {# 🔹 'Píldora' visual que envuelve checkbox + texto #}
+            <input type="checkbox"
+                   name="perm[gestor]"
+                   value="1"
+                   {% if permisos.get('gestor') %}checked{% endif %}>
+            {# 🔹 name="perm[gestor]" → clave en el dict perm[...] que lee el backend #}
+            {# 🔹 checked si permisos['gestor'] es True #}
+            gestor
+            {# 🔹 Texto visible del rol #}
+          </label>
+
+
+          {# 🔹 ROL POLICIA #}
+          <label class="permiso-pill">
+            <input type="checkbox"
+                   name="perm[policia]"
+                   value="1"
+                   {% if permisos.get('policia') %}checked{% endif %}>
+            {# 🔹 Checkbox para rol 'policia' #}
+            policia
+          </label>
+
+
+          {# 🔹 ROL VIGILANTES #}
+          <label class="permiso-pill">
+            <input type="checkbox"
+                   name="perm[vigilantes]"
+                   value="1"
+                   {% if permisos.get('vigilantes') %}checked{% endif %}>
+            {# 🔹 Checkbox para rol 'vigilantes' (plural, coherente con backend) #}
+            vigilantes
+          </label>
+
+
+          {# 🔹 ROL USUARIO #}
+          <label class="permiso-pill">
+            <input type="checkbox"
+                   name="perm[usuario]"
+                   value="1"
+                   {% if permisos.get('usuario') %}checked{% endif %}>
+            {# 🔹 Checkbox para rol 'usuario' #}
+            usuario
+          </label>
+
+        </div>
+      </div>
+
+
+
+      {# ==================================================================== #}
+      {# 6️⃣ BOTÓN GUARDAR                                                   #}
+      {# ==================================================================== #}
+
+      <div class="text-end mt-2">
+        {# 🔹 Contenedor alineado a la derecha para el botón #}
+        <button type="submit" class="btn btn-success btn-sm">
+          {# 🔹 type="submit" → envía el formulario al backend #}
+          💾 Guardar permisos
+        </button>
+      </div>
+
+    {% endif %}
+
+  </form>
+
+</div>
+{# 🔚 Cierre del contenedor .permiso-widget #}
+
+
+
+{# ========================================================================== #}
+{# 7️⃣ ESTILOS (UI DEL WIDGET)                                               #}
+{# ========================================================================== #}
+
+<style>
+
+  /* 🔹 Contenedor general del widget de permisos
+     - max-width: lo hace más estrecho
+     - min-height: asegura una altura aproximada de 10 cm en pantalla */
+  .permiso-widget {
+    max-width: 320px;        /* más estrecho (ajusta a tu gusto) */
+    min-height: 380px;       /* ≈ 10 cm de alto en pantalla, depende de la densidad de píxeles */
+    padding: 8px 10px;       /* espacio interno alrededor del contenido */
+    border: 1px solid #e2e8f0; /* borde gris claro alrededor del widget */
+    border-radius: 6px;      /* esquinas ligeramente redondeadas */
+    background-color: #ffffff; /* fondo blanco para destacar sobre fondos grises */
+  }
+
+  /* 🔹 Contenedor fila permisos (tabla + checkboxes) */
+  .permiso-row {
+    display: flex;                 /* usa flexbox para organizar el contenido */
+    flex-direction: column;        /* coloca título arriba y checkboxes debajo */
+    padding: 4px 0;                /* espacio vertical dentro de la fila */
+    border-bottom: 1px solid #f1f5f9; /* línea separadora inferior */
+    font-size: 12px;               /* tamaño de fuente reducido para compactar */
+  }
+
+  /* 🔹 Título tabla (nombre de la tabla) */
+  .permiso-titulo {
+    width: 100%;                   /* ocupa todo el ancho disponible */
+    margin-bottom: 4px;            /* separación con la zona de checkboxes */
+  }
+
+  /* 🔹 Zona checkboxes (contenedor de las 'píldoras') */
+  .permiso-opciones {
+    display: flex;                 /* distribuye los elementos en línea con flex */
+    gap: 6px;                      /* espacio entre cada píldora de rol */
+    flex-wrap: wrap;               /* permite que salten de línea si no caben */
+  }
+
+  /* 🔹 Estilo tipo píldora para cada rol */
+  .permiso-pill {
+    display: inline-flex;          /* contenido interno alineado en línea */
+    align-items: center;           /* centra verticalmente checkbox y texto */
+    gap: 3px;                      /* separación entre checkbox y texto */
+    padding: 2px 6px;              /* espacio interno de la píldora */
+    border-radius: 999px;          /* hace la píldora completamente redondeada */
+    background: #e5f0ff;           /* fondo azul claro */
+    border: 1px solid #bfdbfe;     /* borde azul algo más oscuro */
+  }
+
+</style>

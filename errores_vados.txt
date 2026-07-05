@@ -1,0 +1,137 @@
+detalle_errores": [
+    {
+      "NIF": "6517327R",
+      "error": "idtbl_tipos_de_vias o idtbl_calles vac\u00edo (idtbl_tipos_de_vias='', idtbl_calles='')",
+      "fila": 1635,
+      "idtbl_calles": "",
+      "idtbl_tipos_de_vias": "",
+      "numero_vado": "3019"
+    },
+    {
+      "NIF": "6550376",
+      "error": "idtbl_tipos_de_vias o idtbl_calles vac\u00edo (idtbl_tipos_de_vias='', idtbl_calles='')",
+      "fila": 2064,
+      "idtbl_calles": "",
+      "idtbl_tipos_de_vias": "",
+      "numero_vado": "3493"
+    },
+    {
+      "NIF": "70804262G",
+      "error": "idtbl_tipos_de_vias o idtbl_calles vac\u00edo (idtbl_tipos_de_vias='', idtbl_calles='')",
+      "fila": 2348,
+      "idtbl_calles": "",
+      "idtbl_tipos_de_vias": "",
+      "numero_vado": "3924"
+    },
+    {
+      "NIF": "45066988Y",
+      "error": "idtbl_tipos_de_vias o idtbl_calles vac\u00edo (idtbl_tipos_de_vias='', idtbl_calles='354')",
+      "fila": 2444,
+      "idtbl_calles": "354",
+      "idtbl_tipos_de_vias": "",
+      "numero_vado": "4030"
+    },
+    {
+      "NIF": "B05141940",
+      "error": "idtbl_tipos_de_vias o idtbl_calles vac\u00edo (idtbl_tipos_de_vias='', idtbl_calles='355')",
+      "fila": 2471,
+      "idtbl_calles": "355",
+      "idtbl_tipos_de_vias": "",
+      "numero_vado": "4071"
+    },
+    {
+      "NIF": "H05101704",
+      "error": "idtbl_tipos_de_vias o idtbl_calles vac\u00edo (idtbl_tipos_de_vias='', idtbl_calles='355')",
+      "fila": 3056,
+      "idtbl_calles": "355",
+      "idtbl_tipos_de_vias": "",
+      "numero_vado": "4712"
+    },
+    {
+      "NIF": "70816972H",
+      "error": "idtbl_tipos_de_vias o idtbl_calles vac\u00edo (idtbl_tipos_de_vias='', idtbl_calles='')",
+      "fila": 3389,
+      "idtbl_calles": "",
+      "idtbl_tipos_de_vias": "",
+      "numero_vado": "5061"
+    },
+    {
+      "NIF": "X7544019L",
+      "error": "idtbl_tipos_de_vias o idtbl_calles vac\u00edo (idtbl_tipos_de_vias='', idtbl_calles='')",
+      "fila": 3795,
+      "idtbl_calles": "",
+      "idtbl_tipos_de_vias": "",
+      "numero_vado": "5485"
+    },
+    {
+      "NIF": "B05018940",
+      "error": "idtbl_tipos_de_vias o idtbl_calles vac\u00edo (idtbl_tipos_de_vias='', idtbl_calles='')",
+      "fila": 4029,
+      "idtbl_calles": "",
+      "idtbl_tipos_de_vias": "",
+      "numero_vado": "5725"
+    },
+    {
+      "NIF": "49008589M",
+      "error": "idtbl_tipos_de_vias o idtbl_calles vac\u00edo (idtbl_tipos_de_vias='', idtbl_calles='')",
+      "fila": 4108,
+      "idtbl_calles": "",
+      "idtbl_tipos_de_vias": "",
+      "numero_vado": "5804"
+    },
+    {
+      "NIF": "6571798P",
+      "error": "idtbl_tipos_de_vias o idtbl_calles vac\u00edo (idtbl_tipos_de_vias='', idtbl_calles='')",
+      "fila": 4141,
+      "idtbl_calles": "",
+      "idtbl_tipos_de_vias": "",
+      "numero_vado": "5837"
+    },
+    {
+      "NIF": "B05018940",
+      "error": "idtbl_tipos_de_vias o idtbl_calles vac\u00edo (idtbl_tipos_de_vias='', idtbl_calles='')",
+      "fila": 4162,
+      "idtbl_calles": "",
+      "idtbl_tipos_de_vias": "",
+      "numero_vado": "5858"
+    },
+    {
+      "NIF": "06524712A",
+      "error": "idtbl_tipos_de_vias o idtbl_calles vac\u00edo (idtbl_tipos_de_vias='', idtbl_calles='')",
+      "fila": 4188,
+      "idtbl_calles": "",
+      "idtbl_tipos_de_vias": "",
+      "numero_vado": "5884"
+    },
+    {
+      "NIF": "70820169H",
+      "error": "idtbl_tipos_de_vias o idtbl_calles vac\u00edo (idtbl_tipos_de_vias='', idtbl_calles='')",
+      "fila": 4195,
+      "idtbl_calles": "",
+      "idtbl_tipos_de_vias": "",
+      "numero_vado": "5891"
+    },
+    {
+      "NIF": "06569835T",
+      "error": "idtbl_tipos_de_vias o idtbl_calles vac\u00edo (idtbl_tipos_de_vias='', idtbl_calles='')",
+      "fila": 4233,
+      "idtbl_calles": "",
+      "idtbl_tipos_de_vias": "",
+      "numero_vado": "5928"
+    },
+    {
+      "NIF": "2708958H",
+      "error": "idtbl_tipos_de_vias o idtbl_calles vac\u00edo (idtbl_tipos_de_vias='', idtbl_calles='')",
+      "fila": 4406,
+      "idtbl_calles": "",
+      "idtbl_tipos_de_vias": "",
+      "numero_vado": "6103"
+    }
+  ],
+  "errores": 16,
+  "insertados": 4428,
+  "mensaje": "Importaci\u00f3n correcta. Se han insertado las filas v\u00e1lidas.",
+  "ok": true,
+  "porcentaje_ok": 99.64,
+  "status": "ok",
+  "total_filas": 4444,

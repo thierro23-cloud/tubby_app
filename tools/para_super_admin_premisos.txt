@@ -1,0 +1,7 @@
+# =============================================================================
+# 👑 PANEL SUPER ADMIN (RUTA DIRECTA)
+# =============================================================================
+
+@super_admin_bp.route("/super_admin/")
+def panel_super_admin():
+    return render_template("super_admin/dashboard.html")

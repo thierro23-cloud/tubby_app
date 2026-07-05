@@ -1,0 +1,24 @@
+/* ============================================================
+   6️⃣ MAPS.CSS
+   ============================================================
+
+   Estilos para mapas interactivos y geolocalización.
+
+   ============================================================ */
+
+.geo-map-container {
+
+    height: 220px;
+
+    border-radius: 10px;
+
+    border: 1px solid #e5e7eb;
+
+    overflow: hidden;
+}
+
+#geo_leaflet_map {
+
+    width: 100%;
+    height: 220px;
+}

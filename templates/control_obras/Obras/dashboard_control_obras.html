@@ -1,0 +1,357 @@
+{# =============================================================================
+   📊 DASHBOARD ANALÍTICO CONTROL DE OBRAS
+   =============================================================================
+
+   ÍNDICE DEL DOCUMENTO
+   -----------------------------------------------------------------------------
+
+   1️⃣ Contenedor principal del dashboard
+   2️⃣ Cabecera y filtros de periodo
+   3️⃣ Tarjetas de estadísticas globales
+   4️⃣ Fila de gráficos principales
+   5️⃣ Segunda fila de gráficos
+   6️⃣ Tablas compactas (alertas y anomalías)
+   7️⃣ Librerías externas
+   8️⃣ Script principal del dashboard
+
+   OBJETIVO
+   -----------------------------------------------------------------------------
+
+   Mostrar toda la información del sistema de control de obras en UNA SOLA
+   pantalla sin scroll.
+
+   FUENTE DE DATOS
+   -----------------------------------------------------------------------------
+
+        /api/dashboard_obras/*
+
+   INFORMES OFICIALES
+   -----------------------------------------------------------------------------
+
+        generar_informe_control_obras.py
+
+============================================================================= #}
+
+{% extends "base.html" %}
+{% block content %}
+
+
+
+<!-- =========================================================================
+     1️⃣ CONTENEDOR PRINCIPAL
+     ========================================================================= -->
+
+<div style="height:90vh; display:flex; flex-direction:column; gap:8px;">
+
+
+
+<!-- =========================================================================
+     2️⃣ CABECERA Y FILTROS
+     ========================================================================= -->
+
+<div style="display:flex; justify-content:space-between; align-items:center">
+
+<h2 style="margin:0">📊 Control de Obras</h2>
+
+<div>
+
+<label>Año</label>
+
+<select id="anio">
+<option value="2024">2024</option>
+<option value="2025">2025</option>
+<option value="2026" selected>2026</option>
+</select>
+
+<label>Mes</label>
+
+<select id="mes">
+<option value="1">Ene</option>
+<option value="2">Feb</option>
+<option value="3">Mar</option>
+<option value="4">Abr</option>
+<option value="5">May</option>
+<option value="6">Jun</option>
+<option value="7">Jul</option>
+<option value="8">Ago</option>
+<option value="9">Sep</option>
+<option value="10">Oct</option>
+<option value="11">Nov</option>
+<option value="12">Dic</option>
+</select>
+
+<button onclick="cargar_dashboard()">Actualizar</button>
+
+</div>
+
+</div>
+
+
+
+<!-- =========================================================================
+     3️⃣ TARJETAS DE ESTADÍSTICAS
+     ========================================================================= -->
+
+<div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px">
+
+<div style="background:#f2f3f4;padding:8px">
+<div>🏗 Obras activas</div>
+<h3 id="card_obras">-</h3>
+</div>
+
+<div style="background:#f2f3f4;padding:8px">
+<div>👮 Inspecciones</div>
+<h3 id="card_inspecciones">-</h3>
+</div>
+
+<div style="background:#f2f3f4;padding:8px">
+<div>⚠ Sin inspección</div>
+<h3 id="card_alertas">-</h3>
+</div>
+
+</div>
+
+
+
+<!-- =========================================================================
+     4️⃣ FILA DE GRÁFICOS PRINCIPALES
+     ========================================================================= -->
+
+<div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px; height:30vh">
+
+<div>
+<h5>Proveedores</h5>
+<canvas id="grafico_proveedores"></canvas>
+</div>
+
+<div>
+<h5>Agentes</h5>
+<canvas id="grafico_agentes"></canvas>
+</div>
+
+<div>
+<h5>Evolución</h5>
+<canvas id="grafico_evolucion"></canvas>
+</div>
+
+</div>
+
+
+
+<!-- =========================================================================
+     5️⃣ SEGUNDA FILA DE GRÁFICOS
+     ========================================================================= -->
+
+<div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px; height:30vh">
+
+<div>
+<h5>Tipos ocupación</h5>
+<canvas id="grafico_ocupacion"></canvas>
+</div>
+
+<div>
+<h5>Calles con más obras</h5>
+<canvas id="grafico_calles"></canvas>
+</div>
+
+<div>
+<h5>Obras con más inspecciones</h5>
+<canvas id="grafico_obras"></canvas>
+</div>
+
+</div>
+
+
+
+<!-- =========================================================================
+     6️⃣ TABLAS COMPACTAS
+     ========================================================================= -->
+
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; height:18vh">
+
+<div>
+
+<h5>⚠ Sin inspección</h5>
+
+<table style="width:100%; font-size:12px">
+
+<thead>
+<tr>
+<th>ID</th>
+<th>Calle</th>
+<th>Última</th>
+</tr>
+</thead>
+
+<tbody id="tabla_alertas"></tbody>
+
+</table>
+
+</div>
+
+
+
+<div>
+
+<h5>🚨 Anomalías</h5>
+
+<table style="width:100%; font-size:12px">
+
+<thead>
+<tr>
+<th>ID</th>
+<th>Tipo</th>
+</tr>
+</thead>
+
+<tbody id="tabla_anomalias"></tbody>
+
+</table>
+
+</div>
+
+</div>
+
+
+
+</div>
+
+
+
+<!-- =========================================================================
+     7️⃣ LIBRERÍAS EXTERNAS
+     ========================================================================= -->
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+
+
+<!-- =========================================================================
+     8️⃣ SCRIPT PRINCIPAL DEL DASHBOARD
+     ========================================================================= -->
+
+<script>
+
+let graficoProveedores
+let graficoAgentes
+let graficoEvolucion
+
+
+
+async function cargar_dashboard(){
+
+let anio=document.getElementById("anio").value
+let mes=document.getElementById("mes").value
+
+
+
+/* =========================================================
+   RESUMEN GENERAL
+   ========================================================= */
+
+let r1=await fetch(`/api/dashboard_obras/resumen?anio=${anio}&mes=${mes}`)
+let resumen=await r1.json()
+
+document.getElementById("card_obras").innerText=resumen.obras
+document.getElementById("card_inspecciones").innerText=resumen.inspecciones
+
+
+
+/* =========================================================
+   PROVEEDORES
+   ========================================================= */
+
+let r2=await fetch(`/api/dashboard_obras/proveedores?anio=${anio}&mes=${mes}`)
+let proveedores=await r2.json()
+
+let labels1=proveedores.map(x=>x.proveedor)
+let valores1=proveedores.map(x=>x.inspecciones)
+
+if(graficoProveedores)graficoProveedores.destroy()
+
+graficoProveedores=new Chart(grafico_proveedores,{
+type:"bar",
+data:{labels:labels1,datasets:[{data:valores1}]},
+options:{plugins:{legend:{display:false}},maintainAspectRatio:false}
+})
+
+
+
+/* =========================================================
+   AGENTES
+   ========================================================= */
+
+let r3=await fetch(`/api/dashboard_obras/agentes?anio=${anio}&mes=${mes}`)
+let agentes=await r3.json()
+
+let labels2=agentes.map(x=>x.agente)
+let valores2=agentes.map(x=>x.inspecciones)
+
+if(graficoAgentes)graficoAgentes.destroy()
+
+graficoAgentes=new Chart(grafico_agentes,{
+type:"bar",
+data:{labels:labels2,datasets:[{data:valores2}]},
+options:{plugins:{legend:{display:false}},maintainAspectRatio:false}
+})
+
+
+
+/* =========================================================
+   ALERTAS
+   ========================================================= */
+
+let r5=await fetch(`/api/dashboard_obras/obras_sin_inspeccion`)
+let alertas=await r5.json()
+
+document.getElementById("card_alertas").innerText=alertas.length
+
+let tbody=document.getElementById("tabla_alertas")
+tbody.innerHTML=""
+
+alertas.slice(0,5).forEach(o=>{
+
+let tr=document.createElement("tr")
+
+tr.innerHTML=`
+<td>${o.idtbl_obras}</td>
+<td>${o.calle}</td>
+<td>${o.ultima_inspeccion || "-"}</td>
+`
+
+tbody.appendChild(tr)
+
+})
+
+
+
+/* =========================================================
+   ANOMALÍAS
+   ========================================================= */
+
+let r6=await fetch(`/api/dashboard_obras/anomalias`)
+let anomalias=await r6.json()
+
+let tbody2=document.getElementById("tabla_anomalias")
+tbody2.innerHTML=""
+
+anomalias.slice(0,5).forEach(a=>{
+
+let tr=document.createElement("tr")
+
+tr.innerHTML=`
+<td>${a.idtbl_obras}</td>
+<td>${a.tipo}</td>
+`
+
+tbody2.appendChild(tr)
+
+})
+
+}
+
+cargar_dashboard()
+
+</script>
+
+{% endblock %}

@@ -1,0 +1,319 @@
+{# templates/super_admin/gestor_form.html #}  {# 🗂️ Plantilla del formulario de alta/edición de gestores #}
+<!DOCTYPE html>  {# 📄 Documento HTML5 #}
+<html lang="es">  {# 🌐 Idioma del documento: español #}
+<head>  {# 🧠 Cabecera con metadatos, título y estilos #}
+  <meta charset="UTF-8">  {# 🔤 Codificación de caracteres #}
+  <title>{{ "Editar gestor" if modo == "editar" else "Nuevo gestor" }}</title>  {# 🏷️ Título dinámico según modo #}
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">  {# 📱 Responsive en móviles #}
+
+  <style>  {# 🎨 Estilos propios para este formulario #}
+    :root {  {# 🌱 Variables CSS reutilizables #}
+      --primary: #1e3a8a;          {# 🎨 Azul principal #}
+      --primary-dark: #1d2a6b;     {# 🎨 Azul oscuro (hover) #}
+      --bg: #0f172a;               {# 🎨 Fondo base oscuro #}
+      --card-bg: #ffffff;          {# 🎨 Fondo blanco para la tarjeta #}
+      --text-main: #0f172a;        {# 🎨 Texto principal oscuro #}
+      --text-muted: #6b7280;       {# 🎨 Texto secundario gris #}
+      --border-soft: #e5e7eb;      {# 🎨 Color de bordes suaves #}
+      --radius-lg: 18px;           {# 📐 Radio grande para tarjetas #}
+      --radius-md: 10px;           {# 📐 Radio medio para otros elementos #}
+    }
+    * { box-sizing: border-box; }  {# 📦 Incluye padding/border en el tamaño total #}
+    body {  {# 🧍 Estilo general del body #}
+      margin: 0;                                       {# ↔️ Sin márgenes #}
+      padding: 0;                                      {# ↕️ Sin padding #}
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;  {# 🔤 Tipografía del sistema #}
+      background: radial-gradient(circle at top left, #1e40af 0, #0f172a 40%, #020617 100%);  {# 🌌 Degradado de fondo #}
+      color: #fff;                                     {# 🎨 Texto blanco por defecto #}
+    }
+    .app-shell {  {# 🧱 Contenedor tipo “aplicación” centrado #}
+      max-width: 720px;         {# 📏 Ancho máximo #}
+      margin: 0 auto;           {# 📍 Centrado horizontal #}
+      min-height: 100vh;        {# 📐 Altura mínima pantalla completa #}
+      display: flex;            {# 📐 Diseño flex vertical #}
+      flex-direction: column;
+      padding: 8px;             {# 🧊 Relleno interior #}
+    }
+    .app-header {  {# 🧾 Cabecera con título y usuario #}
+      display: flex;
+      align-items: center;      {# ↕️ Centrado vertical #}
+      justify-content: space-between;  {# ↔️ Separación título/usuario #}
+      margin-bottom: 10px;
+    }
+    .app-title h1 {  {# 🏷️ Título principal #}
+      margin: 0;
+      font-size: 1.25rem;
+    }
+    .app-title span {  {# 🧾 Subtítulo bajo el título #}
+      font-size: 0.8rem;
+      color: #cbd5f5;
+    }
+    .user-pill {  {# 🧑‍💼 Pastilla con rol de usuario (Super Admin) #}
+      padding: 4px 8px;
+      border-radius: 999px;                     {# 🥚 Pastilla redonda #}
+      background: rgba(15,23,42,0.6);           {# 🎨 Fondo oscuro semitransparente #}
+      border: 1px solid rgba(148,163,184,0.7);  {# 🎨 Borde claro #}
+      font-size: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;                                 {# ↔️ Espacio entre avatar y texto #}
+    }
+    .user-badge {  {# 🏅 Avatar circular con iniciales #}
+      width: 20px;
+      height: 20px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, #22c55e, #16a34a);  {# 💚 Degradado verde #}
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+    }
+
+    .card {  {# 🗂️ Tarjeta que envuelve el formulario #}
+      background: var(--card-bg);                   {# 🎨 Fondo blanco #}
+      border-radius: var(--radius-lg);              {# 📐 Esquinas redondeadas #}
+      padding: 12px;
+      border: 1px solid var(--border-soft);         {# 🎨 Borde suave #}
+      box-shadow: 0 12px 28px rgba(15,23,42,0.6);   {# 🌫️ Sombra para efecto flotante #}
+      color: var(--text-main);                      {# 🎨 Texto oscuro dentro de la tarjeta #}
+    }
+    .card-header {  {# 🧾 Cabecera de la tarjeta (icono + textos) #}
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .card-icon {  {# 🧿 Cuadradito con icono 👤 #}
+      width: 30px;
+      height: 30px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      background: rgba(30,64,175,0.08);
+      color: var(--primary);
+    }
+    .card-header h2 {  {# 🏷️ Título de la tarjeta #}
+      margin: 0;
+      font-size: 1rem;
+    }
+    .card-header small {  {# 🧾 Texto explicativo pequeño #}
+      display: block;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    form {  {# 📝 Formulario en grid de dos columnas #}
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));  {# 📐 Dos columnas iguales #}
+      gap: 8px 12px;                                     {# 📏 Espaciado filas/columnas #}
+      font-size: 0.82rem;
+    }
+    .field-full {  {# 🧱 Campo que ocupa la fila completa #}
+      grid-column: span 2;
+    }
+    label {  {# 🏷️ Estilo de etiquetas #}
+      display: block;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+    input, select {  {# ✍ Estilo común para inputs y selects #}
+      width: 100%;
+      padding: 5px 7px;
+      border-radius: 8px;
+      border: 1px solid var(--border-soft);
+      font-size: 0.8rem;
+    }
+    .field-inline {  {# 📐 Para campos en línea (checkbox + texto) #}
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 4px;
+    }
+    .field-inline label {
+      font-weight: 500;
+      margin: 0;
+    }
+
+    .actions {  {# 🎯 Barra de botones del formulario #}
+      grid-column: span 2;               {# 📐 Ocupa ambas columnas #}
+      display: flex;
+      justify-content: flex-end;         {# ↔️ Botones alineados a la derecha #}
+      gap: 6px;
+      margin-top: 6px;
+    }
+    .btn {  {# 🔘 Estilo base de botón #}
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      font-size: 0.8rem;
+    }
+    .btn-primary {  {# 🔵 Botón principal (guardar/crear) #}
+      background: var(--primary);
+      color: #fff;
+    }
+    .btn-primary:hover {
+      background: var(--primary-dark);
+    }
+    .btn-secondary {  {# ⚪ Botón secundario (volver) #}
+      background: #e5e7eb;
+      color: #111827;
+    }
+    .btn-secondary:hover {
+      background: #d1d5db;
+    }
+
+    .app-footer {  {# 📎 Pie de página pequeño #}
+      margin-top: 10px;
+      font-size: 0.7rem;
+      color: #9ca3af;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+<div class="app-shell">  {# 🧱 Contenedor principal de la página #}
+
+  <header class="app-header">  {# 🧾 Cabecera con título y usuario #}
+    <div class="app-title">
+      <h1>{{ "Editar gestor" if modo == "editar" else "Nuevo gestor" }}</h1>  {# 🏷️ Título dinámico segun modo #}
+      <span>bd_tbl_comunes · Gestión de gestores</span>  {# 🧾 Contexto de la tabla #}
+    </div>
+    <div class="user-pill">  {# 🧑‍💼 Indicador de que está logueado un Super Admin #}
+      <div class="user-badge">SA</div>  {# 🏅 Iniciales del rol #}
+      <span>Super Admin</span>
+    </div>
+  </header>
+
+  <main>  {# 📄 Cuerpo principal #}
+    <section class="card">  {# 🗂️ Tarjeta del formulario #}
+      <div class="card-header">
+        <div class="card-icon">👤</div>  {# 🧿 Icono persona #}
+        <div>
+          <h2>{{ "Editar datos del gestor" if modo == "editar" else "Alta de nuevo gestor" }}</h2>
+          {# 🏷️ Subtítulo dinámico #}
+          <small>
+            {% if modo == "editar" %}
+              Modifica los datos del gestor seleccionado.
+              {# ✏️ Modo edición #}
+            {% else %}
+              Rellena los datos para dar de alta un nuevo gestor.
+              {# ➕ Modo alta #}
+            {% endif %}
+          </small>
+        </div>
+      </div>
+
+      <form method="post">  {# 📝 El formulario envía los datos por POST a la misma ruta #}
+        <!-- Nombre y apellidos -->
+        <div>  {# 🧍 Nombre #}
+          <label for="nombre">Nombre</label>
+          <input type="text" id="nombre" name="nombre"
+                 value="{{ gestor.nombre if gestor else '' }}" required>
+          {# ✍ Precarga si gestor existe, obligatorio #}
+        </div>
+        <div>  {# 🧍 Apellido 1 #}
+          <label for="apellido1">Apellido 1</label>
+          <input type="text" id="apellido1" name="apellido1"
+                 value="{{ gestor.apellido1 if gestor else '' }}" required>
+        </div>
+        <div>  {# 🧍 Apellido 2 #}
+          <label for="apellido2">Apellido 2</label>
+          <input type="text" id="apellido2" name="apellido2"
+                 value="{{ gestor.apellido2 if gestor else '' }}">
+        </div>
+        <div>  {# 🧾 Nº profesional #}
+          <label for="numero_profesional">Nº profesional</label>
+          <input type="text" id="numero_profesional" name="numero_profesional"
+                 value="{{ gestor.numero_profesional if gestor else '' }}">
+        </div>
+
+        <!-- Contacto -->
+        <div class="field-full">  {# ✉ Email (fila completa) #}
+          <label for="email">Email</label>
+          <input type="email" id="email" name="email"
+                 value="{{ gestor.email if gestor else '' }}" required>
+        </div>
+        <div>  {# 📞 Teléfono #}
+          <label for="telefono">Teléfono</label>
+          <input type="text" id="telefono" name="telefono"
+                 value="{{ gestor.telefono if gestor else '' }}">
+        </div>
+        <div>  {# ☎ Extensión #}
+          <label for="extension">Extensión</label>
+          <input type="text" id="extension" name="extension"
+                 value="{{ gestor.extension if gestor else '' }}">
+        </div>
+
+        <!-- DNI -->
+        <div>  {# 🪪 DNI #}
+          <label for="DNI">DNI</label>
+          <input type="text" id="DNI" name="DNI"
+                 value="{{ gestor.DNI if gestor else '' }}">
+        </div>
+
+        <!-- Rol -->
+        <div>  {# 🎭 Desplegable de roles (idroles.roles) #}
+           <label for="rol">Rol</label>
+           <select id="rol" name="idtbl_roles">
+             <option value="">-- Selecciona un rol --</option>
+             {# 🎭 'roles' debe venir de la vista con SELECT idtbl_roles, roles FROM tbl_roles #}
+             {% for r in roles %}  {# 🔁 Recorremos todos los roles #}
+               <option value="{{ r.idtbl_roles }}"
+                 {% if gestor and gestor.idtbl_roles == r.idtbl_roles %}selected{% endif %}>
+                 {{ r.roles }}
+                 {# 🏷️ Texto visible = nombre del rol, tomado de la columna roles #}
+               </option>
+             {% endfor %}
+           </select>
+        </div>
+
+        <!-- Debe cambiar contraseña -->
+        <div>  {# 🔐 Flag must_change #}
+          <label for="must_change">Debe cambiar contraseña</label>
+          <select id="must_change" name="must_change">
+            {# 🧩 Lógica:
+               - Alta (sin gestor): por defecto Sí (1).
+               - Edición: respeta el valor actual de gestor.must_change. #}
+            <option value="1"
+              {% if (gestor and gestor.must_change == 1) or not gestor %}selected{% endif %}>
+              Sí
+            </option>
+            <option value="0"
+              {% if gestor and gestor.must_change == 0 %}selected{% endif %}>
+              No
+            </option>
+          </select>
+        </div>
+
+        <!-- Activo -->
+        <div class="field-full field-inline">  {# ✅ Checkbox de estado activo #}
+          <input type="checkbox" id="activo" name="activo"
+                 {% if gestor and gestor.activo %}checked{% elif not gestor %}checked{% endif %}>
+          {# 🧩 Si no hay gestor (alta), se marca por defecto. Si hay gestor, se refleja su estado. #}
+          <label for="activo">Gestor activo</label>
+        </div>
+
+        <!-- Botones -->
+        <div class="actions">  {# 🎯 Botones del formulario #}
+          <a class="btn btn-secondary"
+             href="{{ url_for('super_admin_bp.listar_gestores') }}">⬅ Volver</a>
+          {# ⬅ Volver al listado sin guardar cambios #}
+          <button class="btn btn-primary" type="submit">
+            {{ "💾 Guardar cambios" if modo == "editar" else "➕ Crear gestor" }}
+            {# 💾/➕ Texto según si se edita o crea #}
+          </button>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    Formulario de gestores – bd_tbl_comunes  {# 📎 Pie informativo #}
+  </footer>
+
+</div>
+</body>
+</html>

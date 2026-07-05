@@ -1,0 +1,129 @@
+{# =============================================================================
+  templates/control_obras/listado_control_contenedores.html
+  LISTADO CRUD DE CONTENEDORES (VISTA SOLO LECTURA)
+  -----------------------------------------------------------------------------
+  ✔ Muestra todos los registros de contenedores en una tabla.
+  ✔ Muestra mensaje de error docente si algo falla en la consulta.
+  ✔ Incluye botón para volver al panel CRUD de contenedores.
+  Requiere:
+    - variables pasadas desde la vista:
+        · error   ➜ str | None
+        · detalle ➜ str | None
+        · filas   ➜ iterable de contenedores (dict / objeto)
+  ============================================================================ #}
+
+{% extends "base.html" %}  {# 🏗️ 0.1 · Hereda layout base (cabecera, menú, CSS, etc.) #}
+
+{# =====================================================
+  1️⃣ BLOQUE PRINCIPAL DE CONTENIDO
+  ====================================================== #}
+{% block content %}
+
+  {# ---------------------------------------------------
+    1.1️⃣ CABECERA DEL LISTADO
+    ---------------------------------------------------- #}
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    {# 🧱 1.1.1 · Fila flexible con título + acciones si las hubiera #}
+
+    <h1 class="h4 mb-0">
+      🧮 Listado de contenedores
+      {# 🏷️ 1.1.2 · Título de la página de listado CRUD #}
+    </h1>
+
+    {# (Opcional) Aquí podrías poner un botón "Nuevo contenedor" en el futuro #}
+    {# <a href="{{ url_for('contenedores_bp.form_nuevo_contenedor') }}" ...> #}
+  </div>
+
+  {# ---------------------------------------------------
+    1.2️⃣ BOTÓN DE NAVEGACIÓN / VOLVER
+    ---------------------------------------------------- #}
+  <a href="{{ url_for('contenedores_bp.panel_contenedores_crud') }}"
+     class="btn btn-sm btn-outline-secondary mb-3">
+      ⬅️ Volver al panel CRUD de contenedores
+      {# 🔙 1.2.1 · Vuelve a /control_contenedores_crud/panel (panel manual) #}
+  </a>
+
+  {# ---------------------------------------------------
+    1.3️⃣ BLOQUE DE MENSAJES DE ERROR
+    ---------------------------------------------------- #}
+  {% if error %}
+    {# ⚠️ 1.3.1 · Si viene "error" desde la vista, mostramos alerta #}
+    <div class="alert alert-danger">
+      {{ error }}
+      {# 🗨️ 1.3.2 · Mensaje amigable para el usuario #}
+
+      {% if detalle %}
+        {# 🧾 1.3.3 · Si hay detalle técnico, lo mostramos en pequeño / monoespacio #}
+        <pre class="small text-muted mb-0">{{ detalle }}</pre>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  {# =====================================================
+    2️⃣ TABLA DE LISTADO DE CONTENEDORES
+    ====================================================== #}
+  <div class="table-responsive">
+    {# 🧱 2.0 · Contenedor responsive para tabla (scroll horizontal en pantallas pequeñas) #}
+
+    <table class="table table-sm table-striped align-middle">
+      {# 📊 2.1 · Tabla Bootstrap:
+         - table-sm    ➜ filas compactas
+         - table-striped ➜ filas a rayas
+         - align-middle ➜ contenido centrado verticalmente #}
+
+      <thead class="table-light">
+        {# 🧾 2.2 · Cabecera de la tabla #}
+        <tr>
+          <th scope="col">ID</th>
+          {# 🔑 2.2.1 · idtbl_control_contenedores #}
+
+          <th scope="col">Expediente</th>
+          {# 📁 2.2.2 · número de expediente (numero_expediente) #}
+
+          <th scope="col">Proveedor</th>
+          {# 🏢 2.2.3 · idtbl_proveedores (puede ser ID o nombre según JOIN futuro) #}
+
+          <th scope="col">Fecha colocación</th>
+          {# 📅 2.2.4 · fecha_colocacion #}
+
+          {# ➕ 2.2.5 · Aquí puedes añadir más <th> para otras columnas:
+              · Tipo de vía
+              · Calle
+              · Gestor
+              · Estado
+             etc. #}
+        </tr>
+      </thead>
+
+      <tbody>
+        {# 📦 2.3 · Cuerpo de la tabla con los registros de "filas" #}
+
+        {% for fila in filas %}
+          {# 🔁 2.3.1 · Recorremos cada contenedor devuelto por la consulta #}
+          <tr>
+            <td>{{ fila.idtbl_control_contenedores }}</td>
+            {# 🔑 2.3.1.1 · PK del contenedor (tbl_control_contenedores.idtbl_control_contenedores) #}
+
+            <td>{{ fila.numero_expediente }}</td>
+            {# 📁 2.3.1.2 · Nº expediente (numero_expediente) #}
+
+            <td>{{ fila.idtbl_proveedores }}</td>
+            {# 🏢 2.3.1.3 · ID proveedor (idtbl_proveedores); en el futuro podrías mostrar el nombre #}
+
+            <td>{{ fila.fecha_colocacion }}</td>
+            {# 📅 2.3.1.4 · Fecha de colocación (fecha_colocacion) #}
+          </tr>
+        {% else %}
+          {# ❌ 2.3.2 · Rama "else" del for: no hay filas #}
+          <tr>
+            <td colspan="4" class="text-muted text-center">
+              No hay contenedores para mostrar.
+              {# ℹ️ 2.3.2.1 · Mensaje informativo si la lista está vacía #}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+{% endblock %}

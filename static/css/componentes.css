@@ -1,0 +1,57 @@
+/* ============================================================
+   3️⃣ COMPONENTS.CSS
+   ============================================================
+
+   Componentes reutilizables del sistema.
+
+   Incluye:
+   - tarjetas administrativas
+   - contenedores visuales
+
+   ============================================================ */
+
+.tarjetas {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+
+.tarjeta {
+
+    background-color: white;
+
+    border-radius: 12px;
+
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+
+    padding: 30px;
+
+    flex: 1 1 300px;
+
+    text-align: center;
+
+    font-size: 1.2rem;
+    font-weight: bold;
+
+    color: #1f2937;
+
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.tarjeta:hover {
+
+    transform: translateY(-5px);
+
+    box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+}
+
+.tarjeta h3 {
+    margin-top: 15px;
+    font-size: 1.3rem;
+}
+
+.tarjeta p {
+    margin: 10px 0 15px 0;
+    font-size: 1rem;
+}

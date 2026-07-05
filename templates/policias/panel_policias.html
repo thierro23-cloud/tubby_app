@@ -1,0 +1,337 @@
+{# =============================================================================
+   🌐 PLANTILLA: templates/policias/panel_policias.html
+   =============================================================================
+   PANEL POLICÍA LOCAL · HUB OPERATIVO DEL SISTEMA
+   -----------------------------------------------------------------------------
+   Las tarjetas se generan dinámicamente desde el blueprint:
+
+       policias_bp.panel_policias()
+
+   Variable recibida:
+
+       tarjetas = [
+            {
+                titulo,
+                icono,
+                descripcion,
+                origen,
+                botones
+            }
+       ]
+
+   Compatible con ERP modular.
+============================================================================= #}
+
+{% extends "base.html" %}
+
+{% block title %}Panel Policía Local{% endblock %}
+
+{% block content %}
+
+
+{# =============================================================================
+   1️⃣ ESTILOS DEL PANEL
+============================================================================= #}
+
+<style>
+:root {
+    --pl-primary:#163a70;
+    --pl-primary-soft:#eef4ff;
+    --pl-surface:rgba(15,23,42,.92);
+    --pl-card:#ffffff;
+    --pl-text:#0f172a;
+    --pl-muted:#64748b;
+    --pl-border:#e5e7eb;
+    --pl-shadow:0 18px 40px rgba(15,23,42,.22);
+    --pl-radius-xl:18px;
+    --pl-radius-md:10px;
+}
+
+.pl-shell{
+    max-width:1180px;
+    margin:0 auto;
+    padding:12px;
+    color:#fff;
+}
+
+.pl-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:1rem;
+    margin-bottom:14px;
+}
+
+.pl-header-title h1{
+    margin:0;
+    font-size:1.4rem;
+}
+
+.pl-header-title p{
+    margin:.2rem 0 0 0;
+    color:#cbd5e1;
+}
+
+.pl-user-pill{
+    display:flex;
+    gap:.5rem;
+    padding:.4rem .7rem;
+    border-radius:999px;
+    border:1px solid rgba(148,163,184,.35);
+}
+
+.pl-user-badge{
+    width:26px;
+    height:26px;
+    border-radius:999px;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    background:linear-gradient(135deg,#3b82f6,#1d4ed8);
+    color:#fff;
+}
+
+.pl-content{
+    background:var(--pl-surface);
+    border-radius:22px;
+    padding:16px;
+}
+
+.pl-section-header{
+    display:flex;
+    justify-content:space-between;
+    margin-bottom:12px;
+}
+
+.pl-cards-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(320px,1fr));
+    gap:12px;
+}
+
+.pl-card{
+    background:var(--pl-card);
+    border:1px solid var(--pl-border);
+    border-radius:var(--pl-radius-xl);
+    box-shadow:var(--pl-shadow);
+    padding:14px;
+    display:flex;
+    flex-direction:column;
+    min-height:200px;
+}
+
+.pl-card-header{
+    display:flex;
+    gap:.7rem;
+}
+
+.pl-card-icon{
+    width:42px;
+    height:42px;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    border-radius:12px;
+    background:var(--pl-primary-soft);
+}
+
+.pl-card-main-title{
+    color:var(--pl-text);
+    font-weight:700;
+}
+
+.pl-card-subtitle{
+    font-size:.75rem;
+    color:var(--pl-muted);
+}
+
+.pl-card-buttons{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:.4rem;
+    margin-top:auto;
+}
+
+.pl-btn{
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    padding:.5rem;
+    border-radius:var(--pl-radius-md);
+    text-decoration:none;
+    font-size:.8rem;
+    background:var(--pl-primary);
+    color:#fff;
+}
+
+.pl-btn.secondary{
+    background:#edf2f7;
+    color:#000;
+}
+
+.pl-footer{
+    margin-top:12px;
+    color:#9ca3af;
+    font-size:.73rem;
+}
+</style>
+
+
+
+{# =============================================================================
+   2️⃣ ESTRUCTURA GENERAL
+============================================================================= #}
+
+<div class="pl-shell">
+
+
+<header class="pl-header">
+
+<div class="pl-header-title">
+<h1>👮 Panel Policía Local</h1>
+<p>Acceso rápido a módulos operativos del sistema municipal</p>
+</div>
+
+<div class="pl-user-pill">
+<div class="pl-user-badge">PL</div>
+<span>Acceso Policía Local</span>
+</div>
+
+</header>
+
+
+
+<main class="pl-content">
+
+
+<div class="pl-section-header">
+<h2>🧩 Módulos disponibles</h2>
+<small>Selecciona el módulo que quieras abrir</small>
+</div>
+
+
+
+{# =============================================================================
+   3️⃣ GRID DE TARJETAS
+============================================================================= #}
+
+<div class="pl-cards-grid">
+
+
+{% if tarjetas and tarjetas|length > 0 %}
+
+
+{% for tarjeta in tarjetas %}
+
+<article class="pl-card">
+
+<div>
+
+<div class="pl-card-header">
+
+<div class="pl-card-icon">
+
+{{ tarjeta.icono|default("📦")|safe }}
+
+</div>
+
+<div>
+
+<div class="pl-card-main-title">
+{{ tarjeta.titulo|default("Módulo") }}
+</div>
+
+<div class="pl-card-subtitle">
+{{ tarjeta.descripcion|default("Sin descripción") }}
+</div>
+
+
+{% if tarjeta.origen %}
+<div style="font-size:.70rem;color:#94a3b8;">
+módulo: {{ tarjeta.origen }}
+</div>
+{% endif %}
+
+
+</div>
+
+</div>
+
+</div>
+
+
+<div class="pl-card-buttons">
+
+
+{% if tarjeta.botones %}
+
+{% for btn in tarjeta.botones %}
+
+{# ======================================================
+   ERP compatible:
+   si viene url → usar url
+   si viene endpoint → usar url_for
+====================================================== #}
+
+{% if btn|length >= 2 %}
+
+{% set texto = btn[0] %}
+{% set endpoint = btn[1] %}
+{% set estilo = btn[2] if btn|length > 2 else "" %}
+
+<a class="pl-btn {{ estilo }}"
+
+{% if endpoint.startswith("/") %}
+href="{{ endpoint }}"
+{% else %}
+href="{{ url_for(endpoint) }}"
+{% endif %}
+
+>
+
+{{ texto }}
+
+</a>
+
+{% endif %}
+
+{% endfor %}
+
+{% else %}
+
+<span style="font-size:.75rem;color:#94a3b8;">
+Sin acciones disponibles
+</span>
+
+{% endif %}
+
+
+</div>
+
+</article>
+
+
+{% endfor %}
+
+
+{% else %}
+
+<div style="color:#94a3b8;font-size:.9rem;padding:10px;">
+No hay módulos disponibles para este perfil.
+</div>
+
+{% endif %}
+
+</div>
+
+
+
+<footer class="pl-footer">
+Panel Policía Local · Acceso permitido a perfiles Policía Local, Gestor y Super Admin.
+</footer>
+
+</main>
+
+</div>
+
+{% endblock %}

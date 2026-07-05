@@ -1,0 +1,971 @@
+{#============================================================================
+  📄 1️⃣ PLANTILLA · VALIDAR CONTENEDOR PENDIENTE (LAYOUT 50/50)
+  ============================================================================
+  🧠 COMIENZA INTRODUCCIÓN GENERAL
+  ----------------------------------------------------------------------------
+  (1.1) FUNCIONALIDAD:
+        - Muestra un contenedor pendiente en una pantalla partida 50/50:
+            · PARTE IZQUIERDA : visor PDF del documento original.
+            · PARTE DERECHA   : formulario de validación organizado en pestañas.
+
+  (1.2) CONTEXTO DESDE EL BACKEND:
+        - pendiente        → fila de tbl_contenedores_pendientes o None si no hay.
+        - datos            → dict con datos_extraidos_json + valores por defecto.
+        - proveedores      → lista proveedores (combo).
+        - tipos_vias       → lista tipos de vía (combo).
+        - calles           → lista calles iniciales (combo).
+        - dimensiones      → dimensiones contenedores (combo).
+        - gestores         → gestores (combo).
+        - indice           → índice actual (0..total_pendientes-1).
+        - id_pendiente     → idtbl_contenedores_pendientes.
+        - total_pendientes → número total de pendientes.
+
+  (1.3) RUTAS DEL BLUEPRINT btn_contenedores_listar_pendientes_bp:
+        - "/"                               → btn_contenedores_listar_pendientes
+        - "/pdf/<filename>"                 → serve_pdf
+        - "/calles_por_tipo/<int:id_tipo>"  → calles_por_tipo
+        - "/guardar/<int:id>"               → guardar_validacion
+
+  (1.4) OBJETIVO UI:
+        - Layout 50% PDF · 50% Formulario, sin scroll global (solo en contenidos internos).
+        - Formulario agrupado en pestañas tipo TAG PEQUEÑO:
+            · 🏢 Proveedor
+            · 📄 Administrativo
+            · 📅 Fechas
+            · 📍 Ubicación
+            · 🧾 Contenedor / CSV
+            · 📝 Observaciones
+  ----------------------------------------------------------------------------
+  🧠 TERMINA INTRODUCCIÓN GENERAL
+  ============================================================================#}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Validación contenedor pendiente</title>
+
+  {#===========================================================================
+    🎨 2️⃣ ESTILOS GLOBALES · LAYOUT 50/50 SIN SCROLL GLOBAL (COMIENZA)
+    --------------------------------------------------------------------------
+    - html/body ocupan pantalla completa sin scroll (overflow: hidden).
+    - .layout reparte 50% / 50% PDF y formulario.
+    - Formularios compactos, etiquetas pequeñas y pestañas tipo tag.
+  ---------------------------------------------------------------------------#}
+  <style>
+    /* 2.1 Global: html/body sin scroll */
+    html, body {
+      height: 100%;
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background-color: #f4f6f8;
+      overflow: hidden; /* sin scroll global */
+    }
+
+    /* 2.2 Layout principal a dos columnas 50/50 */
+    .layout {
+      display: flex;
+      height: 100vh;
+    }
+
+    /* 2.3 Columna PDF (izquierda) */
+    .pdf-container {
+      width: 50%;
+      background: #1e1e1e;
+      display: flex;
+      flex-direction: column;
+      min-height: 0; /* permite que el iframe ajuste */
+    }
+
+    .pdf-header {
+      color: #fff;
+      padding: 6px 10px;
+      font-size: 12px;
+      background: #111;
+      border-bottom: 1px solid #333;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex-shrink: 0;
+    }
+
+    .pdf-empty {
+      flex: 1 1 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #eee;
+      font-size: 14px;
+    }
+
+    /* 2.4 Columna formulario (derecha) */
+    .form-container {
+      width: 50%;
+      padding: 8px 12px;
+      box-sizing: border-box;
+      background: #f4f6f8;
+      display: flex;
+      flex-direction: column;
+      min-height: 0; /* necesario para overflow interno */
+    }
+
+    /* 2.5 Cabecera pequeña del formulario */
+    .form-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 6px;
+      flex-shrink: 0;
+    }
+
+    .form-header h2 {
+      margin: 0;
+      font-size: 16px;
+    }
+
+    .form-header small {
+      display: block;
+    }
+
+    .form-header-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 170px;
+      align-items: flex-end;
+    }
+
+    /* 2.6 Bloques y campos del formulario */
+    .bloque {
+      background: #fff;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+      margin-bottom: 8px;
+    }
+
+    .bloque h3 {
+      margin: 0 0 6px;
+      font-size: 13px;
+      color: #333;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .campo-row {
+      display: flex;
+      gap: 6px;
+    }
+
+    .campo {
+      margin-bottom: 6px;
+      flex: 1;
+    }
+
+    .campo--corto  { flex: 0 0 120px; }
+    .campo--medio  { flex: 0 0 180px; }
+    .campo--largo  { flex: 1;        }
+
+    label {
+      display: block;
+      font-size: 10px;
+      font-weight: bold;
+      margin-bottom: 2px;
+      color: #555;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 4px 6px;
+      font-size: 11px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s, background-color 0.15s;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: #2684ff;
+      box-shadow: 0 0 0 2px rgba(38,132,255,0.2);
+      background-color: #fff;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 40px;
+    }
+
+    button {
+      padding: 6px 8px;
+      border: none;
+      border-radius: 6px;
+      font-weight: bold;
+      font-size: 11px;
+      cursor: pointer;
+    }
+
+    .btn-guardar {
+      background: #28a745;
+      color: #fff;
+    }
+
+    .btn-guardar:hover {
+      background: #218838;
+    }
+
+    .btn-prev {
+      background: #6c757d;
+      color: #fff;
+    }
+
+    .btn-prev:hover {
+      background: #5a6268;
+    }
+
+    .btn-next {
+      background: #007bff;
+      color: #fff;
+    }
+
+    .btn-next:hover {
+      background: #0069d9;
+    }
+
+    .btn-disabled {
+      opacity: 0.4;
+      cursor: default;
+    }
+
+    /* 2.7 Pestañas tipo TAG pequeños */
+    .tabs-header {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 6px;
+      font-size: 11px;
+      flex-wrap: wrap;
+      flex-shrink: 0;
+    }
+
+    .tab-btn {
+      border-radius: 20px;
+      border: 1px solid #ccc;
+      background: #e9ecef;
+      padding: 4px 8px;
+      cursor: pointer;
+    }
+
+    .tab-active {
+      background: #007bff;
+      color: #fff;
+      border-color: #007bff;
+    }
+
+    .tabs-content {
+      flex: 1 1 auto;
+      overflow: auto; /* si hay mucho contenido, solo aquí se hace scroll */
+    }
+
+    .tab-pane {
+      display: none;
+    }
+
+    .tab-pane-active {
+      display: block;
+    }
+  </style>
+  {#---------------------------------------------------------------------------
+    🎨 2️⃣ ESTILOS GLOBALES · LAYOUT 50/50 SIN SCROLL GLOBAL (TERMINA)
+    ==========================================================================#}
+</head>
+
+<body>
+
+{#============================================================================
+  🧱 3️⃣ LAYOUT PRINCIPAL · 50% PDF | 50% FORMULARIO (COMIENZA)
+  ----------------------------------------------------------------------------
+  - Parte izquierda: visor PDF con encabezado pequeño.
+  - Parte derecha : encabezado + pestañas + formulario sin scroll global.
+  ============================================================================#}
+<div class="layout">
+
+      {#===========================================================================
+    📥 3.A PARTE IZQUIERDA · VISOR PDF (COMIENZA)
+    --------------------------------------------------------------------------
+    (3.A.1) OBJETIVO:
+            - Mostrar el PDF original asociado al pendiente actual.
+            - Incluir un encabezado informativo que explique por qué este PDF
+              ha terminado en la bandeja de pendientes (para_revision, etc.).
+
+    (3.A.2) FUENTES DE DATOS:
+            - pendiente.nombre_pdf  → nombre real del archivo PDF.
+            - pendiente.ruta_pdf    → carpeta lógica (para_revision, solo_retirada,
+                                      pendientes_validacion, ...).
+            - pendiente.motivo      → motivo técnico/funcional devuelto por el core/
+                                      utils_async al crear el pendiente.
+
+      {#===========================================================================
+    📥 3.A PARTE IZQUIERDA · VISOR PDF (COMIENZA)
+    --------------------------------------------------------------------------
+    (3.A.1) OBJETIVO:
+            - Mostrar en la mitad izquierda el PDF original asociado al
+              contenedor pendiente seleccionado en la UI.
+
+    (3.A.2) CONTEXTO DE DATOS:
+            - pendiente.nombre_pdf
+                · Nombre real del archivo PDF tal y como se guarda en disco
+                  (ej.: 0CB98B3A7157BB4E9D0AE4935BBC3BDD.pdf).
+            - pendiente.ruta_pdf
+                · Carpeta lógica donde está almacenado el PDF en el servidor:
+                    · "para_revision"
+                    · "pendientes_validacion"
+                    · "solo_retirada"
+                    · etc.
+            - pendiente.motivo
+                · Motivo por el que el core/async ha decidido enviar este PDF
+                  a la bandeja de pendientes (falta dato, error interno, retirada
+                  especial, ...).
+            - id_pendiente
+                · Identificador del registro en tbl_contenedores_pendientes que
+                  se utiliza para que la ruta /pdf/<id_pendiente>/<filename>
+                  pueda localizar la subcarpeta correcta en BD.
+
+    (3.A.3) COMPORTAMIENTO:
+            - Si hay pendiente:
+                · Línea 1: muestra el nombre del PDF.
+                · Línea 2: muestra el motivo del pendiente y la carpeta lógica
+                  donde está almacenado.
+                · Iframe: llama a serve_pdf(id_pendiente, filename=pendiente.nombre_pdf),
+                  que a su vez resuelve en BD la subcarpeta y sirve el fichero
+                  desde:
+                      <root>/contenedores/<ruta_pdf>/<nombre_pdf>
+            - Si NO hay pendiente:
+                · Muestra un mensaje de “sin contenedores pendientes”.
+    ---------------------------------------------------------------------------#}
+  <div class="pdf-container">
+    {% if pendiente %}
+      <div class="pdf-header">
+        <div style="font-size:12px;">
+          📄 Documento: <strong>{{ pendiente.nombre_pdf }}</strong>
+        </div>
+        <div style="font-size:11px; color:#ffdd99; margin-top:2px;">
+          Motivo pendiente: <strong>{{ pendiente.motivo }}</strong>
+          · Carpeta lógica: <strong>{{ pendiente.ruta_pdf }}</strong>
+        </div>
+      </div>
+
+      <iframe
+        style="width: 100%; border: none; flex: 1 1 auto;"
+        src="{{ url_for('btn_contenedores_listar_pendientes_bp.serve_pdf',
+                        id_pendiente=id_pendiente,
+                        filename=pendiente.nombre_pdf) }}">
+      </iframe>
+    {% else %}
+      <div class="pdf-header">
+        ✅ Sin contenedores pendientes
+      </div>
+      <div class="pdf-empty">
+        No hay PDFs pendientes de validar.
+      </div>
+    {% endif %}
+  </div>
+  {#===========================================================================
+    📥 3.A PARTE IZQUIERDA · VISOR PDF (TERMINA)
+    ==========================================================================#}
+    {#===========================================================================
+    🧾 3.B PARTE DERECHA · FORMULARIO CON PESTAÑAS (COMIENZA)
+    --------------------------------------------------------------------------
+    - Cabecera pequeña (título, info, navegación).
+    - Pestañas tipo tag para agrupar campos.
+    - Formulario sin scroll global (solo dentro de .tabs-content).
+  ---------------------------------------------------------------------------#}
+  <div class="form-container">
+
+    {#-----------------------------------------------------------------------
+      3.B.1 CABECERA DERECHA · TÍTULO, INFO, NAVEGACIÓN Y VOLVER A BANDEJAS
+      ------------------------------------------------------------------------#}
+    <div class="form-header">
+
+      <div class="form-header-title">
+        <h2>🗃 Validación contenedor</h2>
+
+        <small style="font-size:11px; color:#666;">
+          {% if pendiente %}
+            Pendiente ID {{ id_pendiente }} · Índice {{ indice + 1 }} de {{ total_pendientes }}
+          {% else %}
+            Sin contenedores pendientes · Total 0
+          {% endif %}
+        </small>
+
+        <small style="font-size:10px; color:#888;">
+          {% if pendiente %}
+            📄 {{ pendiente.ruta_pdf.replace('\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\','/').split('/')[-1] }}
+          {% endif %}
+        </small>
+      </div>
+
+      <div class="form-header-actions">
+
+        {# Botón guardar #}
+        <button type="submit"
+                form="form-validacion"
+                class="btn-guardar"
+                {% if not pendiente %}disabled class="btn-disabled"{% endif %}>
+          💾 Guardar
+        </button>
+
+        {# Navegación anterior / siguiente #}
+        <div style="display:flex; gap:4px; align-items:center;">
+
+          {# Botón anterior #}
+          {% if pendiente and indice > 0 %}
+            <a href="{{ url_for('btn_contenedores_listar_pendientes_bp.btn_contenedores_listar_pendientes',
+                                i=indice-1,
+                                carpeta=carpeta_actual) }}">
+              <button type="button" class="btn-prev">⬅</button>
+            </a>
+          {% else %}
+            <button type="button" class="btn-prev btn-disabled" disabled>⬅</button>
+          {% endif %}
+
+          {# Botón siguiente #}
+          {% if pendiente and indice + 1 < total_pendientes %}
+            <a href="{{ url_for('btn_contenedores_listar_pendientes_bp.btn_contenedores_listar_pendientes',
+                                i=indice+1,
+                                carpeta=carpeta_actual) }}">
+              <button type="button" class="btn-next">➡</button>
+            </a>
+          {% else %}
+            <button type="button" class="btn-next btn-disabled" disabled>➡</button>
+          {% endif %}
+
+          {# Botón volver a bandejas #}
+          {% if url_back_carpetas %}
+            <a href="{{ url_back_carpetas }}"
+               class="btn btn-sm btn-outline-secondary"
+               style="margin-left:6px;">
+              ← Volver a bandejas
+            </a>
+          {% endif %}
+
+        </div>
+      </div>
+    </div>
+    {#-----------------------------------------------------------------------
+      3.B.1 CABECERA DERECHA · TÍTULO, INFO, NAVEGACIÓN Y VOLVER A BANDEJAS (FIN)
+      ------------------------------------------------------------------------#}
+    {#=======================================================================
+      🧪 1️⃣ FICHA TÉCNICA DEL PDF (COMIENZA)
+      ------------------------------------------------------------------------
+      OBJETIVO:
+        - Mostrar información técnica de diagnóstico para este PDF pendiente.
+        - Ayuda a entender:
+            · Qué datos ha extraído el core.
+            · Cómo ha quedado registrado el pendiente en BD.
+            · En qué estado técnico está el procesamiento.
+        - No altera la lógica de negocio ni el flujo de validación.
+      =======================================================================#}
+    {% if pendiente %}
+      <div class="bloque" style="margin-bottom:6px; background:#fffdf5; border-color:#f1e0b5;">
+        <h3>1️⃣ Ficha técnica del PDF</h3>
+
+        {#-------------------------------------------------------------------
+          1.1 IDENTIFICACIÓN DEL PENDIENTE
+          --------------------------------------------------------------------
+          - Información básica del registro en tbl_contenedores_pendientes.
+        --------------------------------------------------------------------#}
+        <p style="font-size:11px; margin:2px 0;">
+          <strong>1.1 Identificación del pendiente</strong>
+        </p>
+        <p style="font-size:11px; margin:1px 0;">
+          ID pendiente: <strong>{{ id_pendiente }}</strong>
+          · Nombre PDF: <strong>{{ pendiente.nombre_pdf }}</strong>
+        </p>
+        <p style="font-size:11px; margin:1px 0;">
+          Carpeta lógica: <strong>{{ pendiente.ruta_pdf }}</strong>
+          · Estado pendiente: <strong>{{ pendiente.estado }}</strong>
+        </p>
+        <p style="font-size:11px; margin:1px 0; color:#a66;">
+          Motivo pendiente: <strong>{{ pendiente.motivo }}</strong>
+        </p>
+
+        {#-------------------------------------------------------------------
+          1.2 DATOS EXTRAÍDOS DEL PDF (JSON)
+          --------------------------------------------------------------------
+          - Datos clave que el core ha extraído del documento original y se
+            han guardado en datos_extraidos_json.
+          - Se muestran en formato compacto para diagnóstico rápido.
+        --------------------------------------------------------------------#}
+        <p style="font-size:11px; margin:6px 0 2px 0;">
+          <strong>1.2 Datos extraídos del PDF</strong>
+        </p>
+        <p style="font-size:11px; margin:1px 0;">
+          CSV instalación: <strong>{{ datos.csv }}</strong>
+          {% if datos.csv_retirada %}
+            · CSV retirada: <strong>{{ datos.csv_retirada }}</strong>
+          {% endif %}
+        </p>
+        <p style="font-size:11px; margin:1px 0;">
+          Nº expediente: <strong>{{ datos.numero_expediente }}</strong>
+          · Nº solicitud: <strong>{{ datos.numero_solicitud }}</strong>
+          {% if datos.n_solicitud_retirada %}
+            · Nº sol. retirada: <strong>{{ datos.n_solicitud_retirada }}</strong>
+          {% endif %}
+        </p>
+        <p style="font-size:11px; margin:1px 0;">
+          Fecha colocación: <strong>{{ datos.fecha_colocacion }}</strong>
+          · Firma inicial: <strong>{{ datos.fecha_firma_inicial }}</strong>
+          {% if datos.fecha_retirada %}
+            · Fecha retirada: <strong>{{ datos.fecha_retirada }}</strong>
+          {% endif %}
+        </p>
+        <p style="font-size:11px; margin:1px 0;">
+          Proveedor ID: <strong>{{ datos.idtbl_proveedores }}</strong>
+          · Dimensión ID: <strong>{{ datos.idtbl_dimensiones }}</strong>
+          · Tipo vía ID: <strong>{{ datos.idtbl_tipos_de_vias }}</strong>
+          · Calle ID: <strong>{{ datos.idtbl_calles }}</strong>
+        </p>
+        <p style="font-size:11px; margin:1px 0;">
+          Solicitante: <strong>{{ datos.nombre_solicitante }}</strong>
+          · NIF: <strong>{{ datos.nif }}</strong>
+          {% if datos.telefono %}
+            · Teléfono: <strong>{{ datos.telefono }}</strong>
+          {% endif %}
+        </p>
+        {% if datos.ruta_pdf %}
+          <p style="font-size:11px; margin:1px 0;">
+            Ruta PDF original (core/watcher): <strong>{{ datos.ruta_pdf }}</strong>
+          </p>
+        {% endif %}
+
+        {#-------------------------------------------------------------------
+          1.3 ESTADO TÉCNICO DEL PROCESAMIENTO
+          --------------------------------------------------------------------
+          - Representa cómo ha clasificado el backend el resultado del core.
+          - De momento reutiliza estado/motivo del pendiente; si más adelante
+            guardas estado_core/motivo_core por separado, se pueden sustituir
+            estos campos sin tocar la UI.
+        --------------------------------------------------------------------#}
+        <p style="font-size:11px; margin:6px 0 2px 0;">
+          <strong>1.3 Estado técnico del procesamiento</strong>
+        </p>
+        <p style="font-size:11px; margin:1px 0;">
+          Estado técnico (aprox.): <strong>{{ pendiente.estado }}</strong>
+        </p>
+        <p style="font-size:11px; margin:1px 0; color:#a66;">
+          Motivo técnico (aprox.): <strong>{{ pendiente.motivo }}</strong>
+        </p>
+
+        {#-------------------------------------------------------------------
+          1.4 INFORMACIÓN GPS (SOLO SI EXISTE)
+          --------------------------------------------------------------------
+          - Preparado para cuando el core/watcher empiece a enviar coordenadas.
+          - No se muestra nada mientras latitud/longitud estén vacíos.
+        --------------------------------------------------------------------#}
+        {% if datos.latitud or datos.longitud %}
+          <p style="font-size:11px; margin:6px 0 2px 0;">
+            <strong>1.4 Información GPS</strong>
+          </p>
+          <p style="font-size:11px; margin:1px 0;">
+            Latitud: <strong>{{ datos.latitud }}</strong>
+            · Longitud: <strong>{{ datos.longitud }}</strong>
+            {% if datos.precision_gps %}
+              · Precisión: <strong>{{ datos.precision_gps }}</strong>
+            {% endif %}
+          </p>
+          <p style="font-size:11px; margin:1px 0;">
+            {% if datos.gps_nivel_calidad %}
+              Nivel calidad: <strong>{{ datos.gps_nivel_calidad }}</strong>
+              {% if datos.gps_origen %}
+                · Origen: <strong>{{ datos.gps_origen }}</strong>
+              {% endif %}
+            {% elif datos.gps_origen %}
+              Origen GPS: <strong>{{ datos.gps_origen }}</strong>
+            {% endif %}
+          </p>
+        {% endif %}
+
+      </div>
+    {% endif %}
+    {#=======================================================================
+      🧪 1️⃣ FICHA TÉCNICA DEL PDF (TERMINA)
+      =======================================================================#}
+
+    {#-----------------------------------------------------------------------
+      3.B.2 CONTENIDO DERECHA · PESTAÑAS O MENSAJE (COMIENZA)
+      ------------------------------------------------------------------------#}
+    {% if pendiente %}
+
+      {# 3.B.2.1 BARRA DE PESTAÑAS · TAGS PEQUEÑOS (COMIENZA) #}
+      <div class="tabs-header">
+        <button type="button" class="tab-btn tab-active" data-tab="tab-proveedor">🏢 Proveedor</button>
+        <button type="button" class="tab-btn" data-tab="tab-admin">📄 Administrativo</button>
+        <button type="button" class="tab-btn" data-tab="tab-fechas">📅 Fechas</button>
+        <button type="button" class="tab-btn" data-tab="tab-ubicacion">📍 Ubicación</button>
+        <button type="button" class="tab-btn" data-tab="tab-contenedor">🧾 Contenedor / CSV</button>
+        <button type="button" class="tab-btn" data-tab="tab-observaciones">📝 Observaciones</button>
+      </div>
+      {# 3.B.2.1 BARRA DE PESTAÑAS · TAGS PEQUEÑOS (TERMINA) #}
+
+      {#---------------------------------------------------------------------
+        3.B.3 FORMULARIO PRINCIPAL · PANELES POR PESTAÑA (COMIENZA)
+        ----------------------------------------------------------------------#}
+      <form method="POST"
+            id="form-validacion"
+            action="{{ url_for('btn_contenedores_listar_pendientes_bp.guardar_validacion',
+                              id=id_pendiente, i=indice) }}"
+            style="flex:1 1 auto; display:flex; flex-direction:column;">
+
+        <div class="tabs-content">
+
+          {#==================================================================
+            🏢 TAB 1 · PROVEEDOR / SOLICITANTE (COMIENZA)
+            ------------------------------------------------------------------#}
+          <div class="tab-pane tab-proveedor tab-pane-active">
+            <div class="bloque">
+              <h3>🏢 Proveedor / Solicitante</h3>
+
+             <div class="campo">
+  <label>Proveedor</label>
+  <select name="idtbl_proveedores">
+    <option value="">Selecciona proveedor…</option>
+    {% for p in proveedores %}
+      <option value="{{ p.idtbl_proveedores }}"
+              {% if datos.idtbl_proveedores and (datos.idtbl_proveedores|int == p.idtbl_proveedores|int) %}selected{% endif %}>
+        {{ p.nombre_razon_social }}
+      </option>
+    {% endfor %}
+  </select>
+</div>
+
+              <div class="campo">
+                <label>Nombre solicitante</label>
+                <input name="nombre_solicitante" value="{{ datos.nombre_solicitante }}">
+              </div>
+
+              <div class="campo-row">
+                <div class="campo campo--corto">
+                  <label>NIF</label>
+                  <input name="nif" value="{{ datos.nif }}">
+                </div>
+                <div class="campo campo--corto">
+                  <label>Teléfono</label>
+                  <input name="telefono" value="{{ datos.telefono }}">
+                </div>
+              </div>
+            </div>
+          </div>
+          {#==================================================================
+            🏢 TAB 1 · PROVEEDOR / SOLICITANTE (TERMINA)
+            ==================================================================#}
+
+          {#==================================================================
+            📄 TAB 2 · DATOS ADMINISTRATIVOS (COMIENZA)
+            ------------------------------------------------------------------#}
+<div class="tab-pane tab-admin">
+  <div class="bloque">
+    <h3>📄 Datos administrativos</h3>
+
+    <div class="campo-row">
+      <div class="campo campo--medio">
+        <label>Nº expediente</label>
+        <input name="numero_expediente" value="{{ datos.numero_expediente }}">
+      </div>
+      <div class="campo campo--medio">
+        <label>Nº solicitud</label>
+        <input name="numero_solicitud" value="{{ datos.numero_solicitud }}">
+      </div>
+    </div>
+
+    <div class="campo-row">
+      <div class="campo campo--medio">
+        <label>Nº solicitud retirada</label>
+        <input name="n_solicitud_retirada" value="{{ datos.n_solicitud_retirada }}">
+      </div>
+      <div class="campo campo--medio">
+        <!-- reservado para futuros campos administrativos -->
+      </div>
+    </div>
+  </div>
+</div>
+{#==================================================================
+            📄 TAB 2 · DATOS ADMINISTRATIVOS (TERMINA)
+            ==================================================================#}
+
+          {#==================================================================
+            📅 TAB 3 · FECHAS (COMIENZA)
+            ------------------------------------------------------------------#}
+          <div class="tab-pane tab-fechas">
+            <div class="bloque">
+              <h3>📅 Fechas</h3>
+
+              <div class="campo-row">
+                <div class="campo campo--medio">
+                  <label>Instalación</label>
+                  <input type="date" name="fecha_colocacion" value="{{ datos.fecha_colocacion }}">
+                </div>
+                <div class="campo campo--medio">
+                  <label>Colocación</label>
+                  <input type="date" name="fecha_colocacion" value="{{ datos.fecha_colocacion }}">
+                </div>
+              </div>
+
+              <div class="campo-row">
+                <div class="campo campo--medio">
+                  <label>Retirada</label>
+                  <input type="date" name="fecha_retirada" value="{{ datos.fecha_retirada }}">
+                </div>
+                <div class="campo campo--medio">
+                  <label>Firma inicial</label>
+                  <input type="date" name="fecha_firma_inicial" value="{{ datos.fecha_firma_inicial }}">
+                </div>
+              </div>
+
+              <div class="campo-row">
+                <div class="campo campo--medio">
+                  <label>F. subida instalación</label>
+                  <input type="date" name="fecha_subida_instalacion" value="{{ datos.fecha_subida_instalacion }}">
+                </div>
+                <div class="campo campo--medio">
+                  <label>F. subida retirada</label>
+                  <input type="date" name="fecha_subida_retirada" value="{{ datos.fecha_subida_retirada }}">
+                </div>
+              </div>
+            </div>
+          </div>
+          {#==================================================================
+            📅 TAB 3 · FECHAS (TERMINA)
+            ==================================================================#}
+
+          {#==================================================================
+            📍 TAB 4 · UBICACIÓN (COMIENZA)
+            ------------------------------------------------------------------#}
+          <div class="tab-pane tab-ubicacion">
+            <div class="bloque">
+              <h3>📍 Ubicación</h3>
+
+              <div class="campo-row">
+                <div class="campo campo--medio">
+                  <label>Tipo de vía</label>
+                  <select name="idtbl_tipos_de_vias" id="tipo_via">
+                    <option value="">Tipo de vía…</option>
+                    {% for t in tipos_vias %}
+                      <option value="{{ t.idtbl_tipos_de_vias }}"
+                              {% if datos.idtbl_tipos_de_vias == t.idtbl_tipos_de_vias %}selected{% endif %}>
+                        {{ t.tipos_de_vias }}
+                      </option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="campo campo--largo">
+                  <label>Calle</label>
+                  <select name="idtbl_calles" id="calle">
+                    <option value="">Calle…</option>
+                    {% for c in calles %}
+                      <option value="{{ c.idtbl_calles }}"
+                              {% if datos.idtbl_calles == c.idtbl_calles %}selected{% endif %}>
+                        {{ c.calles }}
+                      </option>
+                    {% endfor %}
+                  </select>
+                </div>
+              </div>
+           <!-- NUEVA FILA: NÚMERO DE PORTAL -->
+              <div class="campo-row">
+                <div class="campo campo--corto">
+                  <label>Número portal</label>
+                  <input name="numero_portal" value="{{ datos.numero_portal or '' }}">
+                </div>
+                <div class="campo campo--medio">
+                  <!-- reservado para futuros campos de dirección (bloque, escalera, etc.) -->
+                </div>
+              </div>
+
+              <div class="campo-row">
+                <div class="campo campo--medio">
+                  <label>Latitud</label>
+                  <input name="latitud" value="{{ datos.latitud }}">
+                </div>
+                <div class="campo campo--medio">
+                  <label>Longitud</label>
+                  <input name="longitud" value="{{ datos.longitud }}">
+                </div>
+              </div>
+
+              <div class="campo-row">
+                <div class="campo campo--medio">
+                  <label>Precisión GPS</label>
+                  <input name="precision_gps" value="{{ datos.precision_gps }}">
+                </div>
+                <div class="campo campo--medio">
+                  <label>Nivel calidad GPS</label>
+                  <input name="gps_nivel_calidad" value="{{ datos.gps_nivel_calidad }}">
+                </div>
+              </div>
+
+              <div class="campo-row">
+                <div class="campo campo--largo">
+                  <label>Origen GPS</label>
+                  <input name="gps_origen" value="{{ datos.gps_origen }}">
+                </div>
+              </div>
+            </div>
+          </div>
+          {#==================================================================
+            📍 TAB 4 · UBICACIÓN (TERMINA)
+            ==================================================================#}
+
+          {#==================================================================
+            🧾 TAB 5 · CONTENEDOR / CSV (COMIENZA)
+            ------------------------------------------------------------------#}
+          <div class="tab-pane tab-contenedor">
+            <div class="bloque">
+              <h3>🧾 Contenedor</h3>
+
+              <div class="campo">
+                <label>Dimensión</label>
+                <select name="idtbl_dimensiones">
+                  <option value="">Selecciona…</option>
+                  {% for d in dimensiones %}
+                    <option value="{{ d.idtbl_dimensiones }}"
+                            {% if datos.idtbl_dimensiones == d.idtbl_dimensiones %}selected{% endif %}>
+                      {{ d.descripcion }}
+                    </option>
+                  {% endfor %}
+                </select>
+              </div>
+
+              
+            <div class="bloque">
+              <h3>🔐 CSV</h3>
+
+              <div class="campo">
+                <label>CSV instalación</label>
+                <input name="csv" value="{{ datos.csv }}">
+              </div>
+
+              <div class="campo">
+                <label>CSV retirada</label>
+                <input name="csv_retirada" value="{{ datos.csv_retirada }}">
+              </div>
+            </div>
+          </div>
+          {#==================================================================
+            🧾 TAB 5 · CONTENEDOR / CSV (TERMINA)
+            ==================================================================#}
+
+          {#==================================================================
+            📝 TAB 6 · OBSERVACIONES (COMIENZA)
+            ------------------------------------------------------------------#}
+          <div class="tab-pane tab-observaciones">
+            <div class="bloque">
+              <h3>📝 Observaciones</h3>
+              <textarea name="observaciones" rows="4">{{ datos.observaciones }}</textarea>
+            </div>
+          </div>
+          {#==================================================================
+            📝 TAB 6 · OBSERVACIONES (TERMINA)
+            ==================================================================#}
+
+        </div> {# fin .tabs-content #}
+      </form>
+      {#---------------------------------------------------------------------
+        3.B.3 FORMULARIO PRINCIPAL · PANELES POR PESTAÑA (TERMINA)
+        ----------------------------------------------------------------------#}
+
+    {% else %}
+
+      {# 3.B.2.2 MENSAJE · SIN CONTENEDORES PENDIENTES #}
+      <div class="bloque" style="margin-top:12px;">
+        <h3>✅ Sin contenedores pendientes</h3>
+        <p style="font-size:12px; color:#555; margin:4px 0;">
+          No hay contenedores pendientes de validación en este momento.
+        </p>
+      </div>
+
+    {% endif %}
+    {#-----------------------------------------------------------------------
+      3.B.2 CONTENIDO DERECHA · PESTAÑAS O MENSAJE (TERMINA)
+      ------------------------------------------------------------------------#}
+
+  </div>
+  {#===========================================================================
+    🧾 3.B PARTE DERECHA · FORMULARIO CON PESTAÑAS (TERMINA)
+    ==========================================================================#}
+
+</div>
+{#============================================================================
+  🧠 TERMINA SECCIÓN 3 · LAYOUT PRINCIPAL
+  ============================================================================#}
+
+{#============================================================================
+  🌐 4️⃣ JAVASCRIPT · PESTAÑAS Y CALLES POR TIPO (COMIENZA)
+  ----------------------------------------------------------------------------
+  - Gestiona:
+      · Cambio de pestaña activa.
+      · Carga AJAX de calles según tipo de vía.
+  ============================================================================#}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  // 4.1 Gestión de pestañas
+  const tabButtons = document.querySelectorAll('.tab-btn');
+  const tabPanes   = document.querySelectorAll('.tab-pane');
+
+  tabButtons.forEach(btn => {
+    btn.addEventListener('click', function () {
+      const target = this.getAttribute('data-tab');
+
+      tabButtons.forEach(b => b.classList.remove('tab-active'));
+      this.classList.add('tab-active');
+
+      tabPanes.forEach(p => {
+        if (p.classList.contains(target)) {
+          p.classList.add('tab-pane-active');
+        } else {
+          p.classList.remove('tab-pane-active');
+        }
+      });
+    });
+  });
+
+  // 4.2 AJAX · Actualizar calles según tipo de vía
+  const tipoVia = document.getElementById("tipo_via");
+  const calleSelect = document.getElementById("calle");
+
+  if (tipoVia && calleSelect) {
+    tipoVia.addEventListener("change", function() {
+      const idTipo = this.value;
+
+      if (!idTipo) {
+        calleSelect.innerHTML = '<option value="">Calle…</option>';
+        return;
+      }
+
+      const baseUrl = "{{ url_for('btn_contenedores_listar_pendientes_bp.calles_por_tipo', id_tipo=0) }}";
+      const url = baseUrl.replace(/0$/, idTipo.toString());
+
+      fetch(url)
+        .then(r => r.json())
+        .then(data => {
+          calleSelect.innerHTML = '<option value="">Calle…</option>';
+          data.forEach(x => {
+            const o = document.createElement("option");
+            o.value = x.idtbl_calles;
+            o.textContent = x.calles;
+            calleSelect.appendChild(o);
+          });
+        })
+        .catch(err => {
+          console.error("Error cargando calles:", err);
+        });
+    });
+  }
+});
+</script>
+{#============================================================================
+  🌐 4️⃣ JAVASCRIPT · PESTAÑAS Y CALLES POR TIPO (TERMINA)
+  ============================================================================#}
+
+</body>
+</html>

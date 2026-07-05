@@ -1,0 +1,233 @@
+{#============================================================================
+  📄 1️⃣ PLANTILLA · LISTADO SIMPLE DE PROVEEDORES (MODO FORMULARIO)
+  =============================================================================
+  🧠 1.1 DESCRIPCIÓN GENERAL
+  -----------------------------------------------------------------------------
+  (1.1.1) Esta plantilla muestra un listado simple de proveedores en formato
+          tabla, con filtros básicos y acceso a la UI avanzada de edición.
+  (1.1.2) Es una vista "ligera" pensada para:
+          - Consultar rápidamente proveedores.
+          - Filtrar por nombre / razón social y NIF.
+          - Saltar a la interfaz avanzada para alta/edición (modal).
+  (1.1.3) La tabla muestra:
+          - ID interno del proveedor.
+          - NIF.
+          - Nombre / Razón social.
+          - Teléfono.
+          - Botón para abrir edición en la vista avanzada.
+
+  🧠 1.2 CONTEXTO DESDE EL BACKEND
+  -----------------------------------------------------------------------------
+  (1.2.1) VARIABLES QUE ESPERA LA PLANTILLA:
+          - proveedores   → lista de dicts con los campos de proveedores.
+          - filtro_nombre → texto actual del filtro por nombre/razón social.
+          - filtro_nif    → texto actual del filtro por NIF.
+  (1.2.2) Cada elemento de `proveedores` contiene, al menos:
+          - Idtbl_proveedores   → Identificador interno.
+          - NIF                 → NIF del proveedor.
+          - Nombre_Razon_Social → Nombre comercial o razón social.
+          - Telefono            → Teléfono de contacto.
+
+  🧠 1.3 BLUEPRINT / CONTROLADOR QUE LA GESTIONA
+  -----------------------------------------------------------------------------
+  (1.3.1) BLUEPRINT RESPONSABLE:
+          - Nombre interno blueprint : proveedores_bp
+          - Rutas típicas asociadas :
+              · GET /proveedores/formulario → proveedores_formulario
+                · Renderiza esta plantilla (listado simple con filtros).
+              · GET /proveedores/ui → proveedores_ui
+                · Vista avanzada con modal para alta/edición.
+  (1.3.2) FLUJO HABITUAL:
+          - El usuario entra en /proveedores/formulario.
+          - El blueprint `proveedores_bp.proveedores_formulario`:
+              · Lee filtros GET (?nombre=...&nif=...).
+              · Ejecuta el SELECT de proveedores filtrado.
+              · Pasa `proveedores`, `filtro_nombre`, `filtro_nif` al render.
+          - Desde aquí, el usuario puede:
+              · Volver a la pantalla anterior.
+              · Ir a la vista avanzada.
+              · Abrir el modal de alta en la vista avanzada.
+  =============================================================================#}
+{% extends "base.html" %}
+{% block title %}Proveedores (formulario){% endblock %}
+
+{% block content %}
+<div class="container mt-3">
+
+  {#==========================================================================
+    2️⃣ CABECERA PRINCIPAL · TÍTULO Y BOTÓN VOLVER
+    --------------------------------------------------------------------------
+    (2.1) OBJETIVO:
+          - Mostrar el título de la sección ("Proveedores").
+          - Incluir un botón "Volver" que usa history.back() para regresar a
+            la pantalla anterior, sin depender de una URL fija.
+    (2.2) ELEMENTOS:
+          - Título h1 pequeño con icono.
+          - Botón secundario alineado a la derecha.
+    ==========================================================================#}
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h5 mb-0">🧾 Proveedores</h1>
+    <button type="button"
+            class="btn btn-sm btn-secondary"
+            onclick="history.back()">
+      ⬅️ Volver
+    </button>
+  </div>
+
+  {#==========================================================================
+    3️⃣ FILTROS SUPERIORES · FORMULARIO GET (NOMBRE / NIF)
+    --------------------------------------------------------------------------
+    🧠 3.1 DESCRIPCIÓN
+    (3.1.1) Filtro simple para acotar la tabla de proveedores.
+    (3.1.2) El formulario envía parámetros por GET:
+            - nombre → filtro_nombre.
+            - nif    → filtro_nif.
+    (3.1.3) El blueprint `proveedores_bp.proveedores_formulario`:
+            - Lee estos parámetros.
+            - Ejecuta el SELECT aplicando WHERE con LIKE / = según diseño.
+            - Vuelve a renderizar esta plantilla con la lista filtrada.
+
+    🧱 3.2 CAMPOS DEL FILTRO
+    (3.2.1) Nombre / Razón social:
+            - input text, mapea con `filtro_nombre`.
+    (3.2.2) NIF:
+            - input text, mapea con `filtro_nif`.
+    (3.2.3) Botones:
+            - "Filtrar": envía el formulario GET.
+            - "Limpiar": resetea filtros redirigiendo a proveedores_formulario.
+            - "Vista avanzada": salta a proveedores_bp.proveedores_ui.
+    ==========================================================================#}
+  <form method="get" class="row g-2 mb-3">
+    <div class="col-md-4">
+      <label class="form-label mb-1">Nombre / Razón social</label>
+      <input type="text"
+             name="nombre"
+             value="{{ filtro_nombre }}"
+             class="form-control form-control-sm">
+    </div>
+    <div class="col-md-3">
+      <label class="form-label mb-1">NIF</label>
+      <input type="text"
+             name="nif"
+             value="{{ filtro_nif }}"
+             class="form-control form-control-sm">
+    </div>
+    <div class="col-md-5 d-flex align-items-end justify-content-end">
+      <button type="submit" class="btn btn-sm btn-primary me-2">
+        🔍 Filtrar
+      </button>
+      <a href="{{ url_for('proveedores_bp.proveedores_formulario') }}"
+         class="btn btn-sm btn-outline-secondary me-2">
+        ❌ Limpiar
+      </a>
+      <a href="{{ url_for('proveedores_bp.proveedores_ui') }}"
+         class="btn btn-sm btn-outline-secondary">
+        📋 Vista avanzada
+      </a>
+    </div>
+  </form>
+
+  {#==========================================================================
+    4️⃣ ACCIÓN RÁPIDA · AÑADIR NUEVO PROVEEDOR
+    --------------------------------------------------------------------------
+    🧠 4.1 OBJETIVO
+    (4.1.1) Permitir crear un nuevo proveedor desde esta vista simple.
+    (4.1.2) No se abre un formulario aquí, sino que:
+            - Redirige a la vista avanzada `proveedores_bp.proveedores_ui`.
+            - Usa un ancla (#modal-proveedor) para abrir el modal de alta.
+
+    🧱 4.2 COMPORTAMIENTO
+    (4.2.1) El enlace:
+            - href → url_for('proveedores_bp.proveedores_ui') + "#modal-proveedor".
+            - Depende de que en la vista avanzada exista un modal con id
+              `modal-proveedor`.
+    ==========================================================================#}
+  <div class="mb-2">
+    <a href="{{ url_for('proveedores_bp.proveedores_ui') }}#modal-proveedor"
+       class="btn btn-sm btn-success">
+      ➕ Añadir proveedor
+    </a>
+  </div>
+
+  {#==========================================================================
+    5️⃣ TABLA PRINCIPAL · LISTADO SIMPLE DE PROVEEDORES
+    --------------------------------------------------------------------------
+    🧠 5.1 ESTRUCTURA GENERAL
+    (5.1.1) Tabla bootstrap pequeña (table-sm) con bordes.
+    (5.1.2) Cabecera fija con columnas:
+            - ID
+            - NIF
+            - Nombre / Razón social
+            - Teléfono
+            - Acciones
+
+    🧱 5.2 COLUMNAS
+    (5.2.1) ID:
+            - Muestra `prov.Idtbl_proveedores`.
+            - Identificador principal del proveedor.
+    (5.2.2) NIF:
+            - Muestra `prov.NIF`.
+    (5.2.3) Nombre / Razón social:
+            - Muestra `prov.Nombre_Razon_Social`.
+    (5.2.4) Teléfono:
+            - Muestra `prov.Telefono`.
+    (5.2.5) Acciones:
+            - Botón "Editar" que lleva a la vista avanzada con un parámetro
+              GET ?editar=<ID> para abrir directamente el proveedor.
+
+    🧪 5.3 BUCLE JINJA Y CASO "SIN RESULTADOS"
+    (5.3.1) `{% for prov in proveedores %}`:
+            - Recorre la lista de proveedores enviada desde el blueprint.
+    (5.3.2) `{% else %}`:
+            - Rama alternativa si la lista `proveedores` está vacía.
+            - Muestra un mensaje "No hay proveedores para los filtros indicados."
+    ==========================================================================#}
+  <table class="table table-sm table-bordered align-middle">
+    <thead class="table-light">
+      <tr>
+        <th style="width: 8%">ID</th>
+        <th style="width: 15%">NIF</th>
+        <th>Nombre / Razón social</th>
+        <th style="width: 18%">Teléfono</th>
+        <th style="width: 10%"></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for prov in proveedores %}
+        <tr>
+          <td>{{ prov.Idtbl_proveedores }}</td>
+          <td>{{ prov.NIF }}</td>
+          <td>{{ prov.Nombre_Razon_Social }}</td>
+          <td>{{ prov.Telefono }}</td>
+          <td class="text-center">
+            {#----------------------------------------------------------------
+              5.4 BOTÓN EDITAR · PUENTE A VISTA AVANZADA
+              ---------------------------------------------------------------
+              (5.4.1) El botón "Editar" no abre nada aquí directamente.
+              (5.4.2) Usa window.location.href para redirigir a:
+                      - url_for('proveedores_bp.proveedores_ui')
+                        con querystring ?editar=<ID>
+              (5.4.3) En la vista avanzada, el blueprint:
+                      - Detecta el parámetro editar.
+                      - Carga los datos del proveedor.
+                      - Muestra el modal o el formulario correspondiente.
+              ---------------------------------------------------------------#}
+            <button type="button"
+                    class="btn btn-sm btn-outline-primary"
+                    onclick="window.location.href='{{ url_for('proveedores_bp.proveedores_ui') }}?editar={{ prov.Idtbl_proveedores }}'">
+              ✏️ Editar
+            </button>
+          </td>
+        </tr>
+      {% else %}
+        <tr>
+          <td colspan="5" class="text-center text-muted">
+            No hay proveedores para los filtros indicados.
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+</div>
+{% endblock %}

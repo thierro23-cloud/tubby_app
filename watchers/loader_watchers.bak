@@ -1,0 +1,105 @@
+import os
+import importlib
+from flask import Flask
+
+
+# =============================================================================
+# 1️⃣ PROCESAR PDFs EXISTENTES
+# =============================================================================
+# Escanea la carpeta de contenedores al arrancar la app
+# y procesa todos los PDFs que ya estén allí.
+# =============================================================================
+
+def procesar_pdfs_existentes(app: Flask):
+
+    from blueprints.control_obras.control_contenedores_bp import (
+        CARPETA_CONTENEDORES,
+        procesar_pdf_contenedor
+    )
+
+    if not os.path.isdir(CARPETA_CONTENEDORES):
+
+        app.logger.warning(
+            "⚠️ Carpeta de contenedores no existe: %s",
+            CARPETA_CONTENEDORES
+        )
+
+        return
+
+    app.logger.info(
+        "🔎 Escaneando PDFs existentes en: %s",
+        CARPETA_CONTENEDORES
+    )
+
+    for archivo in os.listdir(CARPETA_CONTENEDORES):
+
+        if not archivo.lower().endswith(".pdf"):
+            continue
+
+        ruta_pdf = os.path.join(CARPETA_CONTENEDORES, archivo)
+
+        try:
+
+            app.logger.info(
+                "📄 Procesando PDF existente: %s",
+                ruta_pdf
+            )
+
+            with app.app_context():
+
+                procesar_pdf_contenedor(ruta_pdf)
+
+        except Exception as e:
+
+            app.logger.error(
+                "❌ Error procesando PDF existente %s: %s",
+                ruta_pdf,
+                e
+            )
+
+
+# =============================================================================
+# 2️⃣ CARGAR WATCHERS
+# =============================================================================
+
+def iniciar_watchers(app: Flask):
+
+    carpeta_watchers = os.path.join(
+        os.path.dirname(__file__)
+    )
+
+    app.logger.info(
+        "🔎 Buscando watchers en: %s",
+        carpeta_watchers
+    )
+
+    for archivo in os.listdir(carpeta_watchers):
+
+        if not archivo.startswith("watcher_"):
+            continue
+
+        if not archivo.endswith(".py"):
+            continue
+
+        nombre_modulo = f"watchers.{archivo[:-3]}"
+
+        try:
+
+            modulo = importlib.import_module(nombre_modulo)
+
+            if hasattr(modulo, "iniciar_watcher_contenedores"):
+
+                modulo.iniciar_watcher_contenedores(app)
+
+                app.logger.info(
+                    "👀 Watcher iniciado: %s",
+                    nombre_modulo
+                )
+
+        except Exception as e:
+
+            app.logger.error(
+                "❌ Error iniciando watcher %s: %s",
+                nombre_modulo,
+                e
+            )

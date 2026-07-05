@@ -1,0 +1,560 @@
+-- =============================================================================
+-- 📦 TBL_BIENES · REGISTRO MAESTRO DEL INVENTARIO MUNICIPAL
+-- =============================================================================
+--
+-- 🎯 PROPÓSITO:
+-- ────────────────────────────────────────────────────────────────────────────
+-- Tabla principal que actúa como índice general del inventario municipal.
+-- Contiene ÚNICAMENTE los datos comunes a TODOS los tipos de bienes,
+-- independientemente de su naturaleza (vehículo, inmueble, mueble).
+--
+-- 📐 PRINCIPIO DE DISEÑO:
+-- ────────────────────────────────────────────────────────────────────────────
+-- Esta tabla NO duplica información específica de cada tipo de bien.
+-- Actúa como REGISTRO MAESTRO que apunta (mediante FK) a tablas
+-- especializadas donde residen los datos técnicos propios de cada categoría.
+--
+-- 🔗 RELACIONES:
+-- ────────────────────────────────────────────────────────────────────────────
+-- • 1:1 polimórfica con:
+--     - tbl_vehiculos (si tipo_bien='vehiculo')
+--     - tbl_inmuebles (si tipo_bien='inmueble')
+--     - tbl_muebles (si tipo_bien='mueble' y NO es patrimonial)
+--     - tbl_bienes_patrimoniales (si tipo_bien='mueble' y SÍ es patrimonial)
+--     - tbl_calderas (si tipo_bien='equipamiento' y subtipo='caldera')
+--     - tbl_ascensores (si tipo_bien='equipamiento' y subtipo='ascensor')
+--     - tbl_elementos_seguridad (si tipo_bien='equipamiento' y subtipo='seguridad')
+--
+-- • 1:N con:
+--     - tbl_auditoria_bienes (historial completo de eventos)
+--     - tbl_datos_juridicos (escrituras, cargas, derechos)
+--     - tbl_datos_economicos (valoraciones, amortizaciones)
+--     - tbl_archivos_bien (documentación digitalizada)
+--
+-- 📋 NORMATIVA:
+-- ────────────────────────────────────────────────────────────────────────────
+-- RD 1372/1986 - Reglamento de Bienes de las Entidades Locales
+-- Ley 33/2003 - Patrimonio de las Administraciones Públicas
+--
+-- 🔢 CÓDIGO DE INVENTARIO:
+-- ────────────────────────────────────────────────────────────────────────────
+-- Formato normalizado: XX.YY.ZZZ.NNNN
+--
+--   XX   = Epígrafe principal (tipo de bien)
+--          01 = Bienes Inmuebles
+--          03 = Bienes Muebles
+--          04 = Equipamiento de edificios
+--          05 = Elementos de seguridad
+--
+--   YY   = Subepígrafe (categoría específica)
+--          Ejemplos:
+--            01.01 = Edificios administrativos
+--            01.03 = Viviendas
+--            03.01 = Vehículos
+--            03.02 = Mobiliario general
+--            03.07 = Bienes patrimoniales
+--            04.01 = Calderas
+--            04.02 = Ascensores
+--            05.01 = Extintores
+--
+--   ZZZ  = Subgrupo (ubicación/edificio si aplica)
+--          001 = General (sin ubicación específica)
+--          002-999 = Código de edificio si está ubicado en uno
+--
+--   NNNN = Número secuencial (auto-incrementa por subgrupo)
+--          0001-9999
+--
+-- Ejemplo completo: 03.07.015.0023
+--   → Bien mueble (03)
+--   → Patrimonio histórico (07)
+--   → Ubicado en edificio 015
+--   → Número secuencial 0023
+--
+-- 👉 El código se genera AUTOMÁTICAMENTE mediante función Python
+--    al insertar el registro, analizando tipo_bien y FKs rellenas.
+--
+-- =============================================================================
+
+CREATE TABLE tbl_bienes (
+    
+    -- ═════════════════════════════════════════════════════════════════════════
+    -- 🔑 IDENTIFICACIÓN ÚNICA
+    -- ═════════════════════════════════════════════════════════════════════════
+    
+    -- ─────────────────────────────────────────────────────────────────────────
+    -- ID INTERNO (clave primaria auto-incremental)
+    -- ─────────────────────────────────────────────────────────────────────────
+    -- Identificador interno de base de datos.
+    -- Se usa para relaciones entre tablas (FKs).
+    -- NO se muestra al usuario final ni se usa en informes.
+    -- ─────────────────────────────────────────────────────────────────────────
+    
+    idtbl_bienes INT PRIMARY KEY AUTO_INCREMENT 
+        COMMENT 'ID interno del bien (clave primaria)',
+    
+    -- ─────────────────────────────────────────────────────────────────────────
+    -- CÓDIGO DE INVENTARIO (identificador público normalizado)
+    -- ─────────────────────────────────────────────────────────────────────────
+    -- Identificador ÚNICO que cumple normativa RD 1372/1986.
+    -- Este código:
+    --   ✔ Es INMUTABLE una vez asignado
+    --   ✔ Aparece en etiquetas físicas del bien
+    --   ✔ Se usa en informes oficiales
+    --   ✔ Se genera AUTOMÁTICAMENTE al dar de alta el bien
+    --   ✔ Identifica el tipo de bien solo con leerlo
+    --
+    -- 👉 NO se rellena manualmente por el usuario.
+    -- 👉 Se genera mediante función generar_codigo_inventario() en Python.
+    -- ─────────────────────────────────────────────────────────────────────────
+    
+    codigo_inventario VARCHAR(20) UNIQUE NOT NULL 
+        COMMENT 'Código normalizado RD 1372/1986 (formato XX.YY.ZZZ.NNNN)',
+    
+    -- ═════════════════════════════════════════════════════════════════════════
+    -- 🏷️ CLASIFICACIÓN DEL BIEN (determina estructura de datos)
+    -- ═════════════════════════════════════════════════════════════════════════
+    
+    -- ─────────────────────────────────────────────────────────────────────────
+    -- TIPO PRINCIPAL (categoría de primer nivel)
+    -- ─────────────────────────────────────────────────────────────────────────
+    -- Define qué tabla específica contendrá los datos técnicos del bien.
+    --
+    -- 🔹 'vehiculo'
+    --    → Datos específicos en tbl_vehiculos
+    --    → Campos: matrícula, bastidor, ITV, seguro, etc.
+    --
+    -- 🔹 'inmueble'
+    --    → Datos específicos en tbl_inmuebles
+    --    → Campos: ref. catastral, finca registral, superficie, etc.
+    --
+    -- 🔹 'mueble'
+    --    → Datos específicos en:
+    --       • tbl_muebles (si NO es patrimonial)
+    --       • tbl_bienes_patrimoniales (si SÍ es patrimonial)
+    --    → Campos: marca, modelo, número serie, especificaciones, etc.
+    --
+    -- 🔹 'equipamiento'
+    --    → Equipamiento de edificios (calderas, ascensores)
+    --    → Datos específicos según subtipo:
+    --       • tbl_calderas
+    --       • tbl_ascensores
+    --       • tbl_elementos_seguridad (extintores, BIEs, alarmas)
+    -- ─────────────────────────────────────────────────────────────────────────
+    
+    tipo_bien ENUM('vehiculo', 'inmueble', 'mueble', 'equipamiento') NOT NULL 
+        COMMENT 'Categoría principal del bien (determina tabla específica)',
+    
+    -- ─────────────────────────────────────────────────────────────────────────
+    -- SUBTIPO ESPECÍFICO (categoría de segundo nivel)
+    -- ─────────────────────────────────────────────────────────────────────────
+    -- FK a catálogo normalizado de tipos específicos.
+    --
+    -- Ejemplos según tipo_bien:
+    --
+    -- Si tipo_bien = 'inmueble':
+    --   → edificio, vivienda, parcela_urbana, parcela_rustica, local
+    --
+    -- Si tipo_bien = 'mueble':
+    --   → mesa, silla, armario, ordenador, impresora, cuadro, escultura
+    --
+    -- Si tipo_bien = 'vehiculo':
+    --   → turismo, furgoneta, camion, maquinaria_pesada
+    --
+    -- Si tipo_bien = 'equipamiento':
+    --   → caldera, ascensor, extintor, bie, alarma, detector_humo
+    --
+    -- 👉 Este campo referencia a tbl_tipos_bien que contiene el catálogo
+    --    completo de subtipos con metadata adicional (descripción, familia, etc.)
+    -- ─────────────────────────────────────────────────────────────────────────
+    
+    idtbl_tipos_bien INT 
+        COMMENT 'FK a catálogo de subtipos específicos (mesa, ordenador, edificio, etc.)',
+    
+    -- ═════════════════════════════════════════════════════════════════════════
+    -- 🔗 REFERENCIAS POLIMÓRFICAS (apuntan a tabla específica)
+    -- ═════════════════════════════════════════════════════════════════════════
+    
+    -- ─────────────────────────────────────────────────────────────────────────
+    -- ⚠️ REGLA CRÍTICA DE INTEGRIDAD:
+    -- ─────────────────────────────────────────────────────────────────────────
+    -- EXACTAMENTE UNO de estos campos debe estar relleno.
+    -- Un bien NO puede ser simultáneamente vehículo e inmueble.
+    --
+    -- Esta regla se garantiza mediante CONSTRAINT CHECK al final de la tabla.
+    --
+    -- Ejemplos de uso correcto:
+    --
+    --   Registro 1: Vehículo Ford Transit
+    --     tipo_bien = 'vehiculo'
+    --     idtbl_vehiculos = 47
+    --     Resto de IDs = NULL
+    --
+    --   Registro 2: Edificio Ayuntamiento
+    --     tipo_bien = 'inmueble'
+    --     idtbl_inmuebles = 15
+    --     Resto de IDs = NULL
+    --
+    --   Registro 3: Ordenador Dell
+    --     tipo_bien = 'mueble'
+    --     idtbl_muebles = 1203
+    --     Resto de IDs = NULL
+    -- ─────────────────────────────────────────────────────────────────────────
+    
+    -- Referencias a tablas específicas de cada tipo de bien
+    idtbl_vehiculos INT 
+        COMMENT 'FK a tbl_vehiculos (si tipo_bien=vehiculo)',
+    
+    idtbl_inmuebles INT 
+        COMMENT 'FK a tbl_inmuebles (si tipo_bien=inmueble)',
+    
+    idtbl_muebles INT 
+        COMMENT 'FK a tbl_muebles (si tipo_bien=mueble y NO patrimonial)',
+    
+    idtbl_bienes_patrimoniales INT 
+        COMMENT 'FK a tbl_bienes_patrimoniales (si tipo_bien=mueble y SÍ patrimonial)',
+    
+    idtbl_calderas INT 
+        COMMENT 'FK a tbl_calderas (si tipo_bien=equipamiento y subtipo=caldera)',
+    
+    idtbl_ascensores INT 
+        COMMENT 'FK a tbl_ascensores (si tipo_bien=equipamiento y subtipo=ascensor)',
+    
+    idtbl_elementos_seguridad INT 
+        COMMENT 'FK a tbl_elementos_seguridad (si tipo_bien=equipamiento y subtipo=seguridad)',
+    
+    -- ═════════════════════════════════════════════════════════════════════════
+    -- 📝 DESCRIPCIÓN GENERAL (datos comunes a TODOS los bienes)
+    -- ═════════════════════════════════════════════════════════════════════════
+    
+    -- ─────────────────────────────────────────────────────────────────────────
+    -- NOMBRE DEL BIEN (denominación corta)
+    -- ─────────────────────────────────────────────────────────────────────────
+    -- Identificador legible para humanos que describe el bien brevemente.
+    --
+    -- Ejemplos:
+    --   - "Edificio Ayuntamiento"
+    --   - "Furgón Ford Transit matrícula 1234-ABC"
+    --   - "Cuadro óleo Alcalde Pérez 1890"
+    --   - "Ordenador Dell Optiplex 7090"
+    --   - "Mesa despacho roble"
+    --
+    -- 👉 Este campo aparece en:
+    --    - Listados de inventario
+    --    - Etiquetas impresas
+    --    - Informes resumidos
+    --    - Búsquedas rápidas
+    -- ─────────────────────────────────────────────────────────────────────────
+    
+    nombre VARCHAR(255) 
+        COMMENT 'Denominación del bien (ej: "Edificio Ayuntamiento", "Ordenador Dell")',
+    
+    -- ─────────────────────────────────────────────────────────────────────────
+    -- DESCRIPCIÓN DETALLADA (texto libre extenso)
+    -- ─────────────────────────────────────────────────────────────────────────
+    -- Campo de texto largo para información adicional relevante.
+    --
+    -- Ejemplos de contenido:
+    --   - Observaciones sobre el estado físico
+    --   - Historia del bien (cómo se adquirió, de dónde vino)
+    --   - Peculiaridades o características especiales
+    --   - Problemas conocidos o limitaciones
+    --   - Documentación de incidencias pasadas
+    --
+    -- 👉 Este campo es opcional pero recomendado para bienes complejos
+    --    o con historial relevante.
+    -- ─────────────────────────────────────────────────────────────────────────
+    
+    descripcion TEXT 
+        COMMENT 'Descripción detallada, observaciones y notas adicionales',
+    
+    -- ═════════════════════════════════════════════════════════════════════════
+    -- 📊 ESTADO ADMINISTRATIVO DEL BIEN
+    -- ═════════════════════════════════════════════════════════════════════════
+    
+    -- ─────────────────────────────────────────────────────────────────────────
+    -- ESTADO ACTUAL (ciclo de vida del bien)
+    -- ─────────────────────────────────────────────────────────────────────────
+    -- Define la situación administrativa actual del bien.
+    -- Afecta a:
+    --   - Visibilidad en listados activos
+    --   - Cálculos de amortización
+    --   - Reportes oficiales
+    --   - Contabilización en balance
+    --
+    -- 🔹 'activo' (DEFAULT)
+    --    El bien está en uso normal por el ayuntamiento.
+    --    Aparece en inventarios operativos.
+    --    Se incluye en valoraciones patrimoniales.
+    --
+    -- 🔹 'baja'
+    --    Dado de baja definitivamente del inventario.
+    --    Motivos: vendido, destruido, robado, obsoleto irrecuperable.
+    --    NO aparece en listados activos.
+    --    Mantiene registro histórico (no se borra físicamente).
+    --
+    -- 🔹 'cedido'
+    --    Cedido temporalmente a otra entidad pública/privada.
+    --    Sigue siendo propiedad del ayuntamiento.
+    --    Requiere registro del destinatario y plazo de cesión.
+    --
+    -- 🔹 'enajenado'
+    --    Vendido o transferido definitivamente a terceros.
+    --    Ya NO es propiedad del ayuntamiento.
+    --    Se mantiene registro histórico para auditorías.
+    --
+    -- 🔹 'ruina'
+    --    Solo aplica a inmuebles.
+    --    Edificio declarado en estado de ruina.
+    --    No utilizable, pendiente de demolición o rehabilitación.
+    --
+    -- 🔹 'reserva'
+    --    Almacenado sin uso actual.
+    --    En buen estado pero no asignado.
+    --    Disponible para futura asignación.
+    --
+    -- 👉 Los cambios de estado se registran automáticamente en
+    --    tbl_auditoria_bienes mediante trigger.
+    -- ─────────────────────────────────────────────────────────────────────────
+    
+    estado ENUM('activo', 'baja', 'cedido', 'enajenado', 'ruina', 'reserva') 
+        DEFAULT 'activo' 
+        COMMENT 'Estado administrativo del bien (ciclo de vida)',
+    
+    -- ─────────────────────────────────────────────────────────────────────────
+    -- DESTINO / USO ACTUAL (finalidad del bien)
+    -- ─────────────────────────────────────────────────────────────────────────
+    -- Describe el uso o finalidad actual del bien.
+    --
+    -- Ejemplos según tipo de bien:
+    --
+    -- Inmuebles:
+    --   - "Oficinas de Secretaría General"
+    --   - "Centro Cultural Municipal"
+    --   - "Alquiler social - familia García"
+    --   - "Cedido a Cruz Roja para almacén"
+    --
+    -- Vehículos:
+    --   - "Transporte brigada de mantenimiento"
+    --   - "Vehículo oficial Alcaldía"
+    --   - "Servicios técnicos - fontanería"
+    --
+    -- Muebles:
+    --   - "Despacho técnico de obras"
+    --   - "Sala de reuniones planta 2"
+    --   - "Asignado a técnico de informática"
+    --
+    -- 👉 Este campo cambia cuando el bien se reasigna a otro departamento
+    --    o cambia su función. Los cambios se auditan automáticamente.
+    -- ─────────────────────────────────────────────────────────────────────────
+    
+    destino VARCHAR(255) 
+        COMMENT 'Uso o finalidad actual del bien',
+    
+    -- ═════════════════════════════════════════════════════════════════════════
+    -- 🗑️ CONTROL DE BAJAS (trazabilidad de salida del inventario)
+    -- ═════════════════════════════════════════════════════════════════════════
+    
+    -- ─────────────────────────────────────────────────────────────────────────
+    -- FECHA DE BAJA (cuándo salió del inventario)
+    -- ─────────────────────────────────────────────────────────────────────────
+    -- Solo se rellena cuando estado pasa a 'baja' o 'enajenado'.
+    --
+    -- Es obligatorio para:
+    --   - Cumplimiento normativo (auditorías externas)
+    --   - Cálculo de amortizaciones acumuladas
+    --   - Informes de altas y bajas del ejercicio
+    --
+    -- 👉 Se rellena automáticamente cuando se marca el bien como baja
+    --    desde la aplicación.
+    -- ─────────────────────────────────────────────────────────────────────────
+    
+    fecha_baja DATE 
+        COMMENT 'Fecha en que se dio de baja el bien del inventario',
+    
+    -- ─────────────────────────────────────────────────────────────────────────
+    -- MOTIVO DE LA BAJA (justificación documental)
+    -- ─────────────────────────────────────────────────────────────────────────
+    -- Obligatorio para cumplir normativa de patrimonio público.
+    --
+    -- Ejemplos de motivos válidos:
+    --
+    -- 🔹 Enajenación:
+    --   "Vendido mediante subasta pública (Acuerdo Pleno 15/2026)"
+    --   "Donado a asociación benéfica (Decreto Alcaldía 234/2026)"
+    --
+    -- 🔹 Deterioro/Obsolescencia:
+    --   "Ordenador obsoleto - vida útil agotada"
+    --   "Vehículo siniestro total - declarado pérdida por seguro"
+    --
+    -- 🔹 Robo/Pérdida:
+    --   "Robo denunciado (Denuncia Policía nº 12345/2026)"
+    --   "Pérdida en traslado - investigación en curso"
+    --
+    -- 🔹 Demolición/Derribo:
+    --   "Edificio derribado por orden municipal (Licencia 456/2026)"
+    --
+    -- 👉 Este texto aparece en informes de fiscalización y auditorías
+    --    externas, debe ser claro y bien justificado.
+    -- ─────────────────────────────────────────────────────────────────────────
+    
+    motivo_baja TEXT 
+        COMMENT 'Justificación de la baja (venta, deterioro, robo, obsolescencia, etc.)',
+    
+    -- ═════════════════════════════════════════════════════════════════════════
+    -- 👤 AUDITORÍA (quién y cuándo - trazabilidad completa)
+    -- ═════════════════════════════════════════════════════════════════════════
+    
+    -- ─────────────────────────────────────────────────────────────────────────
+    -- ALTA INICIAL EN INVENTARIO
+    -- ─────────────────────────────────────────────────────────────────────────
+    -- Registra cuándo y quién dio de alta el bien por primera vez.
+    --
+    -- fecha_alta:
+    --   - Se rellena automáticamente con CURRENT_TIMESTAMP al insertar
+    --   - Es INMUTABLE (no cambia nunca)
+    --   - Permite calcular antigüedad del bien en inventario
+    --
+    -- idtbl_gestores_alta:
+    --   - FK al usuario que creó el registro
+    --   - Se obtiene automáticamente desde session["user_id"]
+    --   - Permite identificar responsable del alta en auditorías
+    -- ─────────────────────────────────────────────────────────────────────────
+    
+    fecha_alta DATETIME DEFAULT CURRENT_TIMESTAMP 
+        COMMENT 'Timestamp de creación del registro en el inventario',
+    
+    idtbl_gestores_alta INT 
+        COMMENT 'Usuario que dio de alta el bien en el inventario',
+    
+    -- ─────────────────────────────────────────────────────────────────────────
+    -- ÚLTIMA MODIFICACIÓN
+    -- ─────────────────────────────────────────────────────────────────────────
+    -- Registra cuándo y quién modificó el registro por última vez.
+    --
+    -- fecha_modificacion:
+    --   - Se actualiza AUTOMÁTICAMENTE con ON UPDATE CURRENT_TIMESTAMP
+    --   - Cada vez que se hace UPDATE en cualquier campo, se actualiza
+    --   - Permite detectar registros obsoletos o inactivos
+    --
+    -- idtbl_gestores_modificacion:
+    --   - FK al último usuario que modificó el registro
+    --   - Se obtiene desde session["user_id"] en cada UPDATE
+    --   - Permite rastrear quién hizo el último cambio
+    --
+    -- 👉 Estos campos son distintos de tbl_auditoria_bienes:
+    --    - Aquí solo se guarda el ÚLTIMO cambio
+    --    - En auditoría se guarda HISTORIAL COMPLETO de todos los cambios
+    -- ─────────────────────────────────────────────────────────────────────────
+    
+    fecha_modificacion DATETIME ON UPDATE CURRENT_TIMESTAMP 
+        COMMENT 'Timestamp de la última modificación del registro',
+    
+    idtbl_gestores_modificacion INT 
+        COMMENT 'Usuario que realizó la última modificación',
+    
+    -- ═════════════════════════════════════════════════════════════════════════
+    -- 🔐 FOREIGN KEYS (integridad referencial)
+    -- ═════════════════════════════════════════════════════════════════════════
+    
+    -- Relación con datos específicos de vehículos
+    FOREIGN KEY (idtbl_vehiculos) 
+        REFERENCES tbl_vehiculos(idtbl_vehiculos) 
+        ON DELETE RESTRICT,
+    
+    -- Relación con datos específicos de inmuebles
+    FOREIGN KEY (idtbl_inmuebles) 
+        REFERENCES tbl_inmuebles(idtbl_inmuebles) 
+        ON DELETE RESTRICT,
+    
+    -- Relación con mobiliario general (no patrimonial)
+    FOREIGN KEY (idtbl_muebles) 
+        REFERENCES tbl_muebles(idtbl_muebles) 
+        ON DELETE RESTRICT,
+    
+    -- Relación con bienes de valor histórico/cultural
+    FOREIGN KEY (idtbl_bienes_patrimoniales) 
+        REFERENCES tbl_bienes_patrimoniales(idtbl_bienes_patrimoniales) 
+        ON DELETE RESTRICT,
+    
+    -- Relación con calderas de edificios
+    FOREIGN KEY (idtbl_calderas) 
+        REFERENCES tbl_calderas(idtbl_calderas) 
+        ON DELETE RESTRICT,
+    
+    -- Relación con ascensores (identificados por RAE)
+    FOREIGN KEY (idtbl_ascensores) 
+        REFERENCES tbl_ascensores(idtbl_ascensores) 
+        ON DELETE RESTRICT,
+    
+    -- Relación con elementos de seguridad (extintores, BIEs, alarmas)
+    FOREIGN KEY (idtbl_elementos_seguridad) 
+        REFERENCES tbl_elementos_seguridad(idtbl_elementos_seguridad) 
+        ON DELETE RESTRICT,
+    
+    -- Catálogo de subtipos específicos (mesa, ordenador, edificio, etc.)
+    FOREIGN KEY (idtbl_tipos_bien) 
+        REFERENCES tbl_tipos_bien(idtbl_tipos_bien),
+    
+    -- Usuario que creó el registro
+    FOREIGN KEY (idtbl_gestores_alta) 
+        REFERENCES tbl_gestores(idtbl_gestores),
+    
+    -- Usuario que modificó el registro
+    FOREIGN KEY (idtbl_gestores_modificacion) 
+        REFERENCES tbl_gestores(idtbl_gestores),
+    
+    -- ═════════════════════════════════════════════════════════════════════════
+    -- ⚖️ CONSTRAINTS DE VALIDACIÓN (reglas de negocio)
+    -- ═════════════════════════════════════════════════════════════════════════
+    
+    -- Solo una de las FKs polimórficas puede estar rellena
+    CONSTRAINT chk_una_referencia CHECK (
+        (CASE WHEN idtbl_vehiculos IS NOT NULL THEN 1 ELSE 0 END +
+         CASE WHEN idtbl_inmuebles IS NOT NULL THEN 1 ELSE 0 END +
+         CASE WHEN idtbl_muebles IS NOT NULL THEN 1 ELSE 0 END +
+         CASE WHEN idtbl_bienes_patrimoniales IS NOT NULL THEN 1 ELSE 0 END +
+         CASE WHEN idtbl_calderas IS NOT NULL THEN 1 ELSE 0 END +
+         CASE WHEN idtbl_ascensores IS NOT NULL THEN 1 ELSE 0 END +
+         CASE WHEN idtbl_elementos_seguridad IS NOT NULL THEN 1 ELSE 0 END) = 1
+    ),
+    
+    -- El tipo_bien debe coincidir con la FK rellena
+    CONSTRAINT chk_tipo_consistente CHECK (
+        (tipo_bien = 'vehiculo' AND idtbl_vehiculos IS NOT NULL) OR
+        (tipo_bien = 'inmueble' AND idtbl_inmuebles IS NOT NULL) OR
+        (tipo_bien = 'mueble' AND (idtbl_muebles IS NOT NULL OR idtbl_bienes_patrimoniales IS NOT NULL)) OR
+        (tipo_bien = 'equipamiento' AND (idtbl_calderas IS NOT NULL OR idtbl_ascensores IS NOT NULL OR idtbl_elementos_seguridad IS NOT NULL))
+    ),
+    
+    -- Si está de baja, debe tener fecha y motivo
+    CONSTRAINT chk_baja_completa CHECK (
+        (estado IN ('baja', 'enajenado') AND fecha_baja IS NOT NULL AND motivo_baja IS NOT NULL) OR
+        (estado NOT IN ('baja', 'enajenado'))
+    ),
+    
+    -- ═════════════════════════════════════════════════════════════════════════
+    -- 🔍 ÍNDICES (optimización de consultas frecuentes)
+    -- ═════════════════════════════════════════════════════════════════════════
+    
+    -- Búsqueda rápida por código de inventario
+    INDEX idx_codigo (codigo_inventario),
+    
+    -- Filtrado por categoría principal
+    INDEX idx_tipo_bien (tipo_bien),
+    
+    -- Filtrado por estado administrativo
+    INDEX idx_estado (estado),
+    
+    -- Ordenamiento por fecha de alta
+    INDEX idx_fecha_alta (fecha_alta),
+    
+    -- Búsqueda por nombre del bien
+    INDEX idx_nombre (nombre),
+    
+    -- Filtrado combinado (consulta muy frecuente)
+    INDEX idx_tipo_estado (tipo_bien, estado)
+    
+) ENGINE=InnoDB 
+  DEFAULT CHARSET=utf8mb4 
+  COLLATE=utf8mb4_unicode_ci
+  COMMENT='Registro maestro del inventario municipal de bienes (RD 1372/1986)';

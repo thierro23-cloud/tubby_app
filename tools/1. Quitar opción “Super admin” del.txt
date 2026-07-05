@@ -1,0 +1,13 @@
+1. Quitar opción “Super admin” del desplegable
+Sustituye el <select> por este (sin la opción que vuelve a sí mismo):
+
+xml
+<select id="panel_por_rol"
+        onchange="if (this.value) window.location.href=this.value;"
+        style="margin-top: 8px; width: 100%; padding: 4px 8px; border-radius: 8px; border:1px solid #e5e7eb; font-size: 0.78rem;">
+  <option value="">Ir a panel de rol...</option>
+  <option value="{{ url_for('gestores_bp.panel_gestor') }}">Panel gestores</option>
+  <option value="{{ url_for('policias_bp.panel_policias') }}">Panel policías</option>
+  <option value="{{ url_for('vigilantes_bp.panel_vigilantes') }}">Panel vigilantes</option>
+  <option value="{{ url_for('usuarios_bp.panel_usuarios') }}">Panel usuarios</option>
+</select>

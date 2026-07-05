@@ -1,0 +1,525 @@
+{# ================================================================
+   🧩 PLANTILLA: PARQUIN - CONSULTAS AVANZADAS DE PLAZAS
+   ================================================================
+   COMIENZO PLANTILLA
+   ---------------------------------------------------------------
+   Esta plantilla HTML/Jinja2 define la interfaz de backoffice para
+   las "Consultas avanzadas" de plazas del parquin Río Torío.
+
+   Funcionalidad:
+     - Filtros avanzados sobre el ESTADO ACTUAL de plazas:
+         · Fila, estado (libre/ocupada), código de plaza.
+         · Proveedor (nombre/NIF), fechas alta/baja plaza.
+     - Filtros de PERIODO para histórico de BAJAS:
+         · hist_fecha_ini, hist_fecha_fin (por fecha_fin).
+     - Acciones de EXPORTACIÓN:
+         · Estado actual → Excel / Word.
+         · Bajas del periodo → Excel / Word.
+     - Visualización:
+         · Tabla principal: estado actual de plazas.
+         · Tabla secundaria: bajas en el periodo (si las hay).
+
+   Relación con el backend:
+     - Endpoint: btn_rio_torio_consultas_avanzadas_bp.btn_rio_torio_consultas_avanzadas
+     - Parámetros GET:
+         · fila, estado, codigo, prov_nombre, prov_nif,
+           fecha_ini, fecha_fin
+         · hist_fecha_ini, hist_fecha_fin
+         · exportar (excel/word)
+         · exportar_periodo (excel/word)
+     - Variables de contexto usadas:
+         · plazas, total, libres, ocupadas
+         · proveedores_filtro
+         · hist_fecha_ini, hist_fecha_fin
+         · bajas_periodo
+   ---------------------------------------------------------------
+#}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Parquin · Consultas avanzadas de plazas</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    {# -------------------------------------------------------------
+       BLOQUE CSS / BOOTSTRAP
+       -------------------------------------------------------------
+       - Se carga Bootstrap 5 desde CDN para clases de maquetación
+         y componentes visuales (cards, tablas, botones...).
+       - Se definen estilos propios para:
+           · Fondo de página.
+           · Cabecera profesional con título.
+           · Card de filtros resaltada.
+           · Píldoras de estado (libre/ocupada).
+           · Cabeceras sticky en tablas.
+           · Tipografía para códigos de plaza.
+       ------------------------------------------------------------- #}
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+
+    <style>
+        body {
+            background-color: #f5f7fa;
+        }
+
+        .page-title {
+            font-size: 1.6rem;
+            font-weight: 600;
+        }
+
+        .card-filtros {
+            border-left: 4px solid #0d6efd;
+        }
+
+        .table thead th {
+            white-space: nowrap;
+        }
+
+        .estado-pill {
+            padding: 0.15rem 0.5rem;
+            border-radius: 999px;
+            font-size: 0.78rem;
+            font-weight: 600;
+        }
+
+        .estado-libre {
+            background-color: #d1e7dd;
+            color: #0f5132;
+        }
+
+        .estado-ocupada {
+            background-color: #fde2e1;
+            color: #842029;
+        }
+
+        .sticky-th {
+            position: sticky;
+            top: 0;
+            background-color: #f8f9fa;
+            z-index: 2;
+        }
+
+        .totales-badge span {
+            margin-right: 0.5rem;
+        }
+
+        .codigo-plaza {
+            font-family: "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            font-size: 0.9rem;
+        }
+
+        .table-responsive {
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+
+        .small-label {
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container-fluid py-3">
+
+    {# =========================================================
+       1. CABECERA DE PÁGINA
+       =========================================================
+       COMIENZO SECCIÓN 1
+       ---------------------------------------------------------
+       Objetivo:
+         - Mostrar el título funcional "Consultas avanzadas de plazas".
+         - Incluir un botón "Volver" (historial del navegador).
+         - Visualizar los totales de plazas (libres / ocupadas / total).
+       --------------------------------------------------------- #}
+    <div class="d-flex justify-content-between align-items-center mb-3">
+
+        {# 1.1 Zona izquierda: botón volver + título + descripción #}
+        <div class="d-flex align-items-center">
+
+            {# 1.1.1 Botón "Volver" usando history.back() #}
+            <button type="button"
+                    class="btn btn-sm btn-outline-secondary me-2"
+                    onclick="window.history.back();">
+                ← Volver
+            </button>
+
+            {# 1.1.2 Título de página y breve explicación de filtros #}
+            <div>
+                <div class="page-title">Consultas avanzadas de plazas</div>
+                <div class="text-muted small">
+                    Filtra por fila, estado, código de plaza, proveedor (nombre/NIF) y fechas de alta/baja.
+                </div>
+            </div>
+        </div>
+
+        {# 1.2 Zona derecha: totales de plazas #}
+        <div class="totales-badge text-end">
+            <span class="badge bg-success">
+                Libres: {{ libres }}
+            </span>
+            <span class="badge bg-danger">
+                Ocupadas: {{ ocupadas }}
+            </span>
+            <span class="badge bg-secondary">
+                Total: {{ total }}
+            </span>
+        </div>
+    </div>
+    {# FIN SECCIÓN 1
+       ========================================================= #}
+
+    {# =========================================================
+       2. BLOQUE DE FILTROS + BOTONES DE EXPORTACIÓN
+       =========================================================
+       COMIENZO SECCIÓN 2
+       ---------------------------------------------------------
+       Contenido del bloque:
+         - Filtros de estado actual:
+             · fila, estado, código, proveedor nombre/NIF.
+             · fecha_ini, fecha_fin.
+         - Filtros de histórico:
+             · hist_fecha_ini, hist_fecha_fin.
+         - Barra de acciones:
+             · Botón Buscar → aplica filtros en pantalla.
+             · 4 botones de exportación:
+                 · exportar=excel  → estado actual a Excel.
+                 · exportar=word   → estado actual a Word.
+                 · exportar_periodo=excel → bajas periodo a Excel.
+                 · exportar_periodo=word  → bajas periodo a Word.
+       --------------------------------------------------------- #}
+    <div class="card card-filtros mb-3">
+        {# 2.1 Cabecera visual del bloque de filtros #}
+        <div class="card-header py-2">
+            <div class="d-flex justify-content-between align-items-center">
+                <span class="fw-semibold">
+                    Filtros de búsqueda
+                </span>
+                <button class="btn btn-sm btn-outline-secondary"
+                        type="button"
+                        onclick="document.getElementById('form-filtros').reset();">
+                    Limpiar filtros
+                </button>
+            </div>
+        </div>
+
+        {# 2.2 Cuerpo del bloque: formulario + exportaciones #}
+        <div class="card-body">
+            <form id="form-filtros"
+                  method="get"
+                  action="{{ url_for('btn_rio_torio_consultas_avanzadas_bp.btn_rio_torio_consultas_avanzadas') }}">
+
+                {# 2.2.1 Filtros del ESTADO ACTUAL (cabecera principal) #}
+                <div class="row g-3 align-items-end">
+
+                    {# Fila de la plaza #}
+                    <div class="col-6 col-md-2">
+                        <label class="small-label mb-1" for="fila">Fila</label>
+                        <input type="text"
+                               class="form-control form-control-sm"
+                               id="fila"
+                               name="fila"
+                               value="{{ fila or '' }}"
+                               placeholder="Ej: 1, 2, 3...">
+                    </div>
+
+                    {# Estado: libre / ocupada #}
+                    <div class="col-6 col-md-2">
+                        <label class="small-label mb-1" for="estado">Estado</label>
+                        <select class="form-select form-select-sm" id="estado" name="estado">
+                            <option value="">(Todos)</option>
+                            <option value="libre"
+                                    {% if estado == 'libre' %}selected{% endif %}>
+                                Libres
+                            </option>
+                            <option value="ocupada"
+                                    {% if estado == 'ocupada' %}selected{% endif %}>
+                                Ocupadas
+                            </option>
+                        </select>
+                    </div>
+
+                    {# Código de plaza (búsqueda parcial) #}
+                    <div class="col-12 col-md-3">
+                        <label class="small-label mb-1" for="codigo">Código plaza</label>
+                        <input type="text"
+                               class="form-control form-control-sm"
+                               id="codigo"
+                               name="codigo"
+                               value="{{ codigo or '' }}"
+                               placeholder="Buscar por código (contiene)">
+                    </div>
+
+                    {# Proveedor por nombre (select a partir de proveedores_filtro) #}
+                    <div class="col-12 col-md-3">
+                        <label class="small-label mb-1" for="prov_nombre">Proveedor (nombre)</label>
+                        <select class="form-select form-select-sm" id="prov_nombre" name="prov_nombre">
+                            <option value="">(Todos)</option>
+                            {% for prov in proveedores_filtro %}
+                                <option value="{{ prov.Nombre_Razon_Social }}"
+                                        {% if prov_nombre == prov.Nombre_Razon_Social %}selected{% endif %}>
+                                    {{ prov.Nombre_Razon_Social }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    {# Proveedor por NIF (select) #}
+                    <div class="col-12 col-md-2">
+                        <label class="small-label mb-1" for="prov_nif">Proveedor NIF</label>
+                        <select class="form-select form-select-sm" id="prov_nif" name="prov_nif">
+                            <option value="">(Todos)</option>
+                            {% for prov in proveedores_filtro %}
+                                <option value="{{ prov.NIF }}"
+                                        {% if prov_nif == prov.NIF %}selected{% endif %}>
+                                    {{ prov.NIF }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                {# 2.2.2 Filtros de FECHAS (alta/baja plaza + histórico) #}
+                <div class="row g-3 align-items-end mt-2">
+
+                    {# Fecha de alta plaza ≥ #}
+                    <div class="col-6 col-md-2">
+                        <label class="small-label mb-1" for="fecha_ini">Alta plaza ≥</label>
+                        <input type="date"
+                               class="form-control form-control-sm"
+                               id="fecha_ini"
+                               name="fecha_ini"
+                               value="{{ fecha_ini or '' }}">
+                    </div>
+
+                    {# Fecha de baja plaza ≤ #}
+                    <div class="col-6 col-md-2">
+                        <label class="small-label mb-1" for="fecha_fin">Baja plaza ≤</label>
+                        <input type="date"
+                               class="form-control form-control-sm"
+                               id="fecha_fin"
+                               name="fecha_fin"
+                               value="{{ fecha_fin or '' }}">
+                    </div>
+
+                    {# Fecha desde (histórico bajas) #}
+                    <div class="col-6 col-md-2">
+                        <label class="small-label mb-1" for="hist_fecha_ini">Histórico · Fecha desde</label>
+                        <input type="date"
+                               class="form-control form-control-sm"
+                               id="hist_fecha_ini"
+                               name="hist_fecha_ini"
+                               value="{{ hist_fecha_ini or '' }}">
+                    </div>
+
+                    {# Fecha hasta (histórico bajas) #}
+                    <div class="col-6 col-md-2">
+                        <label class="small-label mb-1" for="hist_fecha_fin">Histórico · Fecha hasta</label>
+                        <input type="date"
+                               class="form-control form-control-sm"
+                               id="hist_fecha_fin"
+                               name="hist_fecha_fin"
+                               value="{{ hist_fecha_fin or '' }}">
+                    </div>
+
+                    {# 2.2.3 Zona derecha: Buscar + 4 botones exportación #}
+                    <div class="col-12 col-md-4 text-md-end mt-3 mt-md-0">
+
+                        {# BOTÓN BUSCAR → aplica filtros en pantalla #}
+                        <button type="submit"
+                                class="btn btn-sm btn-primary me-2">
+                            Buscar
+                        </button>
+
+                        {# -------------------------------------------------
+                           BOTONES DE EXPORTACIÓN
+                           -------------------------------------------------
+                           - Estado actual (plazas):
+                               · exportar=excel → _exportar_excel(...)
+                               · exportar=word  → _exportar_word(...)
+                           - Bajas del periodo (histórico):
+                               · exportar_periodo=excel → _exportar_periodo_excel_bajas(...)
+                               · exportar_periodo=word  → _exportar_periodo_word_bajas(...)
+                           ------------------------------------------------- #}
+                        <div class="btn-group mb-1" role="group" aria-label="Exportación estado actual">
+                            <button type="submit"
+                                    class="btn btn-sm btn-success"
+                                    name="exportar" value="excel">
+                                Excel actual
+                            </button>
+                            <button type="submit"
+                                    class="btn btn-sm btn-outline-success"
+                                    name="exportar" value="word">
+                                Word actual
+                            </button>
+                        </div>
+
+                        <div class="btn-group mb-1" role="group" aria-label="Exportación bajas periodo">
+                            <button type="submit"
+                                    class="btn btn-sm btn-info"
+                                    name="exportar_periodo" value="excel">
+                                Excel bajas
+                            </button>
+                            <button type="submit"
+                                    class="btn btn-sm btn-outline-info"
+                                    name="exportar_periodo" value="word">
+                                Word bajas
+                            </button>
+                        </div>
+
+                    </div>
+                </div>
+
+            </form>
+        </div>
+    </div>
+    {# FIN SECCIÓN 2
+       ========================================================= #}
+
+    {# =========================================================
+       3. TABLA PRINCIPAL: ESTADO ACTUAL DE PLAZAS
+       =========================================================
+       COMIENZO SECCIÓN 3
+       ---------------------------------------------------------
+       - Muestra la lista de plazas según los filtros del estado actual.
+       - Cada fila indica:
+           · Código de plaza, fila.
+           · Estado (libre/ocupada) con color.
+           · Proveedor (nombre/NIF).
+           · Fechas de alta/baja de plaza y usuario.
+           · Expedientes de alta/baja.
+       --------------------------------------------------------- #}
+    <div class="card mb-3">
+        <div class="card-header py-2">
+            <div class="d-flex justify-content-between align-items-center">
+                <span class="fw-semibold">Estado actual de plazas</span>
+                <span class="text-muted small">{{ plazas|length }} resultados</span>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th scope="col" class="sticky-th">Plaza</th>
+                            <th scope="col" class="sticky-th">Fila</th>
+                            <th scope="col" class="sticky-th">Estado</th>
+                            <th scope="col" class="sticky-th">Proveedor</th>
+                            <th scope="col" class="sticky-th">NIF</th>
+                            <th scope="col" class="sticky-th">Alta plaza</th>
+                            <th scope="col" class="sticky-th">Baja plaza</th>
+                            <th scope="col" class="sticky-th">F. inicio usuario</th>
+                            <th scope="col" class="sticky-th">F. baja usuario</th>
+                            <th scope="col" class="sticky-th">Exp. alta plaza</th>
+                            <th scope="col" class="sticky-th">Exp. baja plaza</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% if plazas %}
+                        {% for p in plazas %}
+                        <tr>
+                            <td>
+                                <span class="codigo-plaza">{{ p.codigo_plazas }}</span>
+                                <small class="text-muted"> (ID {{ p.idtbl_plazas }})</small>
+                            </td>
+                            <td>{{ p.fila }}</td>
+                            <td>
+                                {% if p.idtbl_usuarios %}
+                                    <span class="estado-pill estado-ocupada">Ocupada</span>
+                                {% else %}
+                                    <span class="estado-pill estado-libre">Libre</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ p.prov_nombre or "-" }}</td>
+                            <td>{{ p.prov_nif or "-" }}</td>
+                            <td>{{ p.plaza_fecha_inicio or "" }}</td>
+                            <td>{{ p.plaza_fecha_fin or "" }}</td>
+                            <td>{{ p.usuario_fecha_inicio or "" }}</td>
+                            <td>{{ p.usuario_fecha_baja or "" }}</td>
+                            <td>{{ p.plaza_exp_solicitud or "" }}</td>
+                            <td>{{ p.plaza_exp_solicitud_fin or "" }}</td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="11" class="text-center text-muted py-4">
+                                No hay plazas que cumplan los criterios de búsqueda.
+                            </td>
+                        </tr>
+                    {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {# FIN SECCIÓN 3
+       ========================================================= #}
+
+    {# =========================================================
+       4. TABLA SECUNDARIA: BAJAS EN EL PERIODO (HISTÓRICO)
+       =========================================================
+       COMIENZO SECCIÓN 4
+       ---------------------------------------------------------
+       - Se muestra solo si existen bajas_periodo.
+       - Refleja las BAJAS cuya fecha_fin está entre
+         hist_fecha_ini y hist_fecha_fin.
+       - Es coherente con los ficheros Excel/Word de bajas
+         exportados desde la vista.
+       --------------------------------------------------------- #}
+    {% if bajas_periodo %}
+    <div class="card mb-3">
+        <div class="card-header py-2">
+            <div class="d-flex justify-content-between align-items-center">
+                <span class="fw-semibold">Bajas de plazas en el periodo seleccionado</span>
+                <small class="text-muted">
+                    Periodo: {{ hist_fecha_ini or "?" }} a {{ hist_fecha_fin or "?" }}
+                </small>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-sm table-striped mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th scope="col" class="sticky-th">Plaza</th>
+                            <th scope="col" class="sticky-th">Fila</th>
+                            <th scope="col" class="sticky-th">Abonado</th>
+                            <th scope="col" class="sticky-th">NIF</th>
+                            <th scope="col" class="sticky-th">Fecha inicio</th>
+                            <th scope="col" class="sticky-th">Fecha fin</th>
+                            <th scope="col" class="sticky-th">Exp. fin</th>
+                            <th scope="col" class="sticky-th">Nº expediente</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for b in bajas_periodo %}
+                        <tr>
+                            <td>{{ b.codigo_plazas }}</td>
+                            <td>{{ b.fila }}</td>
+                            <td>{{ b.Nombre_Razon_Social }}</td>
+                            <td>{{ b.NIF }}</td>
+                            <td>{{ b.fecha_inicio }}</td>
+                            <td>{{ b.fecha_fin }}</td>
+                            <td>{{ b.exp_solicitud_fin }}</td>
+                            <td>{{ b.numero_expediente }}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {# FIN SECCIÓN 4
+       ========================================================= #}
+
+</div>
+
+{# ---------------------------------------------------------------
+   FIN PLANTILLA
+   =============================================================== #}
+</body>
+</html>

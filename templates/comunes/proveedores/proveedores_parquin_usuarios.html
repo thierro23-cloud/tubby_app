@@ -1,0 +1,533 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Usuarios del parquin por proveedor</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  {# Bootstrap 5 + Icons #}
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  >
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
+    rel="stylesheet"
+  >
+
+  <style>
+    :root {
+      --pg-bg: #0f172a;
+      --pg-bg-soft: #020617;
+      --pg-card: rgba(15, 23, 42, 0.95);
+      --pg-border: rgba(148, 163, 184, 0.45);
+      --pg-accent: #3b82f6;
+      --pg-accent-soft: rgba(59, 130, 246, 0.18);
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 10% 20%, rgba(129, 140, 248, 0.18), transparent 55%),
+        radial-gradient(circle at 80% 0%, rgba(56, 189, 248, 0.15), transparent 55%),
+        linear-gradient(135deg, #0f172a, #020617);
+      color: #e5e7eb;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    .pg-shell {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding: 1.5rem 0.75rem;
+    }
+
+    .pg-frame {
+      max-width: 1024px;
+      margin: 0 auto;
+      border-radius: 1.25rem;
+      border: 1px solid var(--pg-border);
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(15, 23, 42, 0.97));
+      box-shadow:
+        0 28px 75px rgba(15, 23, 42, 0.85),
+        0 0 0 1px rgba(15, 23, 42, 0.8);
+      padding: 1.1rem 1.2rem 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+    }
+
+    .pg-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: stretch;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .pg-hero {
+      flex: 1;
+      border-radius: 1rem;
+      padding: 0.8rem 1rem;
+      background:
+        linear-gradient(135deg, #60a5fa, #3b82f6, #1d4ed8);
+      color: #0b1120;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .pg-hero::after {
+      content: "";
+      position: absolute;
+      right: -30px;
+      top: -40px;
+      width: 120px;
+      height: 120px;
+      background: radial-gradient(circle, rgba(255, 255, 255, 0.28), transparent 60%);
+      opacity: 0.75;
+    }
+
+    .pg-hero-main {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+    }
+
+    .pg-hero-icon {
+      width: 2.6rem;
+      height: 2.6rem;
+      border-radius: 0.9rem;
+      background: rgba(15, 23, 42, 0.08);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .pg-hero-text h1 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin: 0 0 0.1rem;
+    }
+
+    .pg-hero-text p {
+      font-size: 0.8rem;
+      margin: 0;
+      opacity: 0.9;
+    }
+
+    .pg-hero-pill {
+      margin-top: 0.25rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.15rem 0.6rem;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.1);
+      font-size: 0.7rem;
+    }
+
+    .pg-summary {
+      min-width: 210px;
+      border-radius: 1rem;
+      padding: 0.7rem 0.9rem;
+      background: rgba(15, 23, 42, 0.96);
+      border: 1px solid rgba(148, 163, 184, 0.6);
+      font-size: 0.78rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      color: #e5e7eb;
+    }
+
+    .pg-summary strong {
+      font-size: 0.82rem;
+    }
+
+    .pg-summary-btn {
+      margin-top: 0.5rem;
+    }
+
+    .pg-main {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .pg-card {
+      border-radius: 1rem;
+      background: var(--pg-card);
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      box-shadow: 0 14px 40px rgba(15, 23, 42, 0.75);
+    }
+
+    .pg-card-header {
+      padding: 0.6rem 0.9rem;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.3);
+      background: linear-gradient(
+        90deg,
+        rgba(148, 163, 184, 0.12),
+        rgba(59, 130, 246, 0.18)
+      );
+    }
+
+    .pg-card-body {
+      padding: 0.7rem 0.9rem 0.85rem;
+    }
+
+    .pg-badge-soft {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.15rem 0.55rem;
+      border-radius: 999px;
+      background: rgba(239, 246, 255, 0.12);
+      color: #e5e7eb;
+      font-size: 0.72rem;
+    }
+
+    .pg-badge-state {
+      font-size: 0.7rem;
+      border-radius: 999px;
+      padding: 0.15rem 0.5rem;
+    }
+
+    .pg-provider-heading {
+      font-size: 0.86rem;
+      font-weight: 600;
+    }
+
+    .pg-provider-sub {
+      font-size: 0.76rem;
+      color: #9ca3af;
+    }
+
+    .pg-contact {
+      font-size: 0.75rem;
+      color: #9ca3af;
+    }
+
+    .pg-contact i {
+      margin-right: 0.25rem;
+    }
+
+    .pg-form-label-sm {
+      font-size: 0.72rem;
+      font-weight: 600;
+      margin-bottom: 0.1rem;
+      color: #d1d5db;
+    }
+
+    .pg-footer {
+      margin-top: 0.4rem;
+      border-top: 1px solid rgba(148, 163, 184, 0.35);
+      padding-top: 0.4rem;
+      font-size: 0.72rem;
+      color: #9ca3af;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .pg-btn-ghost {
+      border-radius: 999px;
+      border-color: rgba(148, 163, 184, 0.7);
+      color: #e5e7eb;
+      font-size: 0.75rem;
+      padding-inline: 0.7rem;
+    }
+
+    .pg-btn-primary {
+      border-radius: 999px;
+      background: linear-gradient(135deg, #3b82f6, #6366f1);
+      border: none;
+      font-size: 0.78rem;
+      padding-inline: 0.9rem;
+      box-shadow: 0 8px 18px rgba(59, 130, 246, 0.5);
+    }
+
+    .pg-btn-primary:hover {
+      filter: brightness(1.05);
+    }
+
+    .pg-empty {
+      border-radius: 0.9rem;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px dashed rgba(148, 163, 184, 0.5);
+      padding: 0.9rem 1rem;
+      font-size: 0.78rem;
+      color: #e5e7eb;
+    }
+  </style>
+</head>
+<body>
+
+<div class="pg-shell">
+  <div class="pg-frame">
+
+    {# 1️⃣ CABECERA #}
+    <div class="pg-header">
+      <div class="pg-hero">
+        <div class="pg-hero-main">
+          <div class="pg-hero-icon">
+            <i class="bi bi-p-square fs-5"></i>
+          </div>
+          <div class="pg-hero-text">
+            <h1>Usuarios del parquin por proveedor</h1>
+            <p>
+              Gestiona los usuarios de parquin asociados a cada proveedor con
+              un entorno visual claro y agradable.
+            </p>
+            <div class="pg-hero-pill">
+              <i class="bi bi-people"></i>
+              <span>Total proveedores: {{ filas|length }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pg-summary">
+        <div>
+          <div class="mb-1">
+            <strong>Panel de proveedores</strong>
+          </div>
+          <div class="text-muted">
+            Revisa el estado de cada proveedor y ajusta los usuarios de parquin
+            sin perder de vista las fechas de alta y baja.
+          </div>
+        </div>
+        <div class="pg-summary-btn text-end">
+          <button type="button"
+                  class="btn btn-light btn-sm"
+                  onclick="volverAnterior()">
+            <i class="bi bi-arrow-left-circle me-1"></i>
+            Volver
+          </button>
+        </div>
+      </div>
+    </div>
+
+    {# 2️⃣ MENSAJES FLASH (SI LOS PASA LA VISTA) #}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="mt-1">
+          {% for category, msg in messages %}
+            <div class="alert alert-{{ 'info' if category == 'message' else category }} py-1 px-2 mb-1">
+              <span class="small">{{ msg }}</span>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    {# 3️⃣ CUERPO PRINCIPAL #}
+    <div class="pg-main">
+
+      {% if not filas %}
+        <div class="pg-empty">
+          <i class="bi bi-info-circle me-1"></i>
+          No se han encontrado proveedores con parquin configurado.
+        </div>
+      {% else %}
+
+        <div class="d-flex flex-column gap-3">
+          {% for fila in filas %}
+          {% set prov_activo = fila.proveedor_activo_baja == 'activo' %}
+          {% set est_usr = fila.usuario_activo_baja or 'activo' %}
+          {% set usr_activo = (fila.usuario_activo_baja or 'activo') == 'activo' %}
+
+          <div class="pg-card">
+
+            {# CABECERA TARJETA PROVEEDOR #}
+            <div class="pg-card-header">
+              <div class="d-flex justify-content-between align-items-start">
+                <div>
+                  <div class="pg-provider-heading mb-1">
+                    <i class="bi bi-building-check text-primary me-2"></i>
+                    {{ fila.proveedor_nombre }}
+                    {% if fila.proveedor_parquin %}
+                      <span class="pg-badge-soft ms-1">
+                        <i class="bi bi-p-square"></i> Parquin
+                      </span>
+                    {% endif %}
+                  </div>
+                  <div class="pg-provider-sub">
+                    ID prov: {{ fila.idtbl_proveedores }} ·
+                    NIF:
+                    <span class="fw-monospace">{{ fila.proveedor_nif }}</span>
+                  </div>
+                </div>
+
+                <div class="text-end">
+                  {# Estado proveedor #}
+                  {% if fila.proveedor_activo_baja == 'activo' %}
+                    <span class="pg-badge-state bg-success-subtle text-success mb-1">
+                      <i class="bi bi-check-circle me-1"></i>Proveedor activo
+                    </span>
+                  {% elif fila.proveedor_activo_baja == 'baja' %}
+                    <span class="pg-badge-state bg-danger-subtle text-danger mb-1">
+                      <i class="bi bi-x-circle me-1"></i>Prov. en baja
+                    </span>
+                  {% else %}
+                    <span class="pg-badge-state bg-secondary-subtle text-secondary mb-1">
+                      {{ fila.proveedor_activo_baja }}
+                    </span>
+                  {% endif %}
+
+                  <div class="mt-1">
+                    {% if fila.idtbl_usuarios %}
+                      {% if usr_activo %}
+                        <span class="pg-badge-state bg-success-subtle text-success">
+                          <i class="bi bi-person-check me-1"></i>Usuario activo
+                        </span>
+                      {% else %}
+                        <span class="pg-badge-state bg-warning-subtle text-warning">
+                          <i class="bi bi-person-dash me-1"></i>Usuario en baja
+                        </span>
+                      {% endif %}
+                      <div class="pg-provider-sub mt-1">
+                        ID usuario:
+                        <strong>{{ fila.idtbl_usuarios }}</strong>
+                      </div>
+                    {% else %}
+                      <span class="pg-badge-state bg-info-subtle text-info">
+                        <i class="bi bi-person-plus me-1"></i>Usuario pendiente
+                      </span>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {# CUERPO TARJETA #}
+            <div class="pg-card-body">
+
+              {# Contacto #}
+              <div class="row mb-2 pg-contact">
+                <div class="col-md-6">
+                  {% if fila.proveedor_telefono %}
+                    <div>
+                      <i class="bi bi-telephone"></i>
+                      {{ fila.proveedor_telefono }}
+                    </div>
+                  {% endif %}
+                  {% if fila.proveedor_email %}
+                    <div>
+                      <i class="bi bi-envelope"></i>
+                      {{ fila.proveedor_email }}
+                    </div>
+                  {% endif %}
+                </div>
+              </div>
+
+              {# Formulario usuario parquin #}
+              <form method="POST" class="row g-2 align-items-end">
+
+                <input type="hidden"
+                       name="idtbl_proveedores"
+                       value="{{ fila.idtbl_proveedores }}">
+                <input type="hidden"
+                       name="idtbl_usuarios"
+                       value="{{ fila.idtbl_usuarios or '' }}">
+
+                <div class="col-md-4">
+                  <label class="pg-form-label-sm">
+                    <i class="bi bi-bank me-1 text-primary"></i>
+                    Número cuenta
+                  </label>
+                  <input type="text"
+                         class="form-control form-control-sm"
+                         name="numero_cuenta"
+                         value="{{ fila.numero_cuenta or '' }}"
+                         placeholder="Cuenta bancaria">
+                </div>
+
+                <div class="col-md-3">
+                  <label class="pg-form-label-sm">
+                    <i class="bi bi-person-lines-fill me-1 text-primary"></i>
+                    Estado usuario
+                  </label>
+                  <select name="activo_baja"
+                          class="form-select form-select-sm">
+                    <option value="activo" {% if est_usr == 'activo' %}selected{% endif %}>
+                      Activo
+                    </option>
+                    <option value="baja" {% if est_usr == 'baja' %}selected{% endif %}>
+                      Baja
+                    </option>
+                  </select>
+                </div>
+
+                <div class="col-md-2">
+                  <label class="pg-form-label-sm">
+                    <i class="bi bi-calendar-plus me-1 text-primary"></i>
+                    F. inicio
+                  </label>
+                  <input type="date"
+                         class="form-control form-control-sm"
+                         name="fecha_inicio"
+                         value="{{ fila.fecha_inicio|default('', true) }}">
+                </div>
+
+                <div class="col-md-3">
+                  <label class="pg-form-label-sm">
+                    <i class="bi bi-calendar-minus me-1 text-primary"></i>
+                    F. baja
+                  </label>
+                  <input type="date"
+                         class="form-control form-control-sm"
+                         name="fecha_baja"
+                         value="{{ fila.fecha_baja|default('', true) }}">
+                </div>
+
+                <div class="col-12 d-flex justify-content-end mt-2">
+                  <button type="submit"
+                          class="btn pg-btn-primary">
+                    <i class="bi bi-save me-1"></i>
+                    Guardar usuario parquin
+                  </button>
+                </div>
+
+              </form>
+
+            </div>
+
+          </div>
+          {% endfor %}
+        </div>
+
+      {% endif %}
+
+      <div class="pg-footer">
+        <span>
+          <i class="bi bi-info-circle me-1"></i>
+          Los cambios sobre usuarios de parquin se aplican inmediatamente
+          sobre el proveedor seleccionado.
+        </span>
+        <span class="d-none d-sm-inline">
+          Gestión de usuarios · Parquin Río Torío
+        </span>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+  function volverAnterior() {
+    if (window.history.length > 1) {
+      window.history.back();
+    } else {
+      window.location.href = "/";
+    }
+  }
+</script>
+
+</body>
+</html>

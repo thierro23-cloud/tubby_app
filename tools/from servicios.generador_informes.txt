@@ -1,0 +1,23 @@
+
+bleuprints
+from servicios.generador_informes import generar_informe 
+
+Plantillas
+datos = generar_informe(SQL_OBRAS)
+
+return render_template(
+    "informes_obras.html",
+    datos=datos
+)
+pdf = generar_informe(SQL_OBRAS, formato="pdf")
+
+return send_file(
+    pdf,
+    download_name="informe_obras.pdf",
+    as_attachment=True
+)
+
+excel = generar_informe(SQL_OBRAS, formato="excel")
+
+excel.save("informe.xlsx")
+csv_data = generar_informe(SQL_OBRAS, formato="csv")

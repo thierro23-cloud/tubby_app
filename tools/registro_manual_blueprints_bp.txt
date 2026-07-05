@@ -1,0 +1,40 @@
+Dentro de ese archivo tienes:
+
+control_dashboard_bp = Blueprint(
+    "control_dashboard",
+    __name__,
+    url_prefix="/control/dashboard"
+)
+
+Entonces el manual sería:
+
+from blueprints.control_obras.control_dashboard_bp import control_dashboard_bp
+
+app.register_blueprint(control_dashboard_bp)
+ 2. Cómo usarlo en tus blueprints sin coste extra
+En cada blueprint que registre tarjetas, importa y registra al final del módulo:
+
+python
+from core.registry import registrar_tarjeta
+
+registrar_tarjeta(
+    panel="control_obras",
+    tarjeta_id="mapa_contenedores",
+    titulo="Mapa de contenedores",
+    icono="fa-map",
+    url="/control-obras/mapa-contenedores",
+    orden=10,
+)
+Otro ejemplo:
+
+python
+from core.registry import registrar_tarjeta
+
+registrar_tarjeta(
+    panel="control_obras",
+    tarjeta_id="listado_obras",
+    titulo="Listado de obras",
+    icono="fa-list",
+    url="/control-obras/listado-obras",
+    orden=5,
+)

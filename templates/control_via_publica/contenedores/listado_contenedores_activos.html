@@ -1,0 +1,51 @@
+{# 📝 Archivo: templates/control_obras/listado_contenedores_activos.html #}
+{% extends "base.html" %} {# 🏗️ Hereda de la plantilla base con cabecera, footer y CSS comunes #}
+
+{% block title %}Contenedores no retirados{% endblock %} {# 🏷️ Título de la página que aparece en la pestaña del navegador #}
+
+{% block content %} {# 💻 Bloque principal de contenido de la página #}
+<div class="container my-4"> {# 📦 Contenedor con margen vertical #}
+  <h1 class="h4 mb-3">🚚 Contenedores no retirados</h1> {# 🚨 Título visible en la página con icono de camión #}
+
+  <p class="text-muted mb-3"> {# 📝 Descripción breve con estilo de texto muted #}
+    Contenedores que <strong>siguen en vía pública</strong>, con datos de empresa
+    y de la persona que presentó la solicitud. {# 📌 Información contextual para el usuario #}
+  </p>
+
+  {% if registros and registros|length > 0 %} {# ✅ Verifica si existen registros para mostrar #}
+    <div class="table-responsive mb-4"> {# 📊 Hace la tabla responsive en dispositivos pequeños #}
+      <table class="table table-sm table-striped align-middle"> {# 🪟 Tabla pequeña, rayada y centrada verticalmente #}
+        <thead class="table-light"> {# 🖌️ Encabezado de tabla con fondo claro #}
+          <tr>
+            <th>Expediente</th> {# 📄 Número de expediente #}
+            <th>Empresa</th> {# 🏢 Nombre de la empresa/proveedor #}
+            <th>Fecha instalación</th> {# 📅 Fecha en que se instaló el contenedor #}
+            <th>Interesado</th> {# 🙋 Persona que solicitó la instalación #}
+            <th>Teléfono</th> {# 📞 Contacto del interesado #}
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in registros %} {# 🔁 Itera sobre todos los registros de contenedores activos #}
+            <tr>
+              <td>{{ r.numero_expdiente }}</td> {# 📄 Muestra el número de expediente #}
+              <td>{{ r.empresa or "-" }}</td> {# 🏢 Muestra la empresa o "-" si está vacío #}
+              <td>{{ r.fecha_colocacion or "-" }}</td> {# 📅 Muestra la fecha de colocación o "-" si no hay #}
+              <td>{{ r.interesado or "-" }}</td> {# 🙋 Muestra el nombre del interesado o "-" si no hay #}
+              <td>{{ r.telefono or "-" }}</td> {# 📞 Muestra el teléfono o "-" si no hay #}
+            </tr>
+          {% endfor %} {# 🔚 Fin del bucle de registros #}
+        </tbody>
+      </table>
+    </div>
+  {% else %} {# ⚠️ Si no hay registros activos #}
+    <div class="alert alert-success">
+      No hay contenedores pendientes de retirada. 🎉 {# 🎊 Mensaje positivo cuando no hay registros #}
+    </div>
+  {% endif %}
+
+  <a href="{{ url_for('control_obras_bp.panel_control_obras') }}"
+     class="btn btn-secondary"> {# 🔙 Botón para volver al panel de control de obras #}
+    ⬅️ Volver al panel control obras
+  </a>
+</div>
+{% endblock %} {# 🔚 Fin del bloque de contenido #}

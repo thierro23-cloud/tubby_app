@@ -1,0 +1,92 @@
+{# templates/macros/direccion.html #}
+{% macro direccion_fields(direccion_form, provincias, municipios_iniciales, tipos_via, url_municipios_api) %}
+<div class="row g-2" id="direccion-wrapper">
+    <div class="col-12 col-md-4">
+        <label class="form-label" for="{{ direccion_form.idtbl_provincia.id }}">Provincia</label>
+        <select class="form-select"
+                id="{{ direccion_form.idtbl_provincia.id }}"
+                name="{{ direccion_form.idtbl_provincia.name }}">
+            <option value="">Seleccione provincia</option>
+            {% for prov in provincias %}
+                <option value="{{ prov.idtbl_provincia }}"
+                        {% if direccion_form.idtbl_provincia.data == prov.idtbl_provincia %}selected{% endif %}>
+                    {{ prov.nombre }}
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="col-12 col-md-4">
+        <label class="form-label" for="{{ direccion_form.idtbl_municipio.id }}">Municipio</label>
+        <select class="form-select"
+                id="{{ direccion_form.idtbl_municipio.id }}"
+                name="{{ direccion_form.idtbl_municipio.name }}">
+            <option value="">Seleccione municipio</option>
+            {% for mun in municipios_iniciales %}
+                <option value="{{ mun.idtbl_municipio }}"
+                        {% if direccion_form.idtbl_municipio.data == mun.idtbl_municipio %}selected{% endif %}>
+                    {{ mun.nombre }}
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="col-12 col-md-4">
+        <label class="form-label" for="{{ direccion_form.idtbl_tipo_de_via.id }}">Tipo de vía</label>
+        <select class="form-select"
+                id="{{ direccion_form.idtbl_tipo_de_via.id }}"
+                name="{{ direccion_form.idtbl_tipo_de_via.name }}">
+            <option value="">Tipo de vía</option>
+            {% for tv in tipos_via %}
+                <option value="{{ tv.idtbl_tipo_de_via }}"
+                        {% if direccion_form.idtbl_tipo_de_via.data == tv.idtbl_tipo_de_via %}selected{% endif %}>
+                    {{ tv.nombre }}
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="col-12 mt-2">
+        <label class="form-label" for="{{ direccion_form.nombre_calle.id }}">Calle</label>
+        <input type="text"
+               class="form-control"
+               id="{{ direccion_form.nombre_calle.id }}"
+               name="{{ direccion_form.nombre_calle.name }}"
+               value="{{ direccion_form.nombre_calle.data or '' }}"
+               placeholder="Nombre de la calle">
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const provinciaSelect = document.getElementById("{{ direccion_form.idtbl_provincia.id }}");
+    const municipioSelect = document.getElementById("{{ direccion_form.idtbl_municipio.id }}");
+    const municipiosApiUrl = "{{ url_municipios_api }}";  // base URL sin id
+
+    provinciaSelect.addEventListener("change", function () {
+        const provinciaId = provinciaSelect.value;
+
+        // Vaciar municipios cuando no haya provincia
+        if (!provinciaId) {
+            municipioSelect.innerHTML = '<option value="">Seleccione municipio</option>';
+            return;
+        }
+
+        // Llamada a la API para cargar municipios
+        fetch(municipiosApiUrl.replace("0", provinciaId))
+            .then(response => response.json())
+            .then(data => {
+                let options = '<option value=\"\">Seleccione municipio</option>';
+                data.forEach(function (mun) {
+                    options += `<option value="${mun.idtbl_municipio}">${mun.nombre}</option>`;
+                });
+                municipioSelect.innerHTML = options;
+            })
+            .catch(err => {
+                console.error("Error cargando municipios:", err);
+                municipioSelect.innerHTML = '<option value=\"\">Error al cargar</option>';
+            });
+    });
+});
+</script>
+{% endmacro %}

@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Pendientes de validación{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+
+  <div class="mb-4">
+    <h1 class="h4 mb-2">📝 Pendientes de validación de contenedores</h1>
+    <p class="text-secondary mb-0">
+      Aquí aparecen los PDFs que no se han podido guardar automáticamente y necesitan revisión manual.
+    </p>
+  </div>
+
+  {% if pendientes %}
+    <div class="card border-0 shadow-sm rounded-4">
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle">
+            <thead class="table-dark">
+              <tr>
+                <th>Fecha</th>
+                <th>PDF</th>
+                <th>Motivo</th>
+                <th>Expediente</th>
+                <th>CSV</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for p in pendientes %}
+                <tr>
+                  <td>{{ p.fecha_creacion }}</td>
+                  <td>{{ p.nombre_pdf_original }}</td>
+                  <td>{{ p.motivo }}</td>
+                  <td>{{ p.datos.numero_expediente or '—' }}</td>
+                  <td>{{ p.datos.csv or '—' }}</td>
+                  <td>
+                    <a class="btn btn-sm btn-dark"
+                       href="{{ url_for('control_contenedores_bp.revisar_pendiente_contenedor', pendiente_id=p.id) }}">
+                      Abrir
+                    </a>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  {% else %}
+    <div class="alert alert-info">
+      No hay pendientes de validación.
+    </div>
+  {% endif %}
+
+</div>
+{% endblock %}

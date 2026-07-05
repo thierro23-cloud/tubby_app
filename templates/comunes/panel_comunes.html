@@ -1,0 +1,323 @@
+{# ============================================================================
+   templates/comunes/panel_comunes.html
+   🗂️ PANEL BDs COMUNES (HEREDA base.html)
+   --------------------------------------------------------------------------
+   ▸ Muestra un botón (deshabilitado o activo) por cada tabla de bd_tbl_comunes.
+   ▸ Pensado como mapa visual de mantenimiento de bases comunes.
+   ============================================================================ #}
+
+{% extends "base.html" %}
+{% block title %}Panel BDs comunes v2{% endblock %}
+
+{% block content %}
+<div class="container mt-3">
+
+  {# ==========================================================================
+     1️⃣ CABECERA · TÍTULO Y BOTÓN VOLVER
+     --------------------------------------------------------------------------
+     - Título general del panel de BDs comunes.
+     - Botón "Volver" que usa history.back() del navegador.
+     ========================================================================== #}
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="mb-0">🗂️ Bases de datos comunes</h1>
+    <button type="button"
+            class="btn btn-sm btn-secondary"
+            onclick="history.back()">
+      ⬅️ Volver
+    </button>
+  </div>
+
+  <p class="text-muted">
+    Mapa de tablas de <strong>bd_tbl_comunes</strong>. Cada botón representa un futuro
+    formulario de mantenimiento para esa tabla.
+  </p>
+
+  {# ==========================================================================
+     2️⃣ GRID DE BOTONES – CADA BOTÓN CORRESPONDE A UNA TABLA
+     ========================================================================== #}
+  <div class="row row-cols-1 row-cols-md-3 g-3">
+
+    {# ------------------------------------------------------------------------
+       2.1 BOTÓN · GESTIÓN CENTRALIZADA DE DIRECCIONES (HELPERS VÍAS)
+       -------------------------------------------------------------------------
+       - Apunta al panel helpers_vias_bp.formulario_helpers_vias.
+       - Gestiona de forma unificada:
+           · Provincias (solo lectura)
+           · Municipios
+           · Tipos de vía
+           · Calles
+       - Ruta generada:
+           url_for('helpers_vias_bp.formulario_helpers_vias')
+       ------------------------------------------------------------------------ #}
+    <div class="col">
+      <p class="small text-muted mb-1">
+        Gestión centralizada de provincias, municipios, tipos de vía y calles.
+      </p>
+      <a href="{{ url_for('helpers_vias_bp.formulario_helpers_vias') }}"
+     class="btn btn-sm btn-outline-secondary">
+     🛣️ Gestión de direcciones
+     </a>>
+    </div>
+
+    {# ------------------------------------------------------------------------
+       2.2 BOTÓN · tbl_anos (AÑOS)
+       -------------------------------------------------------------------------
+       - Representa la tabla bd_tbl_comunes.tbl_anos.
+       - Actualmente deshabilitado (no hay pantalla de mantenimiento específica).
+       - En el futuro podría enlazar a un formulario de gestión de años fiscales.
+       ------------------------------------------------------------------------ #}
+    <div class="col">
+      <button class="btn btn-outline-secondary w-100" disabled>
+        📅 tbl_anos
+      </button>
+    </div>
+
+    {# ------------------------------------------------------------------------
+       2.3 BOTÓN · tbl_auditoria_intentos
+       -------------------------------------------------------------------------
+       - Representa la tabla de auditoría de intentos (login, acciones, etc.).
+       - Deshabilitado: solo informativo para el mapa de BD.
+       - No se prevé edición manual desde interfaz en principio.
+       ------------------------------------------------------------------------ #}
+    <div class="col">
+      <button class="btn btn-outline-secondary w-100" disabled>
+        🧪 tbl_auditoria_intentos
+      </button>
+    </div>
+
+    {# ------------------------------------------------------------------------
+       2.4 BOTÓN · tbl_auditorias_accesos
+       -------------------------------------------------------------------------
+       - Tabla de auditoría de accesos (log de entradas a la aplicación).
+       - Botón deshabilitado → lectura/gestión vía otras herramientas o vistas.
+       ------------------------------------------------------------------------ #}
+    <div class="col">
+      <button class="btn btn-outline-secondary w-100" disabled>
+        🧾 tbl_auditorias_accesos
+      </button>
+    </div>
+
+    {# ------------------------------------------------------------------------
+       2.5 BOTÓN · tbl_auditorias_acciones
+       -------------------------------------------------------------------------
+       - Tabla que registra acciones realizadas por usuarios.
+       - De momento no hay panel de gestión; solo se muestra en el mapa.
+       ------------------------------------------------------------------------ #}
+    <div class="col">
+      <button class="btn btn-outline-secondary w-100" disabled>
+        🧾 tbl_auditorias_acciones
+      </button>
+    </div>
+
+    {# ------------------------------------------------------------------------
+       2.6 BOTÓN · tbl_barrios
+       -------------------------------------------------------------------------
+       - Tabla de barrios, probablemente relacionada con municipios/calles.
+       - Botón deshabilitado a la espera de módulo específico de barrios.
+       ------------------------------------------------------------------------ #}
+    <div class="col">
+      <button class="btn btn-outline-secondary w-100" disabled>
+        🏘️ tbl_barrios
+      </button>
+    </div>
+
+    {# ------------------------------------------------------------------------
+       2.7 BOTÓN · tbl_dimensiones
+       -------------------------------------------------------------------------
+       - Tabla de dimensiones (por ejemplo, dimensiones de contenedores).
+       - Solo informativo: no existe aún formulario de mantenimiento asociado.
+       ------------------------------------------------------------------------ #}
+    <div class="col">
+      <button class="btn btn-outline-secondary w-100" disabled>
+        📏 tbl_dimensiones
+      </button>
+    </div>
+
+    {# ------------------------------------------------------------------------
+       2.8 BOTÓN · tbl_gestores
+       -------------------------------------------------------------------------
+       - Tabla de gestores (personas o entidades que gestionan expedientes).
+       - Botón deshabilitado de momento; será un futuro panel de mantenimiento.
+       ------------------------------------------------------------------------ #}
+    <div class="col">
+      <button class="btn btn-outline-secondary w-100" disabled>
+        🧑‍💼 tbl_gestores
+      </button>
+    </div>
+
+    {# ------------------------------------------------------------------------
+   2.9 BOTÓN ACTIVO · tbl_proveedores (MÓDULO GESTIONAR)
+   -------------------------------------------------------------------------
+   - Enlace al módulo de gestión de proveedores:
+       modulo_proveedores_gestionar
+   - Desde este módulo, el super admin mostrará los botones:
+       btn_proveedores_gestionar_tabla_completa,
+       btn_proveedores_gestionar_parquin,
+       etc.
+   ------------------------------------------------------------------------ #}
+<div class="col">
+  <a href="{{ url_for('proveedores_bp.modulo_proveedores_gestionar') }}"
+     class="btn btn-outline-primary w-100">
+    🧾 tbl_proveedores (gestión)
+  </a>
+</div>
+
+
+    {# ------------------------------------------------------------------------
+   2.10 BOTÓN ACTIVO · tbl_proveedores (FORMULARIO + FILTRO)
+   -------------------------------------------------------------------------
+   - Enlace al módulo de gestión de proveedores:
+       modulo_proveedores_gestionar
+   - Desde ese módulo, el super admin mostrará las acciones/btn
+     que tengas definidas (formulario, detalle, etc.).
+   ------------------------------------------------------------------------ #}
+<div class="col">
+  <a href="{{ url_for('proveedores_bp.modulo_proveedores_gestionar') }}"
+     class="btn btn-outline-primary w-100">
+    🧾 tbl_proveedores (formulario)
+  </a>
+</div>
+
+
+    {# ------------------------------------------------------------------------
+   2.11 BOTÓN ACTIVO · tbl_proveedores (FICHA DETALLE)
+   -------------------------------------------------------------------------
+   - En lugar de enlazar directo a proveedor_detalle_form,
+     llevamos al módulo gestionar proveedores.
+   - Desde allí, el super admin mostrará la acción de detalle
+     (btn_proveedores_gestionar_detalle_..., etc.).
+   ------------------------------------------------------------------------ #}
+<div class="col">
+  <a href="{{ url_for('proveedores_bp.modulo_proveedores_gestionar') }}"
+     class="btn btn-outline-primary w-100">
+    🧾 tbl_proveedores (ficha)
+  </a>
+</div>
+
+
+    {# ------------------------------------------------------------------------
+       2.12 BOTÓN · tbl_inventario_mapa
+       -------------------------------------------------------------------------
+       - Tabla asociada a inventario cartográfico o de elementos en mapa.
+       - Sin panel de mantenimiento todavía; botón deshabilitado.
+       ------------------------------------------------------------------------ #}
+    <div class="col">
+      <button class="btn btn-outline-secondary w-100" disabled>
+        🗺️ tbl_inventario_mapa
+      </button>
+    </div>
+
+    {# ------------------------------------------------------------------------
+       2.13 BOTÓN · tbl_login
+       -------------------------------------------------------------------------
+       - Tabla de logins / credenciales.
+       - No se gestiona desde un panel normal por seguridad; por eso está off.
+       ------------------------------------------------------------------------ #}
+    <div class="col">
+      <button class="btn btn-outline-secondary w-100" disabled>
+        🔐 tbl_login
+      </button>
+    </div>
+
+    {# ------------------------------------------------------------------------
+       2.14 BOTÓN · tbl_meses
+       -------------------------------------------------------------------------
+       - Tabla de meses (catálogo fijo).
+       - No necesita mantenimiento habitual; botón informativo deshabilitado.
+       ------------------------------------------------------------------------ #}
+    <div class="col">
+      <button class="btn btn-outline-secondary w-100" disabled>
+        📅 tbl_meses
+      </button>
+    </div>
+
+    {# ------------------------------------------------------------------------
+       2.15 BOTÓN · tbl_moneda
+       -------------------------------------------------------------------------
+       - Tabla de tipos de moneda.
+       - Podría usarse para facturación, tasas, etc.
+       - De momento sin formulario de mantenimiento, por eso está off.
+       ------------------------------------------------------------------------ #}
+    <div class="col">
+      <button class="btn btn-outline-secondary w-100" disabled>
+        💶 tbl_moneda
+      </button>
+    </div>
+
+    {# ------------------------------------------------------------------------
+       2.16 BOTÓN · tbl_permisos_bases
+       -------------------------------------------------------------------------
+       - Tabla de permisos sobre bases de datos.
+       - Gestión delicada; no se expone todavía en un panel editable.
+       ------------------------------------------------------------------------ #}
+    <div class="col">
+      <button class="btn btn-outline-secondary w-100" disabled>
+        🔐 tbl_permisos_bases
+      </button>
+    </div>
+
+    {# ------------------------------------------------------------------------
+       2.17 BOTÓN · tbl_roles
+       -------------------------------------------------------------------------
+       - Tabla de roles (super_admin, gestor, vigilante, etc.).
+       - Podría tener en el futuro un panel de administración de roles.
+       - De momento se muestra solo como parte del mapa de BD.
+       ------------------------------------------------------------------------ #}
+    <div class="col">
+      <button class="btn btn-outline-secondary w-100" disabled>
+        🎭 tbl_roles
+      </button>
+    </div>
+
+    {# ------------------------------------------------------------------------
+       2.18 BOTÓN · tbl_tipo_tercero
+       -------------------------------------------------------------------------
+       - Catálogo de tipos de tercero (empresa, persona física, organismo, etc.).
+       - Botón deshabilitado a la espera de diseño de panel específico.
+       ------------------------------------------------------------------------ #}
+    <div class="col">
+      <button class="btn btn-outline-secondary w-100" disabled>
+        👥 tbl_tipo_tercero
+      </button>
+    </div>
+
+    {# ------------------------------------------------------------------------
+       2.19 BOTÓN · tbl_unidades
+       -------------------------------------------------------------------------
+       - Tabla de unidades administrativas u organizativas.
+       - Sólo se muestra como parte del mapa de bd_tbl_comunes.
+       ------------------------------------------------------------------------ #}
+    <div class="col">
+      <button class="btn btn-outline-secondary w-100" disabled>
+        🏢 tbl_unidades
+      </button>
+    </div>
+
+    {# ------------------------------------------------------------------------
+       2.20 BOTÓN · tbl_unidades_urbanas
+       -------------------------------------------------------------------------
+       - Tabla relacionada con unidades urbanas (zonas, sectores, etc.).
+       - Sin panel asociado por ahora; botón meramente informativo.
+       ------------------------------------------------------------------------ #}
+    <div class="col">
+      <button class="btn btn-outline-secondary w-100" disabled>
+        🏢 tbl_unidades_urbanas
+      </button>
+    </div>
+
+    {# ------------------------------------------------------------------------
+       2.21 BOTÓN · tbl_zona
+       -------------------------------------------------------------------------
+       - Tabla de zonas (geo‑administrativas, fiscales, etc.).
+       - La gestión se valorará en un módulo futuro; por ahora está off.
+       ------------------------------------------------------------------------ #}
+    <div class="col">
+      <button class="btn btn-outline-secondary w-100" disabled>
+        📍 tbl_zona
+      </button>
+    </div>
+
+  </div>  {# /row #}
+
+</div>
+{% endblock %}

@@ -1,0 +1,114 @@
+{# =============================================================================
+   🧠 Generador IA – Plantilla HTML
+   -----------------------------------------------------------------------------
+   OBJETIVO:
+     - Mostrar un formulario para que el super_admin escriba un prompt.
+     - Enviar ese prompt al endpoint de IA (POST /super_admin/generador_ia/).
+     - Dejar todo preparado para que después muestres la respuesta como quieras.
+   ========================================================================== #}
+
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container mt-4">
+
+  {# ===========================================================================
+     1️⃣ SECCIÓN: TÍTULO E INTRODUCCIÓN
+     ---------------------------------------------------------------------------
+     COMIENZA: Bloque de cabecera y texto explicativo del generador.
+     TERMINA: Justo antes del formulario <form>.
+     ------------------------------------------------------------------------ #}
+  <h2>🧠 Generador IA</h2>
+
+  <p class="text-muted">
+    Aquí puedes pedir a la IA que te genere código o estructuras de paneles.<br>
+    Escribe en lenguaje natural lo que necesitas (paneles, módulos, botones, etc.)
+    y el servidor enviará tu petición al generador de código.
+  </p>
+  {# ======================================================================= #}
+
+  {# ===========================================================================
+     2️⃣ SECCIÓN: FORMULARIO PRINCIPAL
+     ---------------------------------------------------------------------------
+     COMIENZA: Etiqueta <form> que envía el prompt al endpoint de IA.
+     TERMINA: Justo después del botón "🚀 Generar".
+     ---------------------------------------------------------------------------
+     DETALLES:
+       - method="POST" → usamos POST para enviar datos al servidor.
+       - action="{{ url_for('generador_ia_bp.generador_ia') }}"
+         → llama al endpoint del blueprint generador_ia_bp.generador_ia
+           (url_prefix="/super_admin/generador_ia", ruta "/").
+     ------------------------------------------------------------------------ #}
+  <form method="POST" action="{{ url_for('generador_ia_bp.generador_ia') }}">
+
+    {# -------------------------------------------------------------------------
+       2.1 SUBSECCIÓN: CAMPO DE TEXTO (PROMPT)
+       -------------------------------------------------------------------------
+       COMIENZA: <textarea ...>
+       TERMINA: cierre de </textarea>.
+       -------------------------------------------------------------------------
+       DETALLES:
+         - name="prompt" → clave que el backend lee con request.form["prompt"].
+         - class="form-control" → estilo Bootstrap para que se vea bonito.
+         - rows="4" → altura inicial del área de texto.
+         - placeholder → ejemplo de lo que puede pedir el usuario.
+       ---------------------------------------------------------------------- #}
+    <div class="mb-3">
+      <label for="prompt" class="form-label">
+        ✍️ Descripción para la IA
+      </label>
+      <textarea
+        id="prompt"
+        name="prompt"
+        class="form-control"
+        rows="4"
+        placeholder="Ej: panel inventario con bienes, vehículos, herramientas y botones para editar e informes"
+      ></textarea>
+    </div>
+    {# ---------------------------------------------------------------------- #}
+
+    {# -------------------------------------------------------------------------
+       2.2 SUBSECCIÓN: BOTÓN DE ENVÍO
+       -------------------------------------------------------------------------
+       COMIENZA: <button ...>
+       TERMINA: </button>.
+       -------------------------------------------------------------------------
+       DETALLES:
+         - type="submit" → envía el formulario al pulsar.
+         - class="btn btn-success mt-2" → estilo botón verde (Bootstrap).
+         - Texto "🚀 Generar" → acción clara para el usuario.
+       ---------------------------------------------------------------------- #}
+    <button type="submit" class="btn btn-success mt-2">
+      🚀 Generar
+    </button>
+    {# ---------------------------------------------------------------------- #}
+
+  </form>
+  {# ======================================================================= #}
+
+  {# ===========================================================================
+     3️⃣ SECCIÓN: ZONA DE RESULTADOS (OPCIONAL / FUTURO)
+     ---------------------------------------------------------------------------
+     COMIENZA: <hr> de separación visual.
+     TERMINA: div con id="resultado-ia".
+     ---------------------------------------------------------------------------
+     USO:
+       - De momento está vacío.
+       - Puedes rellenarlo con el código que devuelva la IA usando JS
+         o renderizando otra plantilla del servidor.
+     ------------------------------------------------------------------------ #}
+  <hr class="my-4">
+
+  <div id="resultado-ia" class="mt-3">
+    {# Aquí puedes mostrar el resultado generado por la IA.
+       Ejemplo futuro:
+         - Mensajes de éxito / error.
+         - Código formateado dentro de <pre><code>...</code></pre>.
+         - Botones para copiar el código generado. #}
+  </div>
+  {# ======================================================================= #}
+
+</div>
+
+{% endblock %}

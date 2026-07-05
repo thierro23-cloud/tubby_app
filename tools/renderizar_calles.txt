@@ -1,0 +1,104 @@
+Con esto:
+
+Cualquier blueprint o script puede hacer from .helpers_vias import cargar_provincias (si está en el mismo paquete) o from blueprints.control_obras.helpers_vias import cargar_provincias (desde otro sitio).
+
+El helpers_vias_bp expone JSON reutilizable para cualquier formulario (contenedores, obras, vados, etc.), sin acoplarse a ninguno en concreto.
+Notas importantes:
+
+formulario_helpers_vias cuelga de helpers_vias_bp, no de panel_comunes_bp.
+
+Desde tu panel de comunes o desde cualquier otro panel puedes enlazar con:
+url_for("helpers_vias_bp.formulario_helpers_vias").
+
+
+# blueprints/control_obras/helpers_vias_bp.py
+# =============================================================================
+# 🧩 BLUEPRINT HELPERS VÍAS – AUTOCOMPLETADOS Y ALTAS RÁPIDAS
+# =============================================================================
+
+from __future__ import annotations
+
+from flask import (
+    Blueprint,    # 🧩 Definición del blueprint
+    request,      # 📥 Lectura de parámetros
+    jsonify,      # 📦 Respuestas JSON
+    current_app,  # 🧠 Logs de errores
+)
+
+# Import relativo, funciona siempre que este archivo y helpers_vias.py
+# estén en el MISMO paquete (blueprints/control_obras)
+from .helpers_vias import (
+    cargar_provincias,   # 🌍 Provincias
+    cargar_municipios,   # 🏙️ Municipios
+    cargar_tipos_via,    # 🛣️ Tipos de vía
+    cargar_calles,       # 🚏 Calles
+)
+
+helpers_vias_bp = Blueprint(
+    "helpers_vias_bp",
+    __name__,
+    url_prefix="/helpers_vias",
+)
+
+
+@helpers_vias_bp.get("/provincias")
+def api_provincias():
+    """🌍 Provincias para selects."""
+    try:
+        provincias = cargar_provincias()
+        return jsonify({"ok": True, "provincias": provincias})
+    except Exception as exc:
+        current_app.logger.exception("Error al cargar provincias")
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
+@helpers_vias_bp.get("/municipios")
+def api_municipios():
+    """🏙️ Municipios por provincia + texto."""
+    id_provincia = request.args.get("id_provincia", type=int)
+    q = request.args.get("q", "", type=str).strip()
+
+    if not id_provincia:
+        return jsonify({"ok": False, "error": "Falta id_provincia"}), 400
+
+    try:
+        municipios = cargar_municipios(id_provincia=id_provincia, texto=q)
+        return jsonify({"ok": True, "municipios": municipios})
+    except Exception as exc:
+        current_app.logger.exception("Error al cargar municipios")
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
+@helpers_vias_bp.get("/tipos_via")
+def api_tipos_via():
+    """🛣️ Tipos de vía filtrados por texto."""
+    q = request.args.get("q", "", type=str).strip()
+
+    try:
+        tipos = cargar_tipos_via(texto=q)
+        return jsonify({"ok": True, "tipos_via": tipos})
+    except Exception as exc:
+        current_app.logger.exception("Error al cargar tipos de vía")
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
+@helpers_vias_bp.get("/calles")
+def api_calles():
+    """🚏 Calles por municipio + tipo vía + texto."""
+    id_municipio = request.args.get("id_municipio", type=int)
+    id_tipo_via = request.args.get("id_tipo_via", type=int)
+    q = request.args.get("q", "", type=str).strip()
+
+    if not id_municipio or not id_tipo_via:
+        return jsonify({"ok": False, "error": "Faltan id_municipio o id_tipo_via"}), 400
+
+    try:
+        calles = cargar_calles(
+            id_municipio=id_municipio,
+            id_tipo_via=id_tipo_via,
+            texto=q,
+        )
+        return jsonify({"ok": True, "calles": calles})
+    except Exception as exc:
+        current_app.logger.exception("Error al cargar calles")
+        return jsonify({"ok": False, "error": str(exc)}), 500

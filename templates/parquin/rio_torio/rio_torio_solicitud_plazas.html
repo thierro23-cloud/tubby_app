@@ -1,0 +1,674 @@
+{% block content %}
+{# ============================================================================
+  1. ESTILOS ESPECÍFICOS DE LA PANTALLA
+  ----------------------------------------------------------------------------
+  - Fondo, tarjetas, tipografía y colores base.
+  - Layout general sin scroll de página, pero permitiendo scroll interno
+    en el contenido si hace falta.
+  ============================================================================ #}
+<style>
+  :root{
+    --rt-bg:#eef3f9;
+    --rt-card:#ffffff;
+    --rt-border:#dbe4f0;
+    --rt-primary:#2e5aac;
+    --rt-primary2:#4e8df5;
+    --rt-success:#2f9b6b;
+    --rt-danger:#d95368;
+    --rt-warning:#e0a63f;
+    --rt-text:#23344d;
+    --rt-muted:#72809a;
+    --rt-radius:18px;
+    --rt-shadow:0 8px 24px rgba(15,23,42,.08);
+  }
+
+  html,
+  body{
+    height:100%;
+    margin:0;
+    background:var(--rt-bg);
+    overflow:hidden;                   /* Sin scroll global */
+    font-family:"Inter",sans-serif;
+    font-size:14px;
+  }
+
+  .rt-page{
+    height:100vh;
+    display:flex;
+    flex-direction:column;
+    padding:10px;                      /* algo menor que 14px */
+    gap:10px;
+  }
+
+  {# 1.1. Cabecera y KPIs #}
+  .rt-header{
+    flex-shrink:0;
+    background:linear-gradient(135deg,#1d3f87 0%, #3f7dd8 45%, #6eb0ff 100%);
+    border-radius:18px;
+    box-shadow:0 8px 20px rgba(30,64,175,.18);
+    color:#fff;
+    padding:10px 14px;                /* menos padding para ganar alto útil */
+  }
+
+  .rt-header-top{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:12px;
+  }
+
+  .rt-title-area{
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+  }
+
+  .rt-mini-title{
+    font-size:.7rem;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    opacity:.9;
+  }
+
+  .rt-main-title{
+    font-size:1.1rem;
+    font-weight:800;
+    line-height:1.1;
+  }
+
+  .rt-subtitle{
+    font-size:.78rem;
+    opacity:.92;
+  }
+
+  .rt-kpis{
+    margin-top:8px;
+    display:grid;
+    grid-template-columns:repeat(6,1fr);
+    gap:6px;
+  }
+
+  .rt-kpi{
+    background:rgba(255,255,255,.12);
+    border:1px solid rgba(255,255,255,.15);
+    border-radius:14px;
+    padding:6px 8px;
+  }
+
+  .rt-kpi-label{
+    font-size:.7rem;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    opacity:.88;
+  }
+
+  .rt-kpi-value{
+    font-size:1rem;
+    font-weight:800;
+    margin-top:1px;
+  }
+
+  .rt-kpi-mini{
+    font-size:.75rem;
+    margin-top:1px;
+  }
+
+  .rt-header-actions{
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+
+  .rt-btn-back{
+    border-radius:999px;
+    padding:4px 10px;
+    border:1px solid rgba(255,255,255,.4);
+    background:rgba(15,23,42,.16);
+    color:#fff;
+    font-size:.75rem;
+    font-weight:600;
+    text-decoration:none;
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+  }
+  .rt-btn-back:hover{
+    background:rgba(15,23,42,.25);
+  }
+
+  {# 1.2. Contenedor del contenido (tarjetas principales) #}
+  .rt-form-wrapper{
+    flex:1;
+    min-height:0;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+
+  .rt-form-card{
+    background:var(--rt-card);
+    border-radius:18px;
+    border:1px solid var(--rt-border);
+    box-shadow:var(--rt-shadow);
+    padding:14px;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+    overflow:auto;                    /* scroll interno si hace falta */
+  }
+
+  {# 1.3. Grid de campos y secciones #}
+  .rt-grid{
+    display:grid;
+    grid-template-columns:repeat(12,1fr);
+    gap:14px;
+  }
+
+  .rt-section-title{
+    grid-column:span 12;
+    font-size:.95rem;
+    font-weight:800;
+    color:var(--rt-text);
+    padding-bottom:6px;
+    border-bottom:1px solid #e6edf5;
+  }
+
+  .rt-field{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+  }
+
+  .rt-col-2{grid-column:span 2;}
+  .rt-col-3{grid-column:span 3;}
+  .rt-col-4{grid-column:span 4;}
+  .rt-col-6{grid-column:span 6;}
+  .rt-col-12{grid-column:span 12;}
+
+  .rt-label{
+    font-size:.72rem;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:.04em;
+    color:var(--rt-muted);
+  }
+
+  {# 1.4. Inputs y selects #}
+  .form-control,
+  .form-select{
+    min-height:38px;
+    border-radius:10px;
+    border:1px solid #cad6e4;
+    background:#fbfcff;
+    padding:.45rem .7rem;
+    font-size:.85rem;
+  }
+
+  textarea.form-control{
+    min-height:90px;
+    resize:none;
+  }
+
+  .form-control:focus,
+  .form-select:focus{
+    border-color:#5c94f5;
+    box-shadow:0 0 0 .15rem rgba(92,148,245,.16);
+    background:#fff;
+  }
+
+  {# 1.5. Botones de acción #}
+  .rt-actions{
+    grid-column:span 12;
+    display:flex;
+    justify-content:flex-end;
+    gap:6px;
+    margin-top:2px;
+  }
+
+  .rt-btn{
+    border-radius:999px;
+    padding:6px 12px;
+    border:none;
+    font-size:.8rem;
+    font-weight:600;
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+    cursor:pointer;
+  }
+
+  .rt-btn-primary{
+    background:linear-gradient(135deg,var(--rt-primary),var(--rt-primary2));
+    color:#fff;
+    box-shadow:0 3px 10px rgba(46,90,172,.35);
+  }
+
+  .rt-btn-primary:hover{
+    transform:translateY(-1px);
+    box-shadow:0 5px 14px rgba(46,90,172,.45);
+  }
+
+  {# 1.6. Tabla de solicitudes #}
+  .rt-table-wrapper{
+    border-radius:14px;
+    border:1px solid #e1e6f0;
+    overflow:auto;
+    max-height:220px;                /* más baja para que se vea también gestión */
+  }
+
+  .rt-table{
+    width:100%;
+    font-size:.75rem;
+    border-collapse:collapse;
+  }
+
+  .rt-table thead{
+    background:#f3f6fb;
+    position:sticky;
+    top:0;
+    z-index:1;
+  }
+
+  .rt-table th,
+  .rt-table td{
+    padding:4px 6px;
+    border-bottom:1px solid #edf1f8;
+    white-space:nowrap;
+  }
+
+  .rt-badge-pendiente,
+  .rt-badge-aprobada,
+  .rt-badge-rechazada{
+    display:inline-block;
+    padding:1px 6px;
+    border-radius:999px;
+    font-size:.68rem;
+  }
+  .rt-badge-pendiente{
+    background:#fff7e0;
+    color:#b88312;
+  }
+  .rt-badge-aprobada{
+    background:#e5f8ef;
+    color:#236c46;
+  }
+  .rt-badge-rechazada{
+    background:#fde6ea;
+    color:#b3263e;
+  }
+
+  {# 1.7. Responsivo #}
+  @media(max-width:1400px){
+    .rt-kpis{
+      grid-template-columns:repeat(3,1fr);
+    }
+  }
+
+  @media(max-width:992px){
+    body{
+      overflow:auto;
+    }
+    .rt-page{
+      height:auto;
+    }
+    .rt-grid{
+      grid-template-columns:1fr;
+    }
+    .rt-col-2,
+    .rt-col-3,
+    .rt-col-4,
+    .rt-col-6,
+    .rt-col-12{
+      grid-column:span 1;
+    }
+    .rt-header-top{
+      flex-direction:column;
+      align-items:flex-start;
+    }
+  }
+
+  @media(max-width:768px){
+    .rt-kpis{
+      grid-template-columns:1fr;
+    }
+  }
+</style>
+
+{# ============================================================================
+  2. LAYOUT GENERAL
+  ============================================================================ #}
+<div class="rt-page">
+
+  {# 2.1. CABECERA + KPIs #}
+  <div class="rt-header">
+    <div class="rt-header-top">
+      <div class="rt-title-area">
+        <div class="rt-mini-title">
+          🧸 TUBBY_APP · PARKING MANAGEMENT
+        </div>
+        <div class="rt-main-title">
+          Solicitudes de plazas · Río Torío
+        </div>
+        <div class="rt-subtitle">
+          Gestión centralizada de solicitudes y asignaciones de plazas corporativas.
+        </div>
+      </div>
+      <div class="rt-header-actions">
+        <a href="{{ url_volver }}" class="rt-btn-back">
+          <i class="bi bi-arrow-left-circle"></i>
+          Volver
+        </a>
+      </div>
+    </div>
+
+    <div class="rt-kpis">
+      <div class="rt-kpi">
+        <div class="rt-kpi-label">Plazas totales</div>
+        <div class="rt-kpi-value">{{ total_plazas }}</div>
+      </div>
+      <div class="rt-kpi">
+        <div class="rt-kpi-label">Libres</div>
+        <div class="rt-kpi-value">{{ total_plazas_libres }}</div>
+      </div>
+      <div class="rt-kpi">
+        <div class="rt-kpi-label">Ocupadas</div>
+        <div class="rt-kpi-value">{{ total_plazas_ocupadas }}</div>
+      </div>
+      <div class="rt-kpi">
+        <div class="rt-kpi-label">Pendientes</div>
+        <div class="rt-kpi-value">{{ total_solicitudes_pendientes }}</div>
+      </div>
+      <div class="rt-kpi">
+        <div class="rt-kpi-label">Fecha / Hora</div>
+        <div class="rt-kpi-mini">{{ fecha_hoy }}</div>
+        <div class="rt-kpi-mini">{{ now }}</div>
+      </div>
+      <div class="rt-kpi">
+        <div class="rt-kpi-label">Panel</div>
+        <div class="rt-kpi-mini">Río Torío · Solicitudes</div>
+        <div class="rt-kpi-mini">Módulo de alta y control</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="rt-form-wrapper">
+
+    {# =========================================================================
+      3. FORMULARIO 1: ALTA DE NUEVAS SOLICITUDES (accion = "nueva")
+      --------------------------------------------------------------------------
+      - Este formulario SOLO sirve para dar de alta una solicitud.
+      - Se envía con accion="nueva" y utiliza el bloque 5.2 del blueprint.
+      ======================================================================== #}
+    <form method="POST"
+          class="rt-form-card"
+          action="{{ url_for('btn_rio_torio_solicitud_plazas_bp.btn_rio_torio_solicitud_plazas') }}">
+
+      {# Campo oculto que indica la acción "nueva" al backend #}
+      <input type="hidden" name="accion" value="nueva">
+
+      <div class="rt-grid">
+        <div class="rt-section-title">
+          Datos de la solicitud
+        </div>
+
+        <div class="rt-field rt-col-3">
+          <label class="rt-label">Proveedor parquin</label>
+          <select class="form-select"
+                  name="idtbl_usuarios"
+                  required>
+            <option value="">-- Seleccione proveedor --</option>
+            {% for prov in proveedores %}
+              <option value="{{ prov.id }}">{{ prov.nombre }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="rt-field rt-col-3">
+          <label class="rt-label">Plaza (libres)</label>
+          <select class="form-select"
+                  name="idtbl_plazas">
+            <option value="">-- Sin asignar --</option>
+            {% for plaza in plazas_libres %}
+              <option value="{{ plaza.id }}">{{ plaza.codigo_plazas }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="rt-field rt-col-2">
+          <label class="rt-label">Nº expediente</label>
+          <input type="text"
+                 class="form-control"
+                 name="n_expediente"
+                 placeholder="EXP-2026-001"
+                 required>
+        </div>
+
+        <div class="rt-field rt-col-2">
+          <label class="rt-label">Fecha solicitud</label>
+          <input type="date"
+                 class="form-control"
+                 name="fecha_solicitud"
+                 value="{{ fecha_hoy }}">
+        </div>
+
+        <div class="rt-field rt-col-2">
+          <label class="rt-label">Solicita</label>
+          <select class="form-select" name="solicita">
+            <option value="plaza_libre">Plaza libre</option>
+            <option value="plaza_extra">Plaza extra</option>
+            <option value="cambio_plaza">Cambio plaza</option>
+          </select>
+        </div>
+
+        <div class="rt-field rt-col-3">
+          <label class="rt-label">Estado</label>
+          <select class="form-select" name="estado">
+            <option value="pendiente">Pendiente</option>
+            <option value="aprobada">Aprobada</option>
+            <option value="rechazada">Rechazada</option>
+          </select>
+        </div>
+
+        <div class="rt-field rt-col-3">
+          <label class="rt-label">Fecha aprobación</label>
+          <input type="date"
+                 class="form-control"
+                 name="fecha_aprobacion">
+        </div>
+
+        <div class="rt-field rt-col-6">
+          <label class="rt-label">Motivo rechazo</label>
+          <textarea class="form-control"
+                    name="motivo_rechazo"
+                    placeholder="Indique observaciones o motivo de rechazo..."></textarea>
+        </div>
+
+        <div class="rt-actions">
+          <button type="submit" class="rt-btn rt-btn-primary">
+            <i class="bi bi-save"></i>
+            Guardar solicitud
+          </button>
+        </div>
+      </div>
+    </form>
+
+    {# =========================================================================
+      4. LISTADO DE SOLICITUDES EXISTENTES (solo visual)
+      --------------------------------------------------------------------------
+      - Tabla informativa para ver el estado de las solicitudes.
+      - NO es un formulario; no envía datos.
+      ======================================================================== #}
+    <div class="rt-form-card">
+      <div class="rt-section-title">
+        Solicitudes registradas
+      </div>
+
+      <div class="rt-table-wrapper">
+        <table class="rt-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Fecha</th>
+              <th>Proveedor</th>
+              <th>NIF</th>
+              <th>Plaza</th>
+              <th>Expediente</th>
+              <th>Tipo</th>
+              <th>Estado</th>
+              <th>Motivo rechazo</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for s in solicitudes %}
+              <tr>
+                <td>{{ s.idtbl_solicitudes_plazas }}</td>
+                <td>{{ s.fecha_solicitud }}</td>
+                <td>{{ s.proveedor_nombre_razon_social or s.proveedor_alias }}</td>
+                <td>{{ s.NIF }}</td>
+                <td>
+                  {% if s.codigo_plazas %}
+                    {{ s.codigo_plazas }} (F{{ s.fila }})
+                  {% else %}
+                    —
+                  {% endif %}
+                </td>
+                <td>{{ s.n_expediente }}</td>
+                <td>{{ s.solicita }}</td>
+                <td>
+                  {% if s.estado == 'pendiente' %}
+                    <span class="rt-badge-pendiente">Pendiente</span>
+                  {% elif s.estado == 'aprobada' %}
+                    <span class="rt-badge-aprobada">Aprobada</span>
+                  {% elif s.estado == 'rechazada' %}
+                    <span class="rt-badge-rechazada">Rechazada</span>
+                  {% else %}
+                    {{ s.estado }}
+                  {% endif %}
+                </td>
+                <td>{{ s.motivo_rechazo or '' }}</td>
+              </tr>
+            {% else %}
+              <tr>
+                <td colspan="9">No hay solicitudes registradas.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    {# =========================================================================
+      5. FORMULARIO 2: GESTIÓN (APROBAR / RECHAZAR)
+      --------------------------------------------------------------------------
+      - Este formulario SOLO sirve para aprobar o rechazar solicitudes.
+      - Campos:
+        · id_solicitud
+        · id_plaza
+        · fecha_inicio_asignacion
+        · generar_informe
+        · motivo_rechazo
+      - Botones:
+        · "Aprobar"  → this.form.accion.value='aprobar'
+        · "Rechazar" → this.form.accion.value='rechazar'
+      - En el backend:
+        · accion == "aprobar"  → bloque 5.3 con _rt_aprobar_solicitud(...)
+        · accion == "rechazar" → bloque 5.4 con _rt_rechazar_solicitud(...)
+      ======================================================================== #}
+    <form method="POST"
+          class="rt-form-card"
+          action="{{ url_for('btn_rio_torio_solicitud_plazas_bp.btn_rio_torio_solicitud_plazas') }}">
+
+      {# Campo oculto: se rellena en tiempo de click (aprobar/rechazar) #}
+      <input type="hidden" name="accion" value="">
+
+      <div class="rt-section-title">
+        Gestión de solicitudes pendientes
+      </div>
+
+      <div class="rt-grid">
+        {# 5.1. Selección de solicitud pendiente #}
+        <div class="rt-field rt-col-4">
+          <label class="rt-label">Solicitud pendiente</label>
+          <select class="form-select" name="id_solicitud" required>
+            <option value="">-- Seleccione solicitud --</option>
+            {% for s in solicitudes %}
+              {% if s.estado == 'pendiente' %}
+                <option value="{{ s.idtbl_solicitudes_plazas }}">
+                  {{ s.idtbl_solicitudes_plazas }}
+                  · {{ s.proveedor_nombre_razon_social or s.proveedor_alias }}
+                  · EXP {{ s.n_expediente }}
+                </option>
+              {% endif %}
+            {% endfor %}
+          </select>
+        </div>
+
+        {# 5.2. Plaza libre a asignar cuando se aprueba #}
+        <div class="rt-field rt-col-3">
+          <label class="rt-label">Plaza libre para asignar</label>
+          <select class="form-select" name="id_plaza">
+            <option value="">-- Seleccione plaza libre --</option>
+            {% for plaza in plazas_libres %}
+              <option value="{{ plaza.id }}">
+                {{ plaza.codigo_plazas }} (F{{ plaza.fila }})
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        {# 5.3. Fecha de inicio de la asignación #}
+        <div class="rt-field rt-col-3">
+          <label class="rt-label">Fecha inicio asignación</label>
+          <input type="date"
+                 class="form-control"
+                 name="fecha_inicio_asignacion"
+                 value="{{ fecha_hoy }}">
+        </div>
+
+        {# 5.4. Flag de generación de informe Word+PDF #}
+        <div class="rt-field rt-col-2">
+          <label class="rt-label">Informe de adjudicación</label>
+          <div class="form-check mt-1">
+            <input class="form-check-input"
+                   type="checkbox"
+                   value="1"
+                   id="chk_generar_informe"
+                   name="generar_informe">
+            <label class="form-check-label" for="chk_generar_informe">
+              Generar Word + PDF
+            </label>
+          </div>
+        </div>
+
+        {# 5.5. Botones de acción: cambian "accion" y envían el formulario #}
+        <div class="rt-actions">
+          <button type="submit"
+                  class="rt-btn rt-btn-primary"
+                  onclick="this.form.accion.value='aprobar'">
+            <i class="bi bi-check-circle"></i>
+            Aprobar solicitud y asignar plaza
+          </button>
+
+          <button type="submit"
+                  class="rt-btn"
+                  style="background:#fde6ea;color:#b3263e;"
+                  onclick="this.form.accion.value='rechazar'">
+            <i class="bi bi-x-circle"></i>
+            Rechazar solicitud
+          </button>
+        </div>
+
+        {# 5.6. Motivo de rechazo (se usa cuando accion = 'rechazar') #}
+        <div class="rt-field rt-col-12">
+          <label class="rt-label">Motivo rechazo (si aplica)</label>
+          <textarea class="form-control"
+                    name="motivo_rechazo"
+                    placeholder="Indique motivo u observaciones de rechazo..."></textarea>
+        </div>
+      </div>
+    </form>
+
+  </div> {# rt-form-wrapper #}
+
+</div> {# rt-page #}
+{% endblock %}

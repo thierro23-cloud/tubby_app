@@ -1,0 +1,455 @@
+{# ============================================================================
+  templates/helpers_vias/helpers_vias.html
+  PANEL AUXILIAR · GESTIÓN DE VÍAS Y CALLES (PARCIAL REUTILIZABLE)
+  ----------------------------------------------------------------------------
+  ✅ Uso desde cualquier plantilla:
+        {% include "helpers_vias/helpers_vias.html" %}
+  ✅ La vista DEBE pasarle (listas de dicts con estas claves REALES):
+        - provincias  ➜ idtbl_provincias, provincias
+        - municipios  ➜ idtbl_municipios, municipios, idtbl_provincias
+        - tipos_via   ➜ idtbl_tipos_de_vias, tipos_de_vias
+        - calles      ➜ idtbl_calles, calles, Codigopostal, Barrio,
+                             idtbl_municipios, idtbl_tipos_de_vias
+  =========================================================================== #}
+
+{# =====================================================
+  1️⃣ SECCIÓN · CABECERA DEL PANEL
+  ====================================================== #}
+<div class="row mb-3">  {# 🧱 1.1 · Fila Bootstrap con margen inferior #}
+  <div class="col">    {# 📐 1.2 · Columna a ancho completo #}
+
+    <h1 class="h4 mb-1">
+      🛣️ Helpers de vías y calles
+      {# 🏷️ 1.3 · Título principal del panel auxiliar #}
+    </h1>
+
+    <p class="text-muted small mb-0">
+      Panel auxiliar para mantener el catálogo de direcciones que usan otros módulos
+      (gestores, obras, control de contenedores, etc.).
+      {# ℹ️ 1.4 · Este panel alimenta otros módulos de la aplicación #}
+    </p>
+
+    <p class="text-muted small mb-0">
+      Provincias son solo de lectura; municipios, tipos de vía y calles son editables.
+      {# 🔒 1.5 · Provincias no se modifican aquí; el resto sí #}
+    </p>
+
+  </div>
+</div>
+
+{# =====================================================
+  2️⃣ SECCIÓN · CUERPO DEL PANEL (4 COLUMNAS)
+  ====================================================== #}
+<div class="row">  {# 🧱 2.0 · Fila con 4 columnas (Bootstrap grid) #}
+
+  {# ===================================================
+    2.1️⃣ SUBSECCIÓN · PROVINCIAS (SOLO LECTURA)
+    ==================================================== #}
+  <div class="col-lg-3 mb-3">
+    {# 📐 2.1.1 · Columna de 3/12 en pantallas grandes #}
+
+    <div class="card shadow-sm h-100">
+      {# 🃏 2.1.2 · Tarjeta con sombra, altura completa #}
+
+      <div class="card-header bg-primary text-white py-2">
+        {# 🎨 2.1.3 · Cabecera azul con texto blanco #}
+        <span class="fw-semibold">🌍 Provincias</span>
+        {# 🌍 2.1.4 · Título de la sección de provincias #}
+      </div>
+
+      <div class="card-body py-2">
+        {# 📦 2.1.5 · Cuerpo de la tarjeta de provincias #}
+
+        <p class="small text-muted mb-2">
+          Catálogo fijo de provincias (no se editan desde la aplicación).
+          {# ℹ️ 2.1.6 · Solo visualización, sin alta/edición aquí #}
+        </p>
+
+        <ul class="list-group list-group-flush small">
+          {# 📋 2.1.7 · Lista de provincias en formato list-group #}
+
+          {% for prov in provincias %}
+            {# 🔁 2.1.8 · Iteramos cada provincia #}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              {# 📏 2.1.9 · Nombre a la izquierda, ID a la derecha #}
+
+              <span>{{ prov.provincias }}</span>
+              {# 🏷️ 2.1.10 · Nombre de la provincia (tbl_provincias.provincias) #}
+
+              <span class="badge bg-light text-muted">
+                {{ prov.idtbl_provincias }}
+              </span>
+              {# 🆔 2.1.11 · ID provincia (tbl_provincias.idtbl_provincias) #}
+            </li>
+          {% else %}
+            {# ❌ 2.1.12 · Rama else: lista provincias vacía #}
+            <li class="list-group-item text-muted">
+              No hay provincias cargadas.
+              {# ℹ️ 2.1.13 · Mensaje cuando no hay datos #}
+            </li>
+          {% endfor %}
+
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  {# ===================================================
+    2.2️⃣ SUBSECCIÓN · MUNICIPIOS (EDITABLES)
+    ==================================================== #}
+  <div class="col-lg-3 mb-3">
+    {# 📐 2.2.1 · Segunda columna: municipios #}
+
+    <div class="card shadow-sm h-100">
+      {# 🃏 2.2.2 · Tarjeta municipios #}
+
+      <div class="card-header bg-warning text-dark py-2">
+        {# 🎨 2.2.3 · Cabecera amarilla para diferenciar #}
+        <span class="fw-semibold">🏘️ Municipios</span>
+        {# 🏘️ 2.2.4 · Título de la sección de municipios #}
+      </div>
+
+      <div class="card-body py-2">
+        {# 📦 2.2.5 · Cuerpo tarjeta municipios #}
+
+        <p class="small text-muted mb-2">
+          Los municipios se pueden añadir o editar. Se usan en direcciones de gestores, obras, etc.
+          {# ℹ️ 2.2.6 · Catálogo compartido por varios módulos #}
+        </p>
+
+        {# ------------------------------------------------
+          2.2.1️⃣ FORMULARIO · ALTA MUNICIPIO
+          ------------------------------------------------- #}
+        <form
+          method="post"
+          action="{{ url_for('helpers_vias_bp.crear_municipio') }}"
+          class="mb-2"
+        >
+          {# 📤 2.2.1.1 · POST al endpoint helpers_vias_bp.crear_municipio #}
+
+          <div class="mb-1">
+            <label class="form-label small mb-0">Provincia</label>
+            {# 🏷️ 2.2.1.2 · Etiqueta del select de provincia #}
+
+            <select
+              name="idtbl_provincias"
+              class="form-select form-select-sm"
+              required
+            >
+              {# 🔽 2.2.1.3 · Select de provincia (FK en tbl_municipios.idtbl_provincias) #}
+              <option value="">
+                -- Elige provincia --
+                {# ℹ️ 2.2.1.4 · Opción placeholder no válida #}
+              </option>
+
+              {% for prov in provincias %}
+                {# 🔁 2.2.1.5 · Opciones de provincias #}
+                <option value="{{ prov.idtbl_provincias }}">
+                  {{ prov.provincias }}
+                  {# 📛 2.2.1.6 · Mostramos nombre, enviamos ID #}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="mb-1">
+            <label class="form-label small mb-0">Nombre municipio</label>
+            {# 🏷️ 2.2.1.7 · Etiqueta del input de nombre municipio #}
+
+            <input
+              type="text"
+              name="municipios"
+              class="form-control form-control-sm"
+              required
+            >
+            {# ⌨️ 2.2.1.8 · Nombre del municipio (tbl_municipios.municipios) #}
+          </div>
+
+          <button
+            type="submit"
+            class="btn btn-sm btn-outline-dark w-100"
+          >
+            ➕ Añadir municipio
+            {# ➕ 2.2.1.9 · Botón de alta de municipio #}
+          </button>
+        </form>
+
+        {# ------------------------------------------------
+          2.2.2️⃣ LISTADO · MUNICIPIOS EXISTENTES
+          ------------------------------------------------- #}
+        <div class="mt-2" style="max-height: 250px; overflow-y:auto;">
+          {# 📜 2.2.2.1 · Contenedor con scroll para lista larga #}
+
+          <ul class="list-group list-group-flush small">
+            {% for mun in municipios %}
+              {# 🔁 2.2.2.2 · Iteramos municipios #}
+              <li class="list-group-item d-flex justify-content-between align-items-center">
+                <span>{{ mun.municipios }}</span>
+                {# 📛 2.2.2.3 · Nombre del municipio (tbl_municipios.municipios) #}
+
+                <span class="badge bg-light text-muted">
+                  Prov: {{ mun.idtbl_provincias }}
+                  {# 🆔 2.2.2.4 · FK a tbl_provincias.idtbl_provincias #}
+                </span>
+              </li>
+            {% else %}
+              {# ❌ 2.2.2.5 · No hay municipios #}
+              <li class="list-group-item text-muted">
+                No hay municipios cargados.
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  {# ===================================================
+    2.3️⃣ SUBSECCIÓN · TIPOS DE VÍA (EDITABLES)
+    ==================================================== #}
+  <div class="col-lg-3 mb-3">
+    {# 📐 2.3.1 · Tercera columna: tipos de vía #}
+
+    <div class="card shadow-sm h-100">
+      <div class="card-header bg-success text-white py-2">
+        {# 🎨 2.3.2 · Cabecera verde para tipos de vía #}
+        <span class="fw-semibold">🛣️ Tipos de vía</span>
+        {# 🛣️ 2.3.3 · Título de la sección #}
+      </div>
+
+      <div class="card-body py-2">
+        {# 📦 2.3.4 · Cuerpo tarjeta tipos de vía #}
+
+        <p class="small text-muted mb-2">
+          Añade nuevos tipos de vía (C/, AVDA, PLAZA, etc.) que luego estarán
+          disponibles en todos los formularios.
+          {# ℹ️ 2.3.5 · Ejemplos típicos de tipos de vía #}
+        </p>
+
+        {# ------------------------------------------------
+          2.3.1️⃣ FORMULARIO · ALTA TIPO DE VÍA
+          ------------------------------------------------- #}
+        <form
+          method="post"
+          action="{{ url_for('helpers_vias_bp.crear_tipo_via') }}"
+          class="mb-2"
+        >
+          {# 📤 2.3.1.1 · POST al endpoint helpers_vias_bp.crear_tipo_via #}
+
+          <div class="mb-1">
+            <label class="form-label small mb-0">Nombre tipo de vía</label>
+            {# 🏷️ 2.3.1.2 · Etiqueta input tipo de vía #}
+
+            <input
+              type="text"
+              name="tipos_de_vias"
+              class="form-control form-control-sm"
+              required
+            >
+            {# ⌨️ 2.3.1.3 · Nombre (tbl_tipos_de_vias.tipos_de_vias) #}
+          </div>
+
+          <button
+            type="submit"
+            class="btn btn-sm btn-outline-light w-100"
+          >
+            ➕ Añadir tipo de vía
+            {# ➕ 2.3.1.4 · Botón alta tipo de vía #}
+          </button>
+        </form>
+
+        {# ------------------------------------------------
+          2.3.2️⃣ LISTADO · TIPOS DE VÍA EXISTENTES
+          ------------------------------------------------- #}
+        <div class="mt-2" style="max-height: 250px; overflow-y:auto;">
+          <ul class="list-group list-group-flush small">
+            {% for tv in tipos_via %}
+              {# 🔁 2.3.2.1 · Iteramos tipos de vía #}
+              <li class="list-group-item d-flex justify-content-between align-items-center">
+                <span>{{ tv.tipos_de_vias }}</span>
+                {# 📛 2.3.2.2 · Nombre (tbl_tipos_de_vias.tipos_de_vias) #}
+
+                <span class="badge bg-light text-muted">
+                  {{ tv.idtbl_tipos_de_vias }}
+                  {# 🆔 2.3.2.3 · ID (tbl_tipos_de_vias.idtbl_tipos_de_vias) #}
+                </span>
+              </li>
+            {% else %}
+              {# ❌ 2.3.2.4 · Sin tipos de vía #}
+              <li class="list-group-item text-muted">
+                No hay tipos de vía cargados.
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  {# ===================================================
+    2.4️⃣ SUBSECCIÓN · CALLES (EDITABLES)
+    ==================================================== #}
+  <div class="col-lg-3 mb-3">
+    {# 📐 2.4.1 · Cuarta columna: calles #}
+
+    <div class="card shadow-sm h-100">
+      <div class="card-header bg-danger text-white py-2">
+        {# 🎨 2.4.2 · Cabecera roja para destacar #}
+        <span class="fw-semibold">🚏 Calles</span>
+        {# 🚏 2.4.3 · Título de la sección #}
+      </div>
+
+      <div class="card-body py-2">
+        {# 📦 2.4.4 · Cuerpo tarjeta calles #}
+
+        <p class="small text-muted mb-2">
+          Las calles son editables y se pueden añadir nuevas asociadas a municipio y tipo de vía.
+          {# ℹ️ 2.4.5 · Relación con municipios y tipos de vía #}
+        </p>
+
+        {# ------------------------------------------------
+          2.4.1️⃣ FORMULARIO · ALTA CALLE
+          ------------------------------------------------- #}
+        <form
+          method="post"
+          action="{{ url_for('helpers_vias_bp.crear_calle') }}"
+          class="mb-2"
+        >
+          {# 📤 2.4.1.1 · POST al endpoint helpers_vias_bp.crear_calle #}
+
+          <div class="mb-1">
+            <label class="form-label small mb-0">Municipio</label>
+            {# 🏷️ 2.4.1.2 · Etiqueta select municipio #}
+
+            <select
+              name="idtbl_municipios"
+              class="form-select form-select-sm"
+              required
+            >
+              {# 🔽 2.4.1.3 · Select para FK tbl_calles.idtbl_municipios #}
+              <option value="">
+                -- Elige municipio --
+              </option>
+              {% for mun in municipios %}
+                {# 🔁 2.4.1.4 · Municipios disponibles #}
+                <option value="{{ mun.idtbl_municipios }}">
+                  {{ mun.municipios }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="mb-1">
+            <label class="form-label small mb-0">Tipo de vía</label>
+            {# 🏷️ 2.4.1.5 · Etiqueta select tipo de vía #}
+
+            <select
+              name="idtbl_tipos_de_vias"
+              class="form-select form-select-sm"
+              required
+            >
+              {# 🔽 2.4.1.6 · Select para FK tbl_calles.idtbl_tipos_de_vias #}
+              <option value="">
+                -- Tipo de vía --
+              </option>
+              {% for tv in tipos_via %}
+                <option value="{{ tv.idtbl_tipos_de_vias }}">
+                  {{ tv.tipos_de_vias }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="mb-1">
+            <label class="form-label small mb-0">Nombre calle</label>
+            {# 🏷️ 2.4.1.7 · Etiqueta input nombre calle #}
+
+            <input
+              type="text"
+              name="calles"
+              class="form-control form-control-sm"
+              required
+            >
+            {# ⌨️ 2.4.1.8 · Nombre (tbl_calles.calles) #}
+          </div>
+
+          <div class="mb-1">
+            <label class="form-label small mb-0">Código postal</label>
+            {# 🏷️ 2.4.1.9 · Etiqueta input CP #}
+
+            <input
+              type="text"
+              name="Codigopostal"
+              class="form-control form-control-sm"
+            >
+            {# ⌨️ 2.4.1.10 · CP (tbl_calles.Codigopostal), opcional #}
+          </div>
+
+          <div class="mb-1">
+            <label class="form-label small mb-0">Barrio</label>
+            {# 🏷️ 2.4.1.11 · Etiqueta input barrio #}
+
+            <input
+              type="text"
+              name="Barrio"
+              class="form-control form-control-sm"
+            >
+            {# ⌨️ 2.4.1.12 · Barrio (tbl_calles.Barrio), opcional #}
+          </div>
+
+          <button
+            type="submit"
+            class="btn btn-sm btn-outline-light w-100"
+          >
+            ➕ Añadir calle
+            {# ➕ 2.4.1.13 · Botón alta calle #}
+          </button>
+        </form>
+
+        {# ------------------------------------------------
+          2.4.2️⃣ LISTADO · CALLES EXISTENTES
+          ------------------------------------------------- #}
+        <div class="mt-2" style="max-height: 250px; overflow-y:auto;">
+          {# 📜 2.4.2.1 · Contenedor con scroll para muchas calles #}
+
+          <ul class="list-group list-group-flush small">
+            {% for c in calles %}
+              {# 🔁 2.4.2.2 · Iteramos calles #}
+              <li class="list-group-item">
+
+                <div class="d-flex justify-content-between">
+                  {# 📏 2.4.2.3 · Nombre calle + CP a la derecha #}
+
+                  <span>{{ c.calles }}</span>
+                  {# 📛 2.4.2.4 · Nombre (tbl_calles.calles) #}
+
+                  <span class="badge bg-light text-muted">
+                    {{ c.Codigopostal or '-' }}
+                    {# 🏷️ 2.4.2.5 · CP (tbl_calles.Codigopostal) o '-' si no hay #}
+                  </span>
+                </div>
+
+                <div class="text-muted small">
+                  Mun: {{ c.idtbl_municipios }},
+                  Tipo vía: {{ c.idtbl_tipos_de_vias }},
+                  Barrio: {{ c.Barrio or '-' }}
+                  {# 🧩 2.4.2.6 · FKs + barrio (tbl_calles.Barrio) #}
+                </div>
+
+              </li>
+            {% else %}
+              {# ❌ 2.4.2.7 · No hay calles #}
+              <li class="list-group-item text-muted">
+                No hay calles cargadas.
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div>  {# 🧱 2.5 · Fin de la fila principal del panel de helpers #}

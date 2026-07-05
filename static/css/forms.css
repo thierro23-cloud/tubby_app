@@ -1,0 +1,49 @@
+/* ============================================================
+   4️⃣ FORMS.CSS
+   ============================================================
+
+   Estilos específicos de formularios.
+
+   Incluye:
+   - botones
+   - inputs
+   - layouts de botones
+
+   ============================================================ */
+
+.botones {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+button {
+
+    background-color: #2563eb;
+
+    color: white;
+
+    border: none;
+
+    border-radius: 8px;
+
+    padding: 10px 20px;
+
+    font-size: 1rem;
+
+    cursor: pointer;
+
+    transition: background-color 0.2s, transform 0.2s;
+}
+
+button:hover {
+
+    background-color: #1d4ed8;
+
+    transform: translateY(-2px);
+}
+
+button:active {
+
+    transform: translateY(0);
+}

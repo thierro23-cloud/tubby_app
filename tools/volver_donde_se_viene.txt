@@ -1,0 +1,7 @@
+ <h1 class="h3 mb-3">
+    <a href="javascript:history.back()" class="btn btn-sm btn-light mr-2" title="Volver">
+      <i class="feather icon-arrow-left"></i> Volver
+    </a>
+    Contenedores · Listado por carpetas
+    <small class="text-muted">(año {{ anio_actual }})</small>
+  </h1>

@@ -1,0 +1,213 @@
+{# templates/parquin/rio_torio/rio_torio_asignar_matriculas.html #}
+{% extends "base.html" %}
+
+{% block title %}Asignar matrículas · Río Torío{% endblock %}
+
+{% block content %}
+{# ==============================================================================
+  0️⃣ INTRODUCCIÓN GENERAL DE LA PLANTILLA
+  ==============================================================================
+  Objetivo principal:
+    - Permitir al gestor / super_admin seleccionar un usuario del parquin Río Torío.
+    - Pegar un listado de matrículas (una por línea o varias separadas por ';').
+    - Asignar masivamente esas matrículas al usuario seleccionado en tbl_camiones.
+
+  Flujo de operación:
+    1) El usuario selecciona un proveedor/usuario en el <select>.
+    2) Pega matrículas en el <textarea> "listado".
+    3) Pulsa el botón "Procesar matrículas".
+    4) Se envía un POST a:
+         /parquin/rio_torio/btn_rio_torio_asignar_matriculas
+    5) En el backend (btn_rio_torio_asignar_matriculas_bp.py):
+         - Se parsean las matrículas con _parsear_matriculas_solo().
+         - Se llama a _asignar_matriculas_a_usuario().
+         - Se actualiza/inserta en tbl_camiones.
+         - Se muestra mensaje de éxito/error con flash().
+
+  Características UX:
+    - Diseño centrado vertical y horizontalmente, sin scroll vertical.
+    - Mensajes flash integrados (success, danger, warning, info).
+    - Explicación del formato de matrículas y comportamiento de la operación.
+    - Campo oculto "next" para volver a la pantalla de origen al terminar.
+  ============================================================================== #}
+
+{# ==============================================================================
+  1️⃣ ESTILOS CSS · VISTA CENTRADA SIN SCROLL VERTICAL
+  ============================================================================== #}
+<style>
+  {# 1.1 · Ocultar scroll vertical en toda la página para esta vista #}
+  body {
+    overflow: hidden;
+  }
+
+  {# 1.2 · Wrapper centrado vertical y horizontalmente #}
+  .rt-matriculas-wrapper {
+    min-height: calc(100vh - 56px); /* ajusta 56px si tu navbar tiene otra altura */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+</style>
+
+{# ==============================================================================
+  2️⃣ ESTRUCTURA PRINCIPAL · WRAPPER CENTRADO
+  ============================================================================== #}
+<div class="container-fluid rt-matriculas-wrapper">
+  <div class="row w-100 justify-content-center">
+    <div class="col-xl-6 col-lg-7 col-md-9 col-sm-11">
+
+      {# ==============================================================================
+         3️⃣ MENSAJES FLASH · ÉXITO, ERROR, AVISOS
+         ============================================================================== #}
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div class="mb-2">
+            {% for category, message in messages %}
+              {# 3.1 · Mapeo de categorías propias a categorías Bootstrap #}
+              {% if category == 'success' %}
+                {% set bs_category = 'success' %}
+              {% elif category == 'danger' %}
+                {% set bs_category = 'danger' %}
+              {% elif category == 'warning' %}
+                {% set bs_category = 'warning' %}
+              {% else %}
+                {% set bs_category = 'info' %}
+              {% endif %}
+
+              <div class="alert alert-{{ bs_category }} alert-dismissible fade show py-2 mb-2" role="alert">
+                <small>{{ message }}</small>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+
+      {# ==============================================================================
+         4️⃣ TARJETA PRINCIPAL · CARD CON CABECERA Y FORMULARIO
+         ============================================================================== #}
+      <div class="card shadow-sm border-0">
+
+        {# 4.1 · Cabecera de la tarjeta: título y botón "Volver" #}
+        <div class="card-header bg-primary text-white py-2">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              {# 4.1.1 · Subtítulo: contexto "Parquin · Río Torío" #}
+              <div class="small text-uppercase text-white-50 mb-0" style="letter-spacing: .12em;">
+                Parquin · Río Torío
+              </div>
+              {# 4.1.2 · Título principal de la pantalla #}
+              <div class="fw-semibold">
+                Asignar matrículas a usuario
+              </div>
+            </div>
+
+            {# 4.2 · Botón "Volver":
+                 - Si hay 'origen' válido, vuelve a esa ruta.
+                 - Si no, vuelve al módulo principal de Río Torío. #}
+            <a href="{{ origen or url_for('modulo_parquin_rio_torio_bp.modulo_parquin_rio_torio') }}"
+               class="btn btn-outline-light btn-sm">
+              Volver
+            </a>
+          </div>
+        </div>
+
+        {# 4.3 · Cuerpo de la tarjeta: instrucciones y formulario #}
+        <div class="card-body py-3 px-3">
+
+          {# 4.3.1 · Instrucciones breves para el usuario #}
+          <p class="small text-muted mb-2">
+            Selecciona el usuario del parquin y pega las matrículas que quieras asignarle.
+            Cada línea puede contener una matrícula, o varias separadas por <code>;</code>.
+          </p>
+
+          {# ==============================================================================
+             5️⃣ FORMULARIO · ENVÍO POST DE MATRÍCULAS
+             ============================================================================== #}
+          <form method="post"
+                action="{{ url_for('btn_rio_torio_asignar_matriculas_bp.btn_rio_torio_asignar_matriculas', next=origen) }}"
+                class="mt-2">
+
+            {# 5.1 · CSRF token (si está disponible en el contexto) #}
+            {{ csrf_token() if csrf_token is defined }}
+
+            {# 5.2 · Campo oculto para preservar 'next' entre GET y POST #}
+            <input type="hidden" name="next" value="{{ origen }}">
+
+            {# ==============================================================================
+               5.3 · SELECT · USUARIO DEL PARQUIN
+               ============================================================================== #}
+            <div class="mb-2">
+              <label for="idtbl_usuarios" class="form-label small fw-semibold">
+                Usuario del parquin
+              </label>
+              <select class="form-select form-select-sm"
+                      id="idtbl_usuarios"
+                      name="idtbl_usuarios"
+                      required>
+                <option value="">Selecciona un usuario…</option>
+                {% for u in usuarios %}
+                  {# 5.3.1 · Cada opción: nombre, NIF y ID del usuario #}
+                  <option value="{{ u.idtbl_usuarios }}">
+                    {{ u.nombre_razon_social }} ({{ u.nif }}) · ID {{ u.idtbl_usuarios }}
+                  </option>
+                {% endfor %}
+              </select>
+              <div class="form-text small">
+                Todas las matrículas pegadas se asignarán al usuario seleccionado.
+              </div>
+            </div>
+
+            {# ==============================================================================
+               5.4 · TEXTAREA · LISTADO DE MATRÍCULAS
+               ============================================================================== #}
+            <div class="mb-2">
+              <label for="listado" class="form-label small fw-semibold">
+                Matrículas a asignar
+              </label>
+              <textarea class="form-control form-control-sm"
+                        id="listado"
+                        name="listado"
+                        rows="8"
+                        placeholder="Ejemplo:
+1234-ABC
+5678-DEF;9999-GHI"
+                        required></textarea>
+            </div>
+
+            {# ==============================================================================
+               5.5 · CAJA DE EXPLICACIÓN · COMPORTAMIENTO DE LA OPERACIÓN
+               ============================================================================== #}
+            <div class="bg-light rounded-2 p-2 mb-2 small">
+              <div class="fw-semibold mb-1">Comportamiento</div>
+              <ul class="mb-0 ps-3">
+                <li>Si la matrícula ya existe para este usuario → se marca como activa.</li>
+                <li>Si la matrícula existe para otro usuario → se reasigna al usuario elegido.</li>
+                <li>Si la matrícula no existe → se crea un nuevo camión activo para este usuario.</li>
+              </ul>
+            </div>
+
+            {# ==============================================================================
+               5.6 · BOTÓN DE ENVÍO · SUBMIT DEL FORMULARIO
+               ============================================================================== #}
+            <div class="d-flex justify-content-between align-items-center mt-2">
+              <small class="text-muted">
+                Revisa bien el usuario antes de procesar el listado.
+              </small>
+              <button type="submit" class="btn btn-primary btn-sm">
+                Procesar matrículas
+              </button>
+            </div>
+
+          </form>
+          {# ==============================================================================
+             FIN DEL FORMULARIO
+             ============================================================================== #}
+
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

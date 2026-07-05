@@ -1,0 +1,415 @@
+{# ============================================================================
+  🅿️ templates/parquin/rio_torio_plano.html
+  ============================================================================
+  0️⃣ INTRODUCCIÓN · OBJETIVO DE ESTA PLANTILLA
+  ----------------------------------------------------------------------------
+  Esta plantilla muestra el PLANO VISUAL de UNA FILA del parking de camiones
+  "Río Torío". Está pensada como una vista rápida, sin scroll horizontal,
+  donde cada plaza se dibuja inclinada como en un parquin real.
+
+  FUNCIONALIDAD PRINCIPAL
+  -----------------------
+  1. Cabecera con:
+       · Título de la fila actual y total de plazas.
+       · Botones para cambiar de fila (1, 2, 3, ...).
+       · Flechas para navegar a la fila anterior/siguiente.
+  2. Contadores de plazas:
+       · Total, Libres y Ocupadas en la fila actual.
+  3. Plano visual:
+       · Una línea de plazas, inclinadas.
+       · Azul (libre) / Naranja (ocupada).
+       · Código visible de plaza y texto vertical LIBRE/OCUPADO.
+  4. Botón para volver al panel principal del módulo Parquin.
+  5. Estilos CSS específicos para el plano (inclinación, colores, responsive).
+
+  DATOS ESPERADOS DESDE EL BACKEND
+  --------------------------------
+  - fila               → identificador de la fila actual (ej. 1, 2, 3...).
+  - filas_disponibles  → lista ordenada de filas disponibles.
+  - plazas             → lista de dicts con las plazas de la fila actual:
+                           {idtbl_plazas, codigo_plazas, idtbl_usuarios, estado, ...}
+  - total, libres, ocupadas → totales pre-calculados para la fila actual.
+  ========================================================================== #}
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Plano fila {{ fila }} · Parking camiones</title>
+
+  <style>
+    /* 7.1 🧱 Contenedor principal (.shell) ocupa todo el ancho disponible */
+    .shell {
+      width: 100%;
+      max-width: 100%;
+      margin: 0;
+      padding-left: 0;
+      padding-right: 0;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background-color: #0f172a;
+      color: #e5e7eb;
+    }
+
+    a {
+      text-decoration: none;
+    }
+
+    .py-3 {
+      padding-top: 1rem;
+      padding-bottom: 1rem;
+    }
+
+    .mb-1 { margin-bottom: 0.25rem; }
+    .mb-3 { margin-bottom: 1rem; }
+
+    .d-flex {
+      display: flex;
+    }
+
+    .flex-wrap { flex-wrap: wrap; }
+    .justify-content-between { justify-content: space-between; }
+    .align-items-center { align-items: center; }
+    .align-items-end { align-items: flex-end; }
+    .gap-1 { gap: 0.25rem; }
+    .gap-2 { gap: 0.5rem; }
+    .gap-3 { gap: 1rem; }
+    .text-end { text-align: right; }
+    .text-muted { color: #9ca3af; }
+    .small { font-size: 0.8rem; }
+    .fw-semibold { font-weight: 600; }
+
+    .btn {
+      display: inline-block;
+      padding: 0.2rem 0.5rem;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+
+    .btn-sm { padding: 0.2rem 0.5rem; }
+
+    .btn-warning {
+      background-color: #facc15;
+      color: #111827;
+      border-color: #fbbf24;
+    }
+
+    .btn-outline-info {
+      background: transparent;
+      color: #0ea5e9;
+      border-color: #0ea5e9;
+    }
+
+    .btn-outline-light {
+      background: transparent;
+      color: #e5e7eb;
+      border-color: #e5e7eb;
+    }
+
+    .btn-secondary {
+      background-color: #6b7280;
+      color: white;
+      border-color: #4b5563;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .bg-light {
+      background-color: #e5e7eb;
+    }
+
+    .bg-white {
+      background-color: #ffffff;
+    }
+
+    .text-dark {
+      color: #111827;
+    }
+
+    .border {
+      border-width: 1px;
+      border-style: solid;
+    }
+
+    .border-secondary { border-color: #6b7280; }
+    .border-success { border-color: #16a34a; }
+    .border-danger { border-color: #dc2626; }
+
+    .rounded-pill {
+      border-radius: 999px;
+    }
+
+    .px-3 { padding-left: 0.75rem; padding-right: 0.75rem; }
+    .py-2 { padding-top: 0.35rem; padding-bottom: 0.35rem; }
+
+    /* 7.2 🎛️ Botones del selector de filas */
+    .fila-selector a {
+      font-size: 0.8rem;
+      text-decoration: none;
+    }
+
+    /* 7.3 🗺️ Contenedor del plano: ancho completo, sin scroll horizontal */
+    .plano-wrapper {
+      padding: 0;
+      width: 100%;
+      overflow-x: hidden;
+    }
+
+    /* 7.4 🧱 Contenedor de la fila de plazas: flex horizontal */
+    .fila-parquin {
+      display: flex;
+      width: 100%;
+    }
+
+    /* 7.5 🅿️ Plaza inclinada como una plaza de parquin real */
+    .plaza-camion {
+      flex: 1 1 0;
+      min-width: 0;
+      border-radius: 12px;
+      border: 2px solid #1d4ed8;
+      background: #020617;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      color: #e5e7eb;
+      box-shadow: 0 4px 10px rgba(15, 23, 42, 0.7);
+      transition: transform 0.1s ease, box-shadow 0.1s ease, border-color 0.1s ease;
+      transform: skewX(-18deg);
+      transform-origin: center center;
+      padding: 6px 4px;
+      box-sizing: border-box;
+    }
+
+    /* 7.6 🎨 Colores según estado (libre / ocupada) */
+    .plaza-libre {
+      border-color: #0ea5e9;
+      background: #020617;
+    }
+
+    .plaza-ocupada {
+      border-color: #f97316;
+      background: #3b1d0f;
+    }
+
+    /* 7.7 ✨ Efecto hover de elevación */
+    .plaza-camion:hover {
+      transform: skewX(-18deg) translateY(-2px);
+      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.9);
+    }
+
+    /* 7.8 🚙 Icono del vehículo centrado */
+    .camion-icon {
+      font-size: 1.8rem;
+      line-height: 1;
+      color: #1d4ed8;
+      transform: skewX(18deg);
+    }
+
+    /* 7.9 🏷️ Código de plaza (P-01, P-02...) */
+    .camion-codigo {
+      font-size: 0.75rem;
+      font-weight: 600;
+      transform: skewX(18deg);
+    }
+
+    /* 7.10 📍 Contenedor del texto vertical de estado */
+    .camion-estado {
+      transform: skewX(18deg);
+    }
+
+    /* 7.11 📍 Texto vertical LIBRE / OCUPADO */
+    .estado-vertical {
+      display: inline-block;
+      font-size: 0.65rem;
+      line-height: 1.1;
+      text-align: center;
+      font-weight: 700;
+    }
+
+    .estado-ocupado {
+      color: #f97316;
+    }
+
+    .estado-libre {
+      color: #0ea5e9;
+    }
+
+    /* 7.12 📱 Ajustes responsive para pantallas pequeñas */
+    @media (max-width: 600px) {
+      .shell {
+        padding-left: 0.25rem;
+        padding-right: 0.25rem;
+      }
+
+      .camion-icon {
+        font-size: 1.4rem;
+      }
+
+      .camion-codigo {
+        font-size: 0.7rem;
+      }
+
+      .estado-vertical {
+        font-size: 0.6rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="shell py-3">
+
+  <!-- 3️⃣ CABECERA (TÍTULO + SELECTOR DE FILAS + FLECHAS) -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-3">
+    <!-- 3.1 Título y descripción corta -->
+    <div>
+      <h1 class="h5 mb-1">
+        🗺️ Plano del parking – fila {{ fila }} ({{ total }} plazas)
+      </h1>
+      <small class="text-muted">
+        Cada plaza 🅿️ se muestra inclinada como en un parquin real.
+        Azul = libre, naranja = ocupada.
+      </small>
+    </div>
+
+    <!-- 3.2 Selector de filas + 3.3 Flechas de navegación -->
+    <div class="d-flex flex-column align-items-end gap-1">
+
+      <!-- Selector de filas (botones 1, 2, 3, ...) -->
+      <div class="fila-selector text-end">
+        <span class="text-muted small me-1">🧱 Filas:</span>
+
+        {% for f in filas_disponibles %}
+          {% if f == fila %}
+            <!-- Fila actual -->
+            <a href="{{ url_for('btn_rio_torio_plano_bp.btn_rio_torio_plano', fila=f) }}"
+               class="btn btn-sm btn-warning ms-1">
+              ⭐ Fila {{ f }}
+            </a>
+          {% else %}
+            <!-- Otras filas -->
+            <a href="{{ url_for('btn_rio_torio_plano_bp.btn_rio_torio_plano', fila=f) }}"
+               class="btn btn-sm btn-outline-info ms-1">
+              ⬜ Fila {{ f }}
+            </a>
+          {% endif %}
+        {% endfor %}
+      </div>
+
+      <!-- Navegación secuencial (⬅️ / ➡️) -->
+      <div class="d-flex align-items-center gap-1">
+        {% if fila in filas_disponibles %}
+          {% set idx = filas_disponibles.index(fila) %}
+        {% else %}
+          {% set idx = 0 %}
+        {% endif %}
+
+        {% if idx > 0 %}
+          <a href="{{ url_for('btn_rio_torio_plano_bp.btn_rio_torio_plano',
+                               fila=filas_disponibles[idx-1]) }}"
+             class="btn btn-sm btn-outline-light">
+            ⬅️ Fila {{ filas_disponibles[idx-1] }}
+          </a>
+        {% else %}
+          <button class="btn btn-sm btn-outline-light" disabled>⬅️</button>
+        {% endif %}
+
+        {% if idx + 1 < filas_disponibles|length %}
+          <a href="{{ url_for('btn_rio_torio_plano_bp.btn_rio_torio_plano',
+                               fila=filas_disponibles[idx+1]) }}"
+             class="btn btn-sm btn-outline-light">
+            Fila {{ filas_disponibles[idx+1] }} ➡️
+          </a>
+        {% else %}
+          <button class="btn btn-sm btn-outline-light" disabled>➡️</button>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- 4️⃣ CONTADORES (TOTAL / LIBRES / OCUPADAS) -->
+  <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+    <div class="badge bg-light text-dark border border-secondary rounded-pill px-3 py-2">
+      <span class="text-muted small me-1">Total:</span>
+      <span class="fw-semibold">{{ total }}</span>
+    </div>
+
+    <div class="badge bg-white text-dark border border-success rounded-pill px-3 py-2">
+      <span class="text-muted small me-1">Libres:</span>
+      <span class="fw-semibold text-success">{{ libres }}</span>
+    </div>
+
+    <div class="badge bg-white text-dark border border-danger rounded-pill px-3 py-2">
+      <span class="text-muted small me-1">Ocupadas:</span>
+      <span class="fw-semibold text-danger">{{ ocupadas }}</span>
+    </div>
+  </div>
+
+  <!-- 5️⃣ PLANO VISUAL -->
+  <div class="plano-wrapper my-3" style="--num-plazas: {{ plazas|length|default(1) }}">
+    <div class="fila-parquin">
+
+      {% for p in plazas %}
+        {% set ocupada = (p.idtbl_usuarios is not none) %}
+
+        <div class="plaza-camion
+                    {% if ocupada %}plaza-ocupada{% else %}plaza-libre{% endif %}">
+
+          <div class="camion-icon">
+            🚙
+          </div>
+
+          <div class="camion-codigo">
+            {{ p.codigo_plazas or ('P' ~ p.idtbl_plazas) }}
+          </div>
+
+          <div class="camion-estado small">
+            {% if ocupada %}
+              <span class="estado-vertical estado-ocupado">
+                O<br>C<br>U<br>P<br>A<br>D<br>O
+              </span>
+            {% else %}
+              <span class="estado-vertical estado-libre">
+                L<br>I<br>B<br>R<br>E
+              </span>
+            {% endif %}
+          </div>
+
+        </div>
+      {% endfor %}
+
+      {% if plazas|length == 0 %}
+        <div class="text-muted small">
+          No hay plazas configuradas para esta fila.
+        </div>
+      {% endif %}
+
+    </div>
+  </div>
+
+  <!-- 6️⃣ BOTÓN VOLVER (a donde vengas, con fallback al panel) -->
+  <div class="text-end">
+    <a href="{{ request.referrer or url_for('panel_parquin_bp.panel_parquin') }}"
+       class="btn btn-sm btn-secondary">
+      ⬅️ Volver
+    </a>
+  </div>
+</div>
+
+</body>
+</html>

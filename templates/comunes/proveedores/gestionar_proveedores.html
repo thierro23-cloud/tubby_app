@@ -1,0 +1,1090 @@
+{# ============================================================================
+  🧩 PLANTILLA: proveedores_gestionar.html
+  FORMULARIO ÚNICO ULTRACOMPACTO · SIN SCROLL · BUSCAR + TABS
+
+  Introducción y descripción del módulo:
+  -------------------------------------
+  Esta plantilla es la vista principal de gestión de proveedores del sistema,
+  centrada en la tabla bd_tbl_comunes.tbl_proveedores.
+
+  Objetivos:
+  - Permitir crear y editar proveedores en una pantalla única, compacta y
+    “tabificada”, sin scroll global, con degradados en tonos azul claro.
+  - Buscar proveedores por:
+      • NIF (tolerando ceros a la izquierda)
+      • Nombre / Razón Social (búsqueda case-insensitive sin tildes)
+  - Gestionar la ubicación mediante combos dependientes:
+      • Provincias: bd_tbl_comunes.tbl_provincias
+      • Municipios: bd_tbl_comunes.tbl_municipios
+      • Tipos de vía: bd_tbl_comunes.tbl_tipos_de_vias
+      • Calles: bd_tbl_comunes.tbl_calles
+  - Permitir editar directamente la calle seleccionada desde el propio
+    formulario de proveedores, saltando a la pantalla de edición de `tbl_calles`
+    y volviendo al proveedor tras guardar.
+
+  Funcionalidades clave:
+  - Búsqueda ultrarrápida por NIF y nombre con debounce de 300ms.
+  - Tabs funcionales:
+      1. Básico   → NIF, Razón Social, teléfono, alias.
+      2. Dirección → provincia, municipio, tipo de vía, calle + domicilio, CP,
+                     portal, provincia (texto libre).
+      3. Contactos → contactos comercial y administración (nombres, teléfonos,
+                     emails).
+      4. Bancos   → cuenta, tipo de tercero, grupo de producto.
+      5. Flags    → switches (parking, bar/hostelería, construcción, informes,
+                     contenedores, etc.).
+  - Panel izquierdo:
+      • Buscador por NIF y nombre.
+      • Resumen del proveedor actual (ID, NIF, estado: Nuevo/Editando).
+      • Listado de resultados de búsqueda con botón para cargar cada proveedor.
+  - Acciones principales:
+      • “Guardar” → POST al mismo endpoint, con PRG (POST/REDIRECT/GET).
+      • “Nuevo” → limpia todo el formulario y deja el ID vacío.
+      • “Volver” → usa window.history.back() con fallback a la propia ruta.
+
+  Integración con backend:
+  - Endpoint principal: /comunes/proveedores/formulario
+      • GET:
+          - Si viene ?prov_id=NNN → carga ese proveedor.
+          - Si no → formulario vacío (modo “Nuevo proveedor”).
+      • POST:
+          - Valida NIF y Nombre/Razón Social.
+          - INSERT si no hay Idtbl_proveedores.
+          - UPDATE si hay Idtbl_proveedores.
+          - Redirige a /comunes/proveedores/formulario?prov_id=NNN.
+
+  - APIs JSON:
+      • /api/buscar_por_nombre
+      • /api/buscar_por_nif
+      • /api/provincias
+      • /api/municipios?prov_id=...
+      • /api/tipos_vias
+      • /api/calles?mun_id=...&via_id=...
+      • /api/proveedor/<id>
+
+  - Variables que el backend debe pasar:
+      proveedor          → dict o None
+      provincias         → [{id, nombre}]
+      tipos_de_vias      → [{id, nombre}]
+      tipos_de_terceros  → [{id, nombre}]
+      productos_grupos   → [{id, nombre}]
+
+  Uso de edición de calles desde proveedores:
+  - En la pestaña Dirección, al tener una calle seleccionada en el combo,
+    aparece el botón “Editar calle seleccionada”.
+  - Al pulsarlo:
+      • Se extrae el ID de la calle del combo.
+      • Se extrae el ID del proveedor del campo oculto Idtbl_proveedores.
+      • Se navega a:
+          /comunes/proveedores/calles/<id_calle>/editar?desde=proveedor&prov_id=<id_prov>
+      • En `editar_calle`, al guardar:
+          - Si viene desde proveedor → redirige a /comunes/proveedores/formulario?prov_id=<id_prov>
+          - Si no → redirige al listado de calles.
+  - En la plantilla de edición de calles (`calles_form.html`) hay un botón
+    “Volver” inteligente que:
+      - Si vienes desde proveedor → vuelve a ese proveedor.
+      - Si no → vuelve al listado de calles.
+
+  ============================================================================ #}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Proveedores UltraCompacto</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+
+  <!-- ========== 1. ESTILOS GENERALES (LAYOUT + LOOK & FEEL) ========== -->
+  <style>
+    :root {
+      --grad-primary: linear-gradient(135deg, #60a5fa 0%, #3b82f6 50%, #2563eb 100%);
+      --grad-tab:     linear-gradient(135deg, #bfdbfe 0%, #93c5fd 100%);
+      --glass: rgba(255,255,255,0.92);
+      --shadow: 0 4px 16px rgba(15,23,42,0.18);
+      --radius: 12px;
+    }
+
+    * {
+      font-family: system-ui, -apple-system, sans-serif;
+      font-size: 0.9rem !important;
+    }
+
+    body {
+      background: linear-gradient(135deg, #e0f2fe 0%, #dbeafe 40%, #bfdbfe 100%);
+      margin: 0;
+      padding: 0.5rem;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .header-compact {
+      background: var(--grad-primary);
+      color: white;
+      padding: 0.5rem 0.75rem;
+      border-radius: var(--radius) var(--radius) 0 0;
+      box-shadow: var(--shadow);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    .main-compact {
+      height: calc(100vh - 70px);
+      display: flex;
+      gap: 0.5rem;
+      padding: 0.75rem;
+      overflow: hidden;
+    }
+
+    .left-panel, .right-panel {
+      background: var(--glass);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      height: 100%;
+      overflow: hidden;
+      padding: 0.75rem;
+      border: 1px solid rgba(148,163,184,0.25);
+    }
+    .left-panel  { width: 25%; }
+    .right-panel { width: 75%; display: flex; flex-direction: column; gap: 0.5rem; }
+
+    .section-frame {
+      background: white;
+      border: 1px solid #dbeafe;
+      border-radius: 8px;
+      padding: 0.5rem;
+      margin-bottom: 0.25rem;
+      transition: all 0.2s ease;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .section-frame:hover {
+      border-color: #3b82f6;
+      transform: scale(1.02) translateY(-1px);
+      box-shadow: 0 8px 24px rgba(37,99,235,0.25);
+      z-index: 10;
+    }
+
+    .section-title {
+      font-size: 0.7rem !important;
+      font-weight: 600;
+      color: #0f172a;
+      margin-bottom: 0.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+
+    .input-tiny, .select-tiny {
+      padding: 0.4rem 0.55rem !important;
+      height: 32px !important;
+      font-size: 0.8rem !important;
+      border: 1px solid #cbd5f5;
+      border-radius: 4px;
+      background-color: #eff6ff;
+    }
+    .input-tiny:focus, .select-tiny:focus {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 0.05rem rgba(59,130,246,0.35);
+      background-color: #ffffff;
+      outline: none;
+    }
+
+    .type-tab {
+      background: #e0f2fe;
+      border: 1px solid #bfdbfe;
+      padding: 0.25rem 0.5rem;
+      border-radius: 20px;
+      font-size: 0.6rem !important;
+      font-weight: 500;
+      margin-right: 0.25rem;
+      transition: all 0.18s;
+      cursor: pointer;
+      color: #1e40af;
+    }
+    .type-tab.active {
+      background: var(--grad-tab);
+      color: #0f172a;
+      box-shadow: 0 4px 12px rgba(59,130,246,0.35);
+      transform: scale(1.05);
+    }
+
+    .tipo-section { display: none; }
+    .tipo-section.active { display: block; }
+
+    .switch-mini .form-check-input {
+      width: 32px;
+      height: 20px;
+    }
+
+    .btn-micro {
+      padding: 0.3rem 0.7rem !important;
+      font-size: 0.8rem !important;
+      height: 30px;
+      border-radius: 999px;
+      border: 1px solid rgba(248,250,252,0.6);
+    }
+
+    .right-panel form#formMain {
+      flex: 1;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ========== 2. CABECERA (VOLVER / NUEVO / GUARDAR) ========== -->
+<div class="header-compact">
+  <div class="d-flex align-items-center gap-2">
+    <i class="bi bi-building-gear fs-5"></i>
+    <span class="fw-bold">Proveedores</span>
+  </div>
+  <div class="d-flex gap-1">
+    <!-- Volver -->
+    <button class="btn btn-light btn-micro"
+            type="button"
+            title="Volver"
+            onclick="volverAnterior()">
+      <i class="bi bi-arrow-left text-secondary"></i>
+    </button>
+
+    <!-- Nuevo -->
+    <button class="btn btn-light btn-micro"
+            type="button"
+            title="Nuevo"
+            onclick="limpiarTodo()">
+      <i class="bi bi-plus-lg text-primary"></i>
+    </button>
+
+    <!-- Guardar -->
+    <button type="submit"
+            form="formMain"
+            class="btn btn-light btn-micro"
+            title="Guardar">
+      <i class="bi bi-check2 text-success"></i>
+    </button>
+  </div>
+</div>
+<!-- ========== FIN CABECERA ========== -->
+
+<div class="main-compact">
+
+  <!-- 3.1 PANEL IZQUIERDO -->
+  <div class="left-panel">
+    <!-- Búsqueda -->
+    <div class="section-frame mb-2">
+      <div class="section-title">
+        <i class="bi bi-search text-primary"></i> 1️⃣ Buscar Proveedor
+      </div>
+      <input type="text" class="input-tiny w-100 mb-1" id="buscarNIF" placeholder="NIF">
+      <input type="text" class="input-tiny w-100" id="buscarNom" placeholder="Nombre / Razón Social">
+      <div id="mensajeBusqueda" class="small text-muted mt-1"></div>
+    </div>
+
+    <!-- Resumen -->
+    <div class="section-frame">
+      <div class="section-title">
+        <i class="bi bi-file-text text-info"></i> 2️⃣ Resumen Actual
+      </div>
+      <div class="small">
+        <div>ID: <span id="resID" class="fw-bold">{{ proveedor.Idtbl_proveedores if proveedor else '-' }}</span></div>
+        <div>NIF: <span id="resNIF">{{ proveedor.NIF if proveedor else '-' }}</span></div>
+        <div><span id="resStatus" class="type-tab">{{ 'Editando' if proveedor else 'Nuevo' }}</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3.2 PANEL DERECHO -->
+  <div class="right-panel">
+
+    <!-- Resultados búsqueda -->
+    <div id="resultadosBusqueda" class="section-frame mb-1" style="max-height: 160px; overflow-y: auto; display:none;">
+      <div class="section-title d-flex justify-content-between align-items-center">
+        <span>
+          <i class="bi bi-list-check text-primary"></i> Resultados de búsqueda
+        </span>
+        <span class="badge bg-primary-subtle text-primary" id="contadorResultados">
+          0 resultados
+        </span>
+      </div>
+      <div id="listaResultados" class="small"></div>
+    </div>
+
+    <!-- FORMULARIO PRINCIPAL -->
+    <form id="formMain" method="POST">
+      <!-- ID oculto -->
+      <input type="hidden"
+             id="idProv"
+             name="Idtbl_proveedores"
+             value="{{ proveedor.Idtbl_proveedores if proveedor else '' }}">
+
+      <!-- Tabs -->
+      <div class="d-flex flex-wrap gap-1 mb-2 pb-1" style="border-bottom: 1px solid #dbeafe;">
+        <span class="type-tab active" onclick="mostrarTipo('basico', event)">Básico</span>
+        <span class="type-tab" onclick="mostrarTipo('direccion', event)">Dirección</span>
+        <span class="type-tab" onclick="mostrarTipo('contacto', event)">Contactos</span>
+        <span class="type-tab" onclick="mostrarTipo('banco', event)">Bancos</span>
+        <span class="type-tab" onclick="mostrarTipo('caract', event)">Flags</span>
+      </div>
+
+      <!-- BASICO -->
+      <div id="secBasico" class="tipo-section active">
+        <div class="section-frame">
+          <div class="section-title">
+            <i class="bi bi-person-circle text-primary"></i> 3️⃣ Datos Empresa
+          </div>
+          <div class="row g-1">
+            <div class="col-6">
+              <input class="input-tiny w-100"
+                     name="NIF"
+                     value="{{ proveedor.NIF if proveedor else '' }}"
+                     required
+                     placeholder="NIF/CIF">
+            </div>
+            <div class="col-6">
+              <input class="input-tiny w-100"
+                     name="Nombre_Razon_Social"
+                     value="{{ proveedor.Nombre_Razon_Social if proveedor else '' }}"
+                     required
+                     placeholder="Razón Social">
+            </div>
+            <div class="col-6">
+              <input class="input-tiny w-100"
+                     name="Telefono"
+                     value="{{ proveedor.Telefono if proveedor else '' }}"
+                     placeholder="Teléfono">
+            </div>
+            <div class="col-6">
+              <input class="input-tiny w-100"
+                     name="ALIAS"
+                     value="{{ proveedor.ALIAS if proveedor else '' }}"
+                     placeholder="Alias">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DIRECCION -->
+      <div id="secDireccion" class="tipo-section">
+        <div class="section-frame">
+          <div class="section-title">
+            <i class="bi bi-geo-alt-fill text-primary"></i> 4️⃣ Dirección
+          </div>
+          <div class="row g-1">
+            <!-- Provincia -->
+            <div class="col-3">
+              <select class="select-tiny w-100" name="idtbl_provincias" id="provincia">
+                <option value="">Prov</option>
+                {% for p in provincias %}
+                  <option value="{{ p.id }}"
+                    {% if proveedor and proveedor.idtbl_provincias == p.id %}selected{% endif %}>
+                    {{ p.nombre }}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <!-- Municipio -->
+            <div class="col-3">
+              <select class="select-tiny w-100" name="idtbl_municipios" id="municipio">
+                <option value="">Mun</option>
+              </select>
+            </div>
+
+            <!-- Tipo de vía -->
+            <div class="col-3">
+              <select class="select-tiny w-100" name="idtbl_tipos_de_vias" id="tipo_via">
+                <option value="">Vía</option>
+                {% for t in tipos_de_vias %}
+                  <option value="{{ t.id }}"
+                    {% if proveedor and proveedor.idtbl_tipos_de_vias == t.id %}selected{% endif %}>
+                    {{ t.nombre }}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <!-- Calle -->
+            <div class="col-3">
+              <select class="select-tiny w-100" name="idtbl_calles" id="calle">
+                <option value="">Calle</option>
+              </select>
+            </div>
+          </div>
+
+          <input class="input-tiny w-100 mt-1"
+                 name="Domicilio"
+                 value="{{ proveedor.Domicilio if proveedor else '' }}"
+                 placeholder="Domicilio">
+
+          <input class="input-tiny w-100 mt-1"
+                 name="Poblacion"
+                 value="{{ proveedor.Poblacion if proveedor else '' }}"
+                 placeholder="Población">
+
+          <div class="row g-1 mt-1">
+            <div class="col-3">
+              <input class="input-tiny w-100"
+                     name="Codigo_Postal"
+                     value="{{ proveedor.Codigo_Postal if proveedor else '' }}"
+                     placeholder="Cód. Postal">
+            </div>
+            <div class="col-3">
+              <input class="input-tiny w-100"
+                     name="numero_portal"
+                     value="{{ proveedor.numero_portal if proveedor else '' }}"
+                     placeholder="Nº portal">
+            </div>
+            <div class="col-6">
+              <input class="input-tiny w-100"
+                     name="Provincia"
+                     value="{{ proveedor.Provincia if proveedor else '' }}"
+                     placeholder="Provincia (texto libre)">
+            </div>
+          </div>
+
+          <!-- Botón EDICIÓN DE CALLE -->
+          <div class="mt-2 d-flex justify-content-end">
+            <button type="button"
+                    class="btn btn-sm btn-outline-primary"
+                    onclick="editarCalleActual()">
+              <i class="bi bi-pencil-square"></i> Editar calle seleccionada
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- CONTACTO -->
+      <div id="secContacto" class="tipo-section">
+        <div class="section-frame">
+          <div class="section-title">
+            <i class="bi bi-telephone-outbound text-primary"></i> 5️⃣ Contactos
+          </div>
+          <div class="row g-1">
+            <div class="col-6">
+              <input class="input-tiny w-100"
+                     name="Persona_contacto_comercial"
+                     value="{{ proveedor.Persona_contacto_comercial if proveedor else '' }}"
+                     placeholder="Comercial">
+            </div>
+            <div class="col-6">
+              <input class="input-tiny w-100"
+                     name="telefono_movil"
+                     value="{{ proveedor.telefono_movil if proveedor else '' }}"
+                     placeholder="Móvil comercial">
+            </div>
+            <div class="col-6">
+              <input class="input-tiny w-100"
+                     name="correo_electronico_comercial"
+                     value="{{ proveedor.correo_electronico_comercial if proveedor else '' }}"
+                     placeholder="Email comercial">
+            </div>
+            <div class="col-6">
+              <input class="input-tiny w-100"
+                     name="Persona_contacto_admin"
+                     value="{{ proveedor.Persona_contacto_admin if proveedor else '' }}"
+                     placeholder="Contacto administración">
+            </div>
+            <div class="col-4">
+              <input class="input-tiny w-100"
+                     name="telefono_fijo_admin"
+                     value="{{ proveedor.telefono_fijo_admin if proveedor else '' }}"
+                     placeholder="Fijo admin">
+            </div>
+            <div class="col-4">
+              <input class="input-tiny w-100"
+                     name="telefono_movil_admin"
+                     value="{{ proveedor.telefono_movil_admin if proveedor else '' }}"
+                     placeholder="Móvil admin">
+            </div>
+            <div class="col-4">
+              <input class="input-tiny w-100"
+                     name="correo_electronico_admin"
+                     value="{{ proveedor.correo_electronico_admin if proveedor else '' }}"
+                     placeholder="Email admin">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BANCOS -->
+      <div id="secBanco" class="tipo-section">
+        <div class="section-frame">
+          <div class="section-title">
+            <i class="bi bi-bank text-primary"></i> 6️⃣ Bancos
+          </div>
+          <div class="row g-1">
+            <div class="col-6">
+              <input class="input-tiny w-100"
+                     name="numero_cuenta"
+                     value="{{ proveedor.numero_cuenta if proveedor else '' }}"
+                     placeholder="Cuenta">
+            </div>
+            <div class="col-3">
+              <select class="select-tiny w-100" name="idtbl_Tipo_de_Tercero">
+                <option value="">Tipo tercero</option>
+                {% for t in tipos_de_terceros %}
+                  <option value="{{ t.id }}"
+                    {% if proveedor and proveedor.idtbl_Tipo_de_Tercero == t.id %}selected{% endif %}>
+                    {{ t.nombre }}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-3">
+              <select class="select-tiny w-100" name="idtbl_productos_grupos">
+                <option value="">Grupo producto</option>
+                {% for g in productos_grupos %}
+                  <option value="{{ g.id }}"
+                    {% if proveedor and proveedor.idtbl_productos_grupos == g.id %}selected{% endif %}>
+                    {{ g.nombre }}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- FLAGS -->
+      <div id="secCaract" class="tipo-section">
+        <div class="section-frame">
+          <div class="section-title">
+            <i class="bi bi-check2-circle text-primary"></i> 7️⃣ Flags / Características
+          </div>
+
+          <div class="d-flex flex-wrap gap-2 small">
+
+            <div class="switch-mini form-check form-switch">
+              <input class="form-check-input"
+                     type="checkbox"
+                     name="parquin"
+                     {% if proveedor and proveedor.parquin %}checked{% endif %}>
+              <label class="form-check-label">
+                Parking
+                <span class="text-muted d-block" style="font-size:0.7rem;">
+                  Relación con aparcamientos / parkings
+                </span>
+              </label>
+            </div>
+
+            <div class="switch-mini form-check form-switch">
+              <input class="form-check-input"
+                     type="checkbox"
+                     name="es_bar"
+                     {% if proveedor and proveedor.es_bar %}checked{% endif %}>
+              <label class="form-check-label">
+                Bar / Hostelería
+                <span class="text-muted d-block" style="font-size:0.7rem;">
+                  Local de bar, cafetería o similar
+                </span>
+              </label>
+            </div>
+
+            <div class="switch-mini form-check form-switch">
+              <input class="form-check-input"
+                     type="checkbox"
+                     name="empresa_construccion"
+                     {% if proveedor and proveedor.empresa_construccion %}checked{% endif %}>
+              <label class="form-check-label">
+                Construcción
+                <span class="text-muted d-block" style="font-size:0.7rem;">
+                  Empresa de construcción / obras
+                </span>
+              </label>
+            </div>
+
+            <div class="switch-mini form-check form-switch">
+              <input class="form-check-input"
+                     type="checkbox"
+                     name="recibir_informe_pendientes"
+                     {% if proveedor and proveedor.recibir_informe_pendientes %}checked{% endif %}>
+              <label class="form-check-label">
+                Informes pendientes
+                <span class="text-muted d-block" style="font-size:0.7rem;">
+                  Debe recibir informes de pendientes
+                </span>
+              </label>
+            </div>
+
+            <div class="switch-mini form-check form-switch">
+              <input class="form-check-input"
+                     type="checkbox"
+                     name="coloca_contenedores"
+                     {% if proveedor and proveedor.coloca_contenedores %}checked{% endif %}>
+              <label class="form-check-label">
+                Coloca contenedores
+                <span class="text-muted d-block" style="font-size:0.7rem;">
+                  Habilitado para colocación de contenedores municipales
+                </span>
+              </label>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ========== SCRIPTS UBICACIÓN (si los usas) ========== -->
+<script src="{{ url_for('static', filename='js/ubicacion/core.js') }}"></script>
+<script src="{{ url_for('static', filename='js/ubicacion/catalogos.js') }}"></script>
+<script src="{{ url_for('static', filename='js/ubicacion/filtros.js') }}"></script>
+<script src="{{ url_for('static', filename='js/ubicacion/alta.js') }}"></script>
+<script src="{{ url_for('static', filename='js/ubicacion/espana.js') }}?v=2.0"></script>
+
+<!-- ========== LÓGICA JS PRINCIPAL ========== -->
+<script>
+  // ========== EDICIÓN DE CALLE DESDE PROVEEDORES ==========
+  /**
+   * Salta a la edición de la calle seleccionada en el combo,
+   * recordando el ID del proveedor para volver a él tras guardar.
+   */
+  function editarCalleActual() {
+    const selCalle = document.getElementById("calle");
+    const idCalle  = selCalle ? selCalle.value : "";
+
+    if (!idCalle) {
+      alert("Selecciona una calle antes de editar.");
+      return;
+    }
+
+    const idProvEl = document.getElementById("idProv");
+    const provId   = idProvEl ? idProvEl.value : "";
+
+    const url = `/comunes/proveedores/calles/${idCalle}/editar?desde=proveedor&prov_id=${encodeURIComponent(provId || "")}`;
+
+    window.location.href = url;
+  }
+
+  // Volver a la pantalla anterior
+  function volverAnterior() {
+    if (window.history.length > 1) {
+      window.history.back();
+    } else {
+      window.location.href = "{{ url_for('btn_proveedores_gestionar_bp.btn_proveedores_gestionar') }}";
+    }
+  }
+
+  // ---------- Tabs ----------
+  function mostrarTipo(tipo, event) {
+    if (event && event.preventDefault) {
+      event.preventDefault();
+    }
+
+    const tabs = document.querySelectorAll('.type-tab');
+    tabs.forEach(tab => tab.classList.remove('active'));
+    if (event && event.currentTarget) {
+      event.currentTarget.classList.add('active');
+    }
+
+    const secciones = document.querySelectorAll('.tipo-section');
+    secciones.forEach(sec => sec.classList.remove('active'));
+
+    const mapa = {
+      basico:    'secBasico',
+      direccion: 'secDireccion',
+      contacto:  'secContacto',
+      banco:     'secBanco',
+      caract:    'secCaract',
+    };
+
+    const idSeccion = mapa[tipo];
+    if (idSeccion) {
+      const sec = document.getElementById(idSeccion);
+      if (sec) sec.classList.add('active');
+    }
+  }
+
+  // ---------- Búsqueda ----------
+  const inputNIF    = document.getElementById('buscarNIF');
+  const inputNom    = document.getElementById('buscarNom');
+  const mensajeEl   = document.getElementById('mensajeBusqueda');
+  const resIDEl     = document.getElementById('resID');
+  const resNIFEl    = document.getElementById('resNIF');
+  const resStatusEl = document.getElementById('resStatus');
+  let debounceId;
+
+  function lanzarBusqueda(tipo, texto) {
+    clearTimeout(debounceId);
+    debounceId = setTimeout(() => buscarProveedor(tipo, texto), 300);
+  }
+
+  if (inputNIF) {
+    inputNIF.addEventListener('input', () => {
+      const v = inputNIF.value.trim();
+      if (!v) {
+        mensajeEl.textContent = '';
+        return;
+      }
+      mensajeEl.textContent   = 'Buscando por NIF...';
+      resStatusEl.textContent = 'Buscando...';
+      lanzarBusqueda('nif', v);
+    });
+  }
+
+  if (inputNom) {
+    inputNom.addEventListener('input', () => {
+      const v = inputNom.value.trim();
+      if (!v) {
+        mensajeEl.textContent = '';
+        return;
+      }
+      if (v.length < 2) {
+        mensajeEl.textContent = 'Escribe al menos 2 caracteres para buscar por nombre.';
+        return;
+      }
+      mensajeEl.textContent   = 'Buscando por nombre...';
+      resStatusEl.textContent = 'Buscando...';
+      lanzarBusqueda('nombre', v);
+    });
+  }
+
+  async function buscarProveedor(tipo, valor) {
+    const contResultados     = document.getElementById('resultadosBusqueda');
+    const listaResultados    = document.getElementById('listaResultados');
+    const contadorResultados = document.getElementById('contadorResultados');
+
+    if (!valor) {
+      if (contResultados) contResultados.style.display = 'none';
+      if (contadorResultados) contadorResultados.textContent = '0 resultados';
+      if (listaResultados) listaResultados.innerHTML = '';
+      mensajeEl.textContent = '';
+      return;
+    }
+
+    try {
+      const url = `/comunes/proveedores/api/buscar_por_${tipo}?texto=${encodeURIComponent(valor)}`;
+      const res = await fetch(url);
+      const data = await res.json();
+
+      if (!data.success) {
+        if (contResultados) contResultados.style.display = 'block';
+        if (contadorResultados) contadorResultados.textContent = '0 resultados';
+        if (listaResultados) listaResultados.innerHTML =
+          `<div class="text-danger">${data.message || 'Sin resultados'}</div>`;
+        resStatusEl.textContent = 'Sin resultados';
+        mensajeEl.textContent   = data.message || `Sin resultados para "${valor}".`;
+        return;
+      }
+
+      const resultados = data.results || [];
+
+      if (!resultados.length) {
+        if (contResultados) contResultados.style.display = 'block';
+        if (contadorResultados) contadorResultados.textContent = '0 resultados';
+        if (listaResultados) listaResultados.innerHTML =
+          `<div class="text-muted">Sin resultados para "${valor}".</div>`;
+        resIDEl.textContent     = '-';
+        resNIFEl.textContent    = valor;
+        resStatusEl.textContent = 'Sin resultados';
+        mensajeEl.textContent   = `Sin resultados para "${valor}".`;
+        return;
+      }
+
+      if (contadorResultados) {
+        contadorResultados.textContent = `${resultados.length} resultado${resultados.length !== 1 ? 's' : ''}`;
+      }
+
+      if (listaResultados) {
+        listaResultados.innerHTML = resultados.map(r => `
+          <div class="d-flex justify-content-between align-items-center py-1 border-bottom">
+            <div>
+              <div class="fw-bold">ID ${r.id} · ${r.nif}</div>
+              <div class="text-muted">${r.nombre}</div>
+            </div>
+            <button type="button"
+                    class="btn btn-light btn-micro"
+                    onclick="cargarProveedor(${r.id})">
+              <i class="bi bi-arrow-right-circle text-primary fs-5"></i>
+            </button>
+          </div>
+        `).join("");
+      }
+
+      if (contResultados) contResultados.style.display = 'block';
+
+      resIDEl.textContent     = resultados[0].id;
+      resNIFEl.textContent    = resultados[0].nif;
+      resStatusEl.textContent = `Resultados (${resultados.length})`;
+      mensajeEl.textContent   = data.message || `Encontrados ${resultados.length} resultados.`;
+
+    } catch (e) {
+      console.error('Error búsqueda', e);
+      if (contResultados) contResultados.style.display = 'block';
+      if (contadorResultados) contadorResultados.textContent = '0 resultados';
+      if (listaResultados) listaResultados.innerHTML =
+        '<div class="text-danger">Error al realizar la búsqueda.</div>';
+      resStatusEl.textContent = 'Error búsqueda';
+      mensajeEl.textContent   = 'Error al realizar la búsqueda.';
+    }
+  }
+
+  // ---------- Cargar proveedor desde API ----------
+  async function cargarProveedor(id) {
+    try {
+      const res = await fetch(`/comunes/proveedores/api/proveedor/${id}`);
+      const data = await res.json();
+
+      if (!data.success) {
+        alert(data.message || "No se pudo cargar el proveedor");
+        return;
+      }
+
+      const p = data.proveedor || {};
+
+      const idProvEl = document.getElementById("idProv");
+      const nifEl = document.querySelector('[name="NIF"]');
+      const nombreEl = document.querySelector('[name="Nombre_Razon_Social"]');
+      const telEl = document.querySelector('[name="Telefono"]');
+      const aliasEl = document.querySelector('[name="ALIAS"]');
+
+      const selProvincia = document.getElementById("provincia");
+      const selMunicipio = document.getElementById("municipio");
+      const selTipoVia   = document.getElementById("tipo_via");
+      const selCalle     = document.getElementById("calle");
+
+      const domEl   = document.querySelector('[name="Domicilio"]');
+      const pobEl   = document.querySelector('[name="Poblacion"]');
+      const cpEl    = document.querySelector('[name="Codigo_Postal"]');
+      const portalEl= document.querySelector('[name="numero_portal"]');
+      const provTxtEl = document.querySelector('[name="Provincia"]');
+
+      const pcComEl   = document.querySelector('[name="Persona_contacto_comercial"]');
+      const movComEl  = document.querySelector('[name="telefono_movil"]');
+      const mailComEl = document.querySelector('[name="correo_electronico_comercial"]');
+      const pcAdmEl   = document.querySelector('[name="Persona_contacto_admin"]');
+      const fijoAdmEl = document.querySelector('[name="telefono_fijo_admin"]');
+      const movAdmEl  = document.querySelector('[name="telefono_movil_admin"]');
+      const mailAdmEl = document.querySelector('[name="correo_electronico_admin"]');
+
+      const cuentaEl  = document.querySelector('[name="numero_cuenta"]');
+      const tipoTerEl = document.querySelector('[name="idtbl_Tipo_de_Tercero"]');
+      const grupoEl   = document.querySelector('[name="idtbl_productos_grupos"]');
+
+      const parquinEl = document.querySelector('[name="parquin"]');
+      const barEl     = document.querySelector('[name="es_bar"]');
+      const constEl   = document.querySelector('[name="empresa_construccion"]');
+      const informeEl = document.querySelector('[name="recibir_informe_pendientes"]');
+      const contEl    = document.querySelector('[name="coloca_contenedores"]');
+
+      if (idProvEl) idProvEl.value = p.Idtbl_proveedores || "";
+      if (nifEl)    nifEl.value    = p.NIF || "";
+      if (nombreEl) nombreEl.value = p.Nombre_Razon_Social || "";
+      if (telEl)    telEl.value    = p.Telefono || "";
+      if (aliasEl)  aliasEl.value  = p.ALIAS || "";
+
+      if (domEl)    domEl.value    = p.Domicilio || "";
+      if (pobEl)    pobEl.value    = p.Poblacion || "";
+      if (cpEl)     cpEl.value     = p.Codigo_Postal || "";
+      if (portalEl) portalEl.value = p.numero_portal || "";
+      if (provTxtEl)provTxtEl.value= p.Provincia || "";
+
+      if (pcComEl)  pcComEl.value  = p.Persona_contacto_comercial || "";
+      if (movComEl) movComEl.value = p.telefono_movil || "";
+      if (mailComEl)mailComEl.value= p.correo_electronico_comercial || "";
+      if (pcAdmEl)  pcAdmEl.value  = p.Persona_contacto_admin || "";
+      if (fijoAdmEl)fijoAdmEl.value= p.telefono_fijo_admin || "";
+      if (movAdmEl) movAdmEl.value = p.telefono_movil_admin || "";
+      if (mailAdmEl)mailAdmEl.value= p.correo_electronico_admin || "";
+
+      if (cuentaEl) cuentaEl.value = p.numero_cuenta || "";
+      if (tipoTerEl)tipoTerEl.value= p.idtbl_Tipo_de_Tercero || "";
+      if (grupoEl)  grupoEl.value  = p.idtbl_productos_grupos || "";
+
+      if (parquinEl) parquinEl.checked = !!p.parquin;
+      if (barEl)     barEl.checked     = !!p.es_bar;
+      if (constEl)   constEl.checked   = !!p.empresa_construccion;
+      if (informeEl) informeEl.checked = !!p.recibir_informe_pendientes;
+      if (contEl)    contEl.checked    = !!p.coloca_contenedores;
+
+      const provId  = p.idtbl_provincias || "";
+      const munId   = p.idtbl_municipios || "";
+      const viaId   = p.idtbl_tipos_de_vias || "";
+      const calleId = p.idtbl_calles || "";
+
+      if (selProvincia) selProvincia.value = provId;
+
+      if (provId) {
+        await cargaMun(provId, munId, viaId, calleId);
+      } else {
+        if (selMunicipio) {
+          selMunicipio.innerHTML = '<option value="">Mun</option>';
+          selMunicipio.disabled  = true;
+        }
+        if (selCalle) {
+          selCalle.innerHTML = '<option value="">Calle</option>';
+          selCalle.disabled  = true;
+        }
+      }
+
+      if (selTipoVia) selTipoVia.value = viaId;
+
+      resIDEl.textContent     = p.Idtbl_proveedores || "-";
+      resNIFEl.textContent    = p.NIF || "-";
+      resStatusEl.textContent = "Editando";
+      mensajeEl.textContent   = "Proveedor cargado en el formulario.";
+
+      mostrarTipo("basico");
+    } catch (e) {
+      console.error("Error cargando proveedor", e);
+      alert("Error cargando proveedor");
+    }
+  }
+
+  // ---------- Combos dependientes ----------
+  async function cargaMun(provId, municipioSeleccionado = "", tipoViaSeleccionado = "", calleSeleccionada = "") {
+    const selMunicipio = document.getElementById("municipio");
+    const selCalle     = document.getElementById("calle");
+
+    if (!selMunicipio) return;
+
+    if (!provId) {
+      selMunicipio.innerHTML = '<option value="">Mun</option>';
+      selMunicipio.disabled  = true;
+
+      if (selCalle) {
+        selCalle.innerHTML = '<option value="">Calle</option>';
+        selCalle.disabled  = true;
+      }
+      return;
+    }
+
+    try {
+      const res = await fetch(`/comunes/proveedores/api/municipios?prov_id=${provId}`);
+      if (!res.ok) throw new Error("HTTP " + res.status);
+
+      const opts = await res.json();
+
+      selMunicipio.innerHTML =
+        '<option value="">Mun</option>' +
+        opts.map(o => `<option value="${o.id}">${o.nombre}</option>`).join("");
+      selMunicipio.disabled = false;
+
+      if (municipioSeleccionado) {
+        selMunicipio.value = municipioSeleccionado;
+      }
+
+      if (tipoViaSeleccionado && municipioSeleccionado) {
+        await cargaCalles(municipioSeleccionado, tipoViaSeleccionado, calleSeleccionada);
+      } else if (selCalle) {
+        selCalle.innerHTML = '<option value="">Calle</option>';
+        selCalle.disabled  = true;
+      }
+    } catch (e) {
+      console.error("Error cargando municipios", e);
+    }
+  }
+
+  async function cargaCalles(munId, tipoViaId, calleSeleccionada = "") {
+    const selCalle = document.getElementById("calle");
+
+    if (!selCalle) return;
+
+    if (!munId || !tipoViaId) {
+      selCalle.innerHTML = '<option value="">Calle</option>';
+      selCalle.disabled  = true;
+      return;
+    }
+
+    try {
+      const res = await fetch(
+        `/comunes/proveedores/api/calles?mun_id=${munId}&via_id=${tipoViaId}`
+      );
+      if (!res.ok) throw new Error("HTTP " + res.status);
+
+      const opts = await res.json();
+
+      selCalle.innerHTML =
+        '<option value="">Calle</option>' +
+        opts.map(o => `<option value="${o.id}">${o.nombre}</option>`).join("");
+      selCalle.disabled = false;
+
+      if (calleSeleccionada) {
+        selCalle.value = calleSeleccionada;
+      }
+    } catch (e) {
+      console.error("Error cargando calles", e);
+    }
+  }
+
+  const selProvincia = document.getElementById("provincia");
+  const selMunicipio = document.getElementById("municipio");
+  const selTipoVia   = document.getElementById("tipo_via");
+
+  if (selProvincia) {
+    selProvincia.addEventListener("change", async function () {
+      await cargaMun(this.value);
+    });
+  }
+
+  if (selMunicipio) {
+    selMunicipio.addEventListener("change", async function () {
+      const munId    = this.value;
+      const tipoViaId= selTipoVia ? selTipoVia.value : "";
+      await cargaCalles(munId, tipoViaId);
+    });
+  }
+
+  if (selTipoVia) {
+    selTipoVia.addEventListener("change", async function () {
+      const munId    = selMunicipio ? selMunicipio.value : "";
+      const tipoViaId= this.value;
+      await cargaCalles(munId, tipoViaId);
+    });
+  }
+
+  // ---------- Limpiar (Nuevo) ----------
+  function limpiarTodo() {
+    const form = document.getElementById('formMain');
+    if (form) form.reset();
+
+    const idProvEl  = document.getElementById('idProv');
+    const resStatus = document.getElementById('resStatus');
+    const resID     = document.getElementById('resID');
+    const resNIF    = document.getElementById('resNIF');
+
+    if (idProvEl)  idProvEl.value = '';
+    if (resStatus) resStatus.textContent = 'Nuevo';
+    if (resID)     resID.textContent     = '-';
+    if (resNIF)    resNIF.textContent    = '-';
+
+    if (mensajeEl) mensajeEl.textContent = '';
+
+    const selMunicipio = document.getElementById("municipio");
+    const selCalle     = document.getElementById("calle");
+    if (selMunicipio) {
+      selMunicipio.innerHTML = '<option value="">Mun</option>';
+      selMunicipio.disabled  = true;
+    }
+    if (selCalle) {
+      selCalle.innerHTML = '<option value="">Calle</option>';
+      selCalle.disabled  = true;
+    }
+
+    mostrarTipo('basico');
+    const tabs = document.querySelectorAll('.type-tab');
+    tabs.forEach(t => t.classList.remove('active'));
+    const primerTab = document.querySelector('.type-tab');
+    if (primerTab) primerTab.classList.add('active');
+  }
+
+  // ---------- Inicialización al cargar (si viene un proveedor) ----------
+  document.addEventListener("DOMContentLoaded", async () => {
+    const provId   = "{{ proveedor.idtbl_provincias if proveedor else '' }}";
+    const munId    = "{{ proveedor.idtbl_municipios if proveedor else '' }}";
+    const viaId    = "{{ proveedor.idtbl_tipos_de_vias if proveedor else '' }}";
+    const calleId  = "{{ proveedor.idtbl_calles if proveedor else '' }}";
+
+    if (provId) {
+      await cargaMun(provId, munId, viaId, calleId);
+    }
+  });
+</script>
+
+</body>
+</html>

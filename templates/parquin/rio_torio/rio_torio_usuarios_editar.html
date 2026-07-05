@@ -1,0 +1,149 @@
+{# =============================================================================
+   🧱 rio_torio_usuarios_editar.html – FORMULARIO EDICIÓN USUARIO RIO_TORIO
+   =============================================================================
+   UBICACIÓN:
+   ----------
+   - templates/parquin/rio_torio/rio_torio_usuarios_editar.html
+
+   RELACIÓN CON BLUEPRINT:
+   -----------------------
+   - Blueprint: blueprints/parquin/btn_rio_torio_listar_usuarios_bp.py
+   - Vista:     btn_rio_torio_listar_usuarios_bp.btn_rio_torio_editar_usuario
+   - Render:    return render_template(
+                    "parquin/rio_torio/rio_torio_usuarios_editar.html",
+                    usuario=usuario,
+                )
+
+   RELACIÓN CON LISTADO:
+   ---------------------
+   - Plantilla de listado:
+        templates/parquin/rio_torio/rio_torio_listar_usuarios.html
+   - Vista de listado:
+        btn_rio_torio_listar_usuarios_bp.btn_rio_torio_listar_usuarios
+   - Este formulario de edición, al guardar o al “volver”, regresa
+     precisamente a ese listado.
+
+   VARIABLES QUE LLEGAN DEL BACKEND:
+   ---------------------------------
+   - usuario: dict con los campos de parquin_camiones.tbl_usuarios:
+        idtbl_usuarios
+        idtbl_proveedores
+        numero_cuenta
+        activo_baja      (int: 1=activo, 0=baja)
+        fecha_inicio     (YYYY-MM-DD o None)
+        fecha_baja       (YYYY-MM-DD o None)
+        rol
+
+   ESQUEMA DE ESTA PLANTILLA:
+   --------------------------
+   SECCIÓN 0. Extender base.html y título
+   SECCIÓN 1. Cabecera de pantalla (título + explicación)
+   SECCIÓN 2. Formulario con campos del usuario
+   SECCIÓN 3. Botones de acción (guardar / volver al listado Río Torío)
+   ============================================================================= #}
+
+{% extends "base.html" %}
+
+{# SECCIÓN 0. TÍTULO DE LA PESTAÑA DEL NAVEGADOR #}
+{% block title %}Editar usuario Río Torío{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+  {# SECCIÓN 1. CABECERA PRINCIPAL #}
+  <div class="mb-3 border-bottom pb-2">
+    <h1 class="h4 mb-1">Editar usuario de parquin – Río Torío</h1>
+    <p class="text-muted mb-0">
+      Modifica los datos del usuario seleccionado y guarda los cambios.
+    </p>
+  </div>
+
+  {# SECCIÓN 2. FORMULARIO DE EDICIÓN #}
+  <form method="POST" class="row g-3">
+
+    {# 2.1 ID usuario solo lectura #}
+    <div class="col-md-2">
+      <label class="form-label">ID usuario</label>
+      <input type="text" class="form-control form-control-sm"
+             value="{{ usuario.idtbl_usuarios }}" readonly>
+    </div>
+
+    {# 2.2 ID proveedor #}
+    <div class="col-md-4">
+      <label for="idtbl_proveedores" class="form-label">ID proveedor</label>
+      <input type="text" class="form-control form-control-sm"
+             id="idtbl_proveedores" name="idtbl_proveedores"
+             value="{{ usuario.idtbl_proveedores or '' }}">
+    </div>
+
+    {# 2.3 Número de cuenta #}
+    <div class="col-md-4">
+      <label for="numero_cuenta" class="form-label">Número de cuenta</label>
+      <input type="text" class="form-control form-control-sm"
+             id="numero_cuenta" name="numero_cuenta"
+             value="{{ usuario.numero_cuenta or '' }}">
+    </div>
+
+    {# 2.4 Estado activo/baja
+       - En BD: activo_baja = 1 (activo) / 0 (baja)
+       - En formulario: enviamos 1 o 0.
+    #}
+    <div class="col-md-2">
+      <label for="activo_baja" class="form-label">Estado</label>
+      {% set estado = usuario.activo_baja or 1 %}
+      <select id="activo_baja" name="activo_baja"
+              class="form-select form-select-sm">
+        <option value="1" {% if estado == 1 %}selected{% endif %}>
+          Activo
+        </option>
+        <option value="0" {% if estado == 0 %}selected{% endif %}>
+          Baja
+        </option>
+      </select>
+    </div>
+
+    {# 2.5 Fechas (inicio / baja) #}
+    <div class="col-md-3">
+      <label for="fecha_inicio" class="form-label">Fecha inicio</label>
+      <input type="date" class="form-control form-control-sm"
+             id="fecha_inicio" name="fecha_inicio"
+             value="{{ usuario.fecha_inicio|default('', true) }}">
+    </div>
+
+    <div class="col-md-3">
+      <label for="fecha_baja" class="form-label">Fecha baja</label>
+      <input type="date" class="form-control form-control-sm"
+             id="fecha_baja" name="fecha_baja"
+             value="{{ usuario.fecha_baja|default('', true) }}">
+    </div>
+
+    {# 2.6 Rol #}
+    <div class="col-md-3">
+      <label for="rol" class="form-label">Rol</label>
+      <input type="text" class="form-control form-control-sm"
+             id="rol" name="rol"
+             value="{{ usuario.rol or '' }}">
+    </div>
+
+    {# SECCIÓN 3. BOTONES #}
+    <div class="col-12 mt-3">
+      <button type="submit" class="btn btn-primary">
+        💾 Guardar cambios
+      </button>
+
+      {# Botón “Volver al listado de usuarios Río Torío”
+         - Regresa a la vista de listado:
+             btn_rio_torio_listar_usuarios_bp.btn_rio_torio_listar_usuarios
+         - Esa vista usa la plantilla:
+             parquin/rio_torio/rio_torio_listar_usuarios.html
+      #}
+      <a href="{{ url_for('btn_rio_torio_listar_usuarios_bp.btn_rio_torio_listar_usuarios') }}"
+         class="btn btn-secondary ms-2">
+        ↩ Volver al listado
+      </a>
+    </div>
+
+  </form>
+
+</div>
+{% endblock %}

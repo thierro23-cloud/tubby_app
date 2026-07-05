@@ -1,0 +1,235 @@
+/* 🎨 Variables de color y radios (panel Policía) */
+:root {
+  --primary: #1e3c72;        /* Azul principal para botones y acentos */
+  --primary-dark: #162a4d;   /* Azul más oscuro para hover */
+  --bg: #0f172a;             /* Fondo oscuro de contenido */
+  --card-bg: #ffffff;        /* Fondo blanco de tarjetas */
+  --text-main: #0f172a;      /* Texto principal en tarjetas */
+  --text-muted: #6b7280;     /* Texto secundario */
+  --border-soft: #e5e7eb;    /* Bordes suaves (gris claro) */
+  --radius-lg: 16px;         /* Radio grande para tarjetas */
+  --radius-md: 10px;         /* Radio medio para botones */
+}
+
+/* 🧱 Contenedor principal del panel (shell) */
+.pl-shell {
+  max-width: 1100px;
+  margin: 0 auto;
+  min-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  padding: 8px;
+  color: #fff;
+}
+
+/* 🧱 Cabecera del panel */
+.pl-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.pl-header-title {
+  display: flex;
+  flex-direction: column;
+}
+
+.pl-header-title h1 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.pl-header-title span {
+  font-size: 0.75rem;
+  color: #cbd5f5;
+}
+
+/* 💊 Píldora de usuario (PL) */
+.pl-user-pill {
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(15,23,42,0.6);
+  border: 1px solid rgba(148,163,184,0.7);
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pl-user-badge {
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+}
+
+/* 🧱 Cuerpo principal del panel */
+.pl-content {
+  background: rgba(15,23,42,0.9);
+  border-radius: 18px;
+  padding: 12px;
+  box-shadow: 0 16px 35px rgba(15,23,42,0.8);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* 🧾 Cabecera de sección "Módulos disponibles" */
+.pl-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.pl-section-header h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.pl-section-header small {
+  color: #9ca3af;
+  font-size: 0.75rem;
+}
+
+/* 🧱 Grid de tarjetas (responsive) */
+.pl-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 10px;
+}
+
+/* 🧱 Tarjeta individual */
+.pl-card {
+  background: var(--card-bg);
+  border-radius: var(--radius-lg);
+  padding: 10px;
+  border: 1px solid var(--border-soft);
+  box-shadow: 0 8px 20px rgba(15,23,42,0.12);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+/* 🧱 Cabecera de la tarjeta */
+.pl-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.pl-card-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  background: rgba(30,64,175,0.08);
+  color: var(--primary);
+}
+
+.pl-card-main-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text-main);
+}
+
+.pl-card-subtitle {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.pl-card-body-text {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  margin: 2px 0 6px 0;
+}
+
+/* 🏷 Chips informativos */
+.pl-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #1e293b;
+  font-size: 0.7rem;
+  margin-right: 4px;
+  margin-top: 2px;
+}
+
+/* 🔘 Contenedor de botones de tarjeta */
+.pl-card-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+/* 🔘 Botones base */
+.pl-btn {
+  flex: 1 1 48%;
+  padding: 6px 8px;
+  border-radius: var(--radius-md);
+  border: none;
+  cursor: pointer;
+  font-size: 0.76rem;
+  text-align: center;
+  background: var(--primary);
+  color: #fff;
+  transition: background 0.15s ease, transform 0.1s ease;
+  text-decoration: none;
+}
+
+.pl-btn.secondary {
+  background: #e5e7eb;
+  color: #111827;
+}
+
+.pl-btn.disabled {
+  background: #e5e7eb;
+  color: #9ca3af;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.pl-btn:hover:not(.disabled) {
+  background: var(--primary-dark);
+  transform: translateY(-1px);
+}
+
+.pl-btn.secondary:hover:not(.disabled) {
+  background: #d1d5db;
+}
+
+/* 🦶 Pie del panel */
+.pl-footer {
+  margin-top: 6px;
+  font-size: 0.7rem;
+  color: #9ca3af;
+  text-align: right;
+}
+
+/* 📱 Ajustes responsive */
+@media (max-width: 576px) {
+  .pl-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: .5rem;
+  }
+  .pl-footer {
+    text-align: left;
+  }
+}

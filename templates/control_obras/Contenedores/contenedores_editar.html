@@ -1,0 +1,344 @@
+{# =============================================================================
+  🧾 PLANTILLA: editar_contenedor.html
+  ----------------------------------------------------------------------------- 
+  - Vista asociada al endpoint:
+        contenedores_bp.btn_contenedores_street_editar(id_contenedor)
+  - Contexto esperado desde el backend:
+        contenedor : dict/row con datos de tbl_control_contenedores (+ joins)
+        error      : str | None
+        es_alta    : bool (False en este caso, True cuando se usa como alta)
+  - Objetivo:
+        ✔ Editar datos de un contenedor STREET (administrativo, solicitante, GPS)
+        ✔ Mostrar un mapa Leaflet para ajustar coordenadas
+        ✔ Integrarse con el panel/módulo/acciones del super_admin
+============================================================================= #}
+
+{% extends "base.html" %}
+
+{% block title %}Editar contenedor{% endblock %}
+
+{% block content %}
+
+{# =============================================================================
+1️⃣ ESTILOS ESPECÍFICOS DE LA PANTALLA
+============================================================================= #}
+<style>
+  .ec-page {
+    padding: 16px;
+  }
+
+  .ec-hero {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+
+  .ec-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+  }
+
+  .ec-sub {
+    font-size: 0.9rem;
+    color: #6b7280;
+  }
+
+  .ec-btn {
+    font-size: 0.85rem;
+  }
+
+  .ec-grid {
+    display: grid;
+    grid-template-columns: 2fr 1.3fr 1.3fr;
+    gap: 12px;
+  }
+
+  .ec-card {
+    background: #ffffff;
+    border-radius: 10px;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+    padding: 10px 12px;
+    font-size: 0.85rem;
+  }
+
+  .ec-card-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 2px;
+  }
+
+  .ec-card-sub {
+    font-size: 0.75rem;
+    color: #9ca3af;
+    margin-bottom: 6px;
+  }
+
+  .ec-label {
+    font-size: 0.75rem;
+    color: #6b7280;
+    margin-bottom: 2px;
+  }
+
+  .ec-input {
+    font-size: 0.8rem;
+  }
+
+  .ec-actions {
+    margin-top: 14px;
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  #mapaEdicion {
+    margin-top: 8px;
+    width: 100%;
+    height: 220px;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+  }
+</style>
+
+<div class="ec-page">
+
+  {# ===========================================================================
+  2️⃣ HERO · CABECERA Y BOTÓN DE NAVEGACIÓN
+  ========================================================================== #}
+  <section class="ec-hero">
+
+    <div>
+      <div class="ec-title">
+        ✏️ Edición avanzada de contenedor
+        {% if contenedor %}
+          (#{{ contenedor.idtbl_control_contenedores }})
+        {% endif %}
+      </div>
+      <div class="ec-sub">
+        Modifica datos administrativos, personales y ubicación GPS del contenedor.
+      </div>
+    </div>
+
+    {# Volver al panel principal de contenedores #}
+    <a href="{{ url_for('contenedores_bp.panel_contenedores') }}"
+       class="btn btn-light ec-btn">
+      ← Volver al panel
+    </a>
+
+  </section>
+
+  {# ===========================================================================
+  3️⃣ MENSAJES DE ERROR
+  ========================================================================== #}
+  {% if error %}
+    <div class="alert alert-danger">{{ error }}</div>
+  {% endif %}
+
+  {# ===========================================================================
+  4️⃣ FORMULARIO PRINCIPAL (SOLO SI HAY CONTENEDOR)
+  ========================================================================== #}
+  {% if contenedor %}
+
+    {# Acción explícita: el propio endpoint de edición #}
+    <form method="post"
+          action="{{ url_for('contenedores_bp.btn_contenedores_street_editar',
+                             id_contenedor=contenedor.idtbl_control_contenedores) }}">
+
+      {# =======================================================================
+      5️⃣ GRID PRINCIPAL · ADMINISTRATIVO · SOLICITANTE · GPS
+      ====================================================================== #}
+      <section class="ec-grid">
+
+        {# ---------------------------------------------------------------------
+        5.1 BLOQUE ADMINISTRATIVO
+        ------------------------------------------------------------------- #}
+        <div class="ec-card">
+
+          <div class="ec-card-title">📁 Datos administrativos</div>
+          <div class="ec-card-sub">Información del expediente y estados básicos</div>
+
+          <div class="row g-2">
+
+            <div class="col-6">
+              <label class="ec-label">ID interno</label>
+              <input class="form-control ec-input"
+                     value="{{ contenedor.idtbl_control_contenedores }}"
+                     readonly>
+            </div>
+
+            <div class="col-6">
+              <label class="ec-label">Proveedor</label>
+              <input class="form-control ec-input"
+                     value="{{ contenedor.proveedor }}"
+                     readonly>
+            </div>
+
+            <div class="col-6">
+              <label class="ec-label">Número expediente</label>
+              <input name="numero_expediente"
+                     class="form-control ec-input"
+                     value="{{ contenedor.numero_expediente }}">
+            </div>
+
+            <div class="col-6">
+              <label class="ec-label">Número solicitud</label>
+              <input name="numero_solicitud"
+                     class="form-control ec-input"
+                     value="{{ contenedor.numero_solicitud }}">
+            </div>
+
+            <div class="col-6">
+              <label class="ec-label">Fecha colocación</label>
+              <input type="date"
+                     name="fecha_colocacion"
+                     class="form-control ec-input"
+                     value="{{ contenedor.fecha_colocacion }}">
+            </div>
+
+            <div class="col-6">
+              <label class="ec-label">Fecha retirada</label>
+              <input type="date"
+                     name="fecha_retirada"
+                     class="form-control ec-input"
+                     value="{{ contenedor.fecha_retirada }}">
+            </div>
+
+            <div class="col-12">
+              <label class="ec-label">Observaciones</label>
+              <textarea name="observaciones"
+                        class="form-control ec-input"
+                        rows="3">{{ contenedor.observaciones }}</textarea>
+            </div>
+
+          </div>
+
+        </div>
+
+        {# ---------------------------------------------------------------------
+        5.2 BLOQUE SOLICITANTE
+        ------------------------------------------------------------------- #}
+        <div class="ec-card">
+
+          <div class="ec-card-title">👤 Solicitante</div>
+          <div class="ec-card-sub">Datos de contacto asociados al expediente</div>
+
+          <div class="mb-2">
+            <label class="ec-label">Nombre solicitante</label>
+            <input name="nombre_solicitante"
+                   class="form-control ec-input"
+                   value="{{ contenedor.nombre_solicitante }}">
+          </div>
+
+          <div class="mb-2">
+            <label class="ec-label">NIF</label>
+            <input name="nif"
+                   class="form-control ec-input"
+                   value="{{ contenedor.nif }}">
+          </div>
+
+          <div class="mb-2">
+            <label class="ec-label">Teléfono</label>
+            <input name="telefono"
+                   class="form-control ec-input"
+                   value="{{ contenedor.telefono }}">
+          </div>
+
+        </div>
+
+        {# ---------------------------------------------------------------------
+        5.3 BLOQUE GPS / MAPA
+        ------------------------------------------------------------------- #}
+        <div class="ec-card">
+
+          <div class="ec-card-title">📍 Ubicación GPS</div>
+          <div class="ec-card-sub">
+            Ajusta la posición arrastrando el marcador o haciendo clic en el mapa.
+          </div>
+
+          <div class="mb-2">
+            <label class="ec-label">Latitud</label>
+            <input id="latitud"
+                   name="latitud"
+                   class="form-control ec-input"
+                   value="{{ contenedor.latitud }}">
+          </div>
+
+          <div class="mb-2">
+            <label class="ec-label">Longitud</label>
+            <input id="longitud"
+                   name="longitud"
+                   class="form-control ec-input"
+                   value="{{ contenedor.longitud }}">
+          </div>
+
+          <div id="mapaEdicion"></div>
+
+        </div>
+
+      </section>
+
+      {# =======================================================================
+      6️⃣ BOTONES DE ACCIÓN (GUARDAR / CANCELAR)
+      ====================================================================== #}
+      <section class="ec-actions">
+
+        <a href="{{ url_for('contenedores_bp.btn_contenedores_street_listado') }}"
+           class="btn btn-outline-secondary ec-btn">
+          Cancelar
+        </a>
+
+        <button type="submit"
+                class="btn btn-success ec-btn">
+          💾 Guardar cambios
+        </button>
+
+      </section>
+
+    </form>
+
+  {% else %}
+    <div class="alert alert-warning">
+      No se ha encontrado el contenedor solicitado.
+    </div>
+  {% endif %}
+
+</div> {# /ec-page #}
+
+{# =============================================================================
+7️⃣ SCRIPT · MAPA LEAFLET PARA AJUSTE DE COORDENADAS
+============================================================================= #}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  {% if contenedor %}
+    let lat = parseFloat({{ (contenedor.latitud if contenedor.latitud else 40.4168) | tojson }});
+    let lon = parseFloat({{ (contenedor.longitud if contenedor.longitud else -3.7038) | tojson }});
+
+    const mapa = L.map("mapaEdicion").setView([lat, lon], 16);
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: "&copy; OpenStreetMap contributors"
+    }).addTo(mapa);
+
+    const marker = L.marker([lat, lon], { draggable: true }).addTo(mapa);
+
+    function actualizar(lat, lng) {
+      document.getElementById("latitud").value = lat.toFixed(7);
+      document.getElementById("longitud").value = lng.toFixed(7);
+    }
+
+    marker.on("dragend", function (e) {
+      const pos = marker.getLatLng();
+      actualizar(pos.lat, pos.lng);
+    });
+
+    mapa.on("click", function (e) {
+      marker.setLatLng(e.latlng);
+      actualizar(e.latlng.lat, e.latlng.lng);
+    });
+  {% endif %}
+});
+</script>
+
+{% endblock %}

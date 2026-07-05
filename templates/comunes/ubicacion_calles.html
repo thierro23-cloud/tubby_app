@@ -1,0 +1,1100 @@
+{# templates/comunes/ubicacion_calles.html #}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Mantenimiento de calles de España</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <style>
+        /* =================================================================
+           VARIABLES CSS - TEMA OSCURO CON GRADIENTES
+           ================================================================= */
+        :root {
+            --bg-main:#020617;
+            --bg-card:#0b1120;
+            --bg-soft:#020617;
+            --border:#1f2937;
+            --txt:#e5e7eb;
+            --muted:#9ca3af;
+            --accent:#3b82f6;
+            --accent-soft:#1d4ed8;
+        }
+
+        /* =================================================================
+           RESET Y CONFIGURACIÓN BASE
+           ================================================================= */
+        * { 
+            box-sizing:border-box; 
+        }
+
+        html, body {
+            height:100%;
+            margin:0;
+            padding:0;
+            overflow:hidden; /* Evita scroll en la página completa */
+        }
+
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            color:var(--txt);
+            background:
+              radial-gradient(circle at 0% 0%, rgba(59,130,246,.25), transparent 40%),
+              radial-gradient(circle at 100% 0%, rgba(236,72,153,.22), transparent 45%),
+              radial-gradient(circle at 0% 100%, rgba(34,197,94,.20), transparent 40%),
+              linear-gradient(135deg,#020617,#020617 60%,#030712);
+        }
+
+        /* =================================================================
+           LAYOUT PRINCIPAL - SIN SCROLL GENERAL
+           ================================================================= */
+        .page {
+            max-width: 1400px; /* ← Aumentado de 1200px a 1400px */
+            margin: 0 auto;
+            padding: 12px 16px 20px; /* ← Reducido padding lateral */
+            display:flex;
+            flex-direction:column;
+            gap:12px; /* ← Reducido gap vertical */
+            height:100vh;
+            overflow:hidden;
+         }
+
+        /* =================================================================
+           ENCABEZADO PRINCIPAL
+           ================================================================= */
+        .page-header {
+            display:flex;
+            justify-content:space-between;
+            align-items:flex-start;
+            gap:16px;
+            flex-shrink:0; /* No se comprime */
+        }
+
+        .page-title-block h1 {
+            margin:0;
+            font-size:1.35rem; /* ← Ligeramente más pequeño */
+            display:flex;
+            align-items:center;
+            gap:8px;
+        }
+        .page-title-block h1 span.emoji {
+            font-size:1.8rem;
+        }
+        .page-title-block p {
+            margin:4px 0 0;
+            font-size:.9rem;
+            color:var(--muted);
+        }
+
+        .page-meta {
+            text-align:right;
+            font-size:.8rem;
+            color:var(--muted);
+        }
+
+        .page-meta .tag {
+            display:inline-block;
+            padding:2px 6px;
+            border-radius:999px;
+            border:1px solid rgba(148,163,184,.5);
+            font-size:.72rem;
+            margin-left:4px;
+        }
+
+        /* =================================================================
+           GRID DE 3 COLUMNAS - ALTURA CONTROLADA
+           Filtros (30%) | Resultados (45%) | Alta (25%)
+           ================================================================= */
+        .page-main {
+            display:grid;
+            grid-template-columns: 28% 45% 27%;
+            gap:1px;
+            align-items:flex-start;
+            flex:1; /* Ocupa el espacio restante */
+            overflow:hidden; /* Sin scroll general */
+            min-height:0; /* Permite que los hijos con overflow funcionen */
+        }
+
+        /* =================================================================
+           TARJETAS (CARDS) - COMPONENTES COMUNES
+           ================================================================= */
+        .card {
+            background:var(--bg-card);
+            border-radius:14px;
+            border:1px solid rgba(148,163,184,.35);
+            padding:12px 14px; /* ← Reducido de 14px 16px */
+            box-shadow:0 18px 45px rgba(15,23,42,.9);
+            display:flex;
+            flex-direction:column;
+            height:100%;
+            overflow:hidden;
+        }
+
+        .card-header {
+            margin-bottom:10px;
+            flex-shrink:0; /* No se comprime */
+        }
+
+        .card-header h2 {
+            margin:0;
+            font-size:.95rem;
+            text-transform:uppercase;
+            letter-spacing:.12em;
+        }
+
+        .card-header p {
+            margin:3px 0 0;
+            font-size:.8rem;
+            color:var(--muted);
+        }
+
+        /* =================================================================
+           FORMULARIOS - CAMPOS Y ACCIONES
+           ================================================================= */
+        .form-grid {
+            display:grid;
+            grid-template-columns: 1fr;
+            gap:10px;
+        }
+
+        .form-field label {
+            display:block;
+            font-size:.8rem;
+            margin-bottom:3px;
+            color:var(--muted);
+        }
+
+        .form-field select,
+        .form-field input[type="text"] {
+            width:100%;
+            padding:6px 8px;
+            border-radius:8px;
+            border:1px solid var(--border);
+            background:#020617;
+            color:var(--txt);
+            font-size:.85rem;
+        }
+
+        .form-actions {
+            margin-top:8px;
+            display:flex;
+            justify-content:flex-end;
+            gap:8px;
+        }
+
+        /* =================================================================
+           BOTONES - ESTILOS Y ESTADOS
+           ================================================================= */
+        .btn {
+           border-radius:999px;
+           padding:6px 12px; /* ← Reducido de 14px a 12px */
+           border:1px solid transparent;
+           font-size:.78rem; /* ← Ligeramente más pequeño */
+           cursor:pointer;
+           display:inline-flex;
+           align-items:center;
+           gap:4px;
+           transition:all 0.2s ease;
+           white-space:nowrap; /* ← Evita saltos de línea */
+       }
+        .btn-primary {
+            background:linear-gradient(135deg,var(--accent),var(--accent-soft));
+            border-color:rgba(59,130,246,.9);
+            color:#e5e7eb;
+        }
+        .btn-secondary {
+            background:transparent;
+            border-color:rgba(148,163,184,.5);
+            color:var(--muted);
+        }
+        .btn-primary:hover {
+            filter:brightness(1.08);
+            transform:translateY(-1px);
+        }
+        .btn-secondary:hover {
+            background:rgba(15,23,42,.9);
+        }
+
+        /* =================================================================
+           BADGES ALFABÉTICOS - FILTROS POR LETRA
+           Aparecen encima de la tabla de resultados
+           ================================================================= */
+        .alfabetico-container {
+            margin-bottom:10px;
+            flex-shrink:0; /* No se comprime */
+        }
+
+        .alfabetico-label {
+            font-size:.75rem;
+            color:var(--muted);
+            margin-bottom:6px;
+            display:block;
+        }
+
+        .alfabetico-badges {
+            display:flex;
+            flex-wrap:wrap;
+            gap:6px;
+        }
+
+        .badge-letra {
+            background:rgba(59, 130, 246, 0.15);
+            border:1px solid rgba(59, 130, 246, 0.3);
+            color:#93c5fd;
+            padding:4px 10px;
+            border-radius:999px;
+            font-size:.75rem;
+            cursor:pointer;
+            transition:all 0.2s ease;
+            user-select:none;
+        }
+
+        .badge-letra:hover {
+            background:rgba(59, 130, 246, 0.25);
+            transform:translateY(-1px);
+        }
+
+        /* Badge activo (cuando se filtra por esa letra) */
+        .badge-letra.activo {
+            background:linear-gradient(135deg, #3b82f6, #1d4ed8);
+            border-color:#3b82f6;
+            color:#fff;
+            box-shadow:0 0 15px rgba(59, 130, 246, 0.5);
+        }
+
+        /* Badge especial "Todas" */
+        .badge-letra.todas {
+            background:rgba(34, 197, 94, 0.15);
+            border-color:rgba(34, 197, 94, 0.3);
+            color:#86efac;
+        }
+
+        .badge-letra.todas:hover {
+            background:rgba(34, 197, 94, 0.25);
+        }
+
+        .badge-letra.todas.activo {
+            background:linear-gradient(135deg, #22c55e, #16a34a);
+            border-color:#22c55e;
+            color:#fff;
+            box-shadow:0 0 15px rgba(34, 197, 94, 0.5);
+        }
+
+        /* =================================================================
+           RESULTADOS - HEADER Y RESUMEN
+           ================================================================= */
+        .results-header {
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            margin-bottom:8px;
+            font-size:.8rem;
+            color:var(--muted);
+            flex-shrink:0; /* No se comprime */
+        }
+
+        .results-tag {
+            display:inline-block;
+            padding:2px 8px;
+            border-radius:999px;
+            border:1px solid rgba(148,163,184,.45);
+            font-size:.7rem;
+        }
+
+        /* =================================================================
+           TABLA CON SCROLL - SOLO LA TABLA TIENE SCROLL
+           Headers fijos (sticky), contenido scrollable
+           ================================================================= */
+        .results-table-wrapper {
+            border-radius:10px;
+            border:1px solid rgba(55,65,81,.9);
+            overflow:hidden;
+            background:rgba(15,23,42,.98);
+            flex:1; /* Ocupa el espacio restante */
+            display:flex;
+            flex-direction:column;
+            min-height:0; /* Permite que el scroll funcione */
+        }
+
+        .results-table-scroll {
+            overflow-y:auto; /* Scroll vertical SOLO aquí */
+            max-height:400px; /* Altura máxima de la tabla */
+            flex:1;
+        }
+
+        table {
+            width:100%;
+            border-collapse:collapse;
+            font-size:.8rem;
+        }
+
+        /* Headers fijos - se quedan arriba al hacer scroll */
+        thead {
+            position:sticky;
+            top:0;
+            z-index:10;
+            background:rgba(15,23,42,1);
+        }
+
+        thead th {
+            text-align:left;
+            padding:6px 8px;
+            border-bottom:1px solid rgba(55,65,81,1);
+            color:var(--muted);
+            text-transform:uppercase;
+            letter-spacing:.08em;
+            font-size:.75rem;
+        }
+
+        tbody tr:nth-child(odd) {
+            background:#020617;
+        }
+        tbody tr:nth-child(even) {
+            background:#02081f;
+        }
+        tbody td {
+            padding:5px 8px;
+            border-bottom:1px solid rgba(31,41,55,.8);
+        }
+        tbody tr:hover {
+            background:rgba(30,64,175,.55);
+        }
+
+        /* Badge dentro de tabla (para tipo de vía) */
+        .badge {
+            display:inline-block;
+            padding:1px 6px;
+            border-radius:999px;
+            font-size:.68rem;
+            background:rgba(148,163,184,.2);
+            color:var(--muted);
+        }
+
+        /* =================================================================
+           FOOTER DE RESULTADOS
+           ================================================================= */
+        .results-footer {
+            margin-top:6px;
+            font-size:.75rem;
+            color:var(--muted);
+            flex-shrink:0; /* No se comprime */
+        }
+
+        /* =================================================================
+           RESPONSIVE - COLAPSA A 1 COLUMNA EN PANTALLAS PEQUEÑAS
+           ================================================================= */
+        @media (max-width: 1100px) {
+            .page-main {
+                grid-template-columns: 1fr;
+                overflow-y:auto; /* Permite scroll en móviles */
+            }
+        }
+
+        /* =================================================================
+           SCROLLBAR PERSONALIZADA (Webkit)
+           ================================================================= */
+        .results-table-scroll::-webkit-scrollbar {
+            width:8px;
+        }
+        .results-table-scroll::-webkit-scrollbar-track {
+            background:rgba(15,23,42,.5);
+        }
+        .results-table-scroll::-webkit-scrollbar-thumb {
+            background:rgba(59,130,246,.4);
+            border-radius:4px;
+        }
+        .results-table-scroll::-webkit-scrollbar-thumb:hover {
+            background:rgba(59,130,246,.6);
+        }
+    </style>
+</head>
+<body>
+<div class="page">
+
+    <!-- =====================================================================
+         ENCABEZADO PRINCIPAL
+         Título, descripción y metadata de la página
+         ===================================================================== -->
+    <header class="page-header">
+        <div class="page-title-block">
+            <h1>
+                <span class="emoji">🧭</span>
+                <span>Mantenimiento de calles de España</span>
+            </h1>
+            <p>
+                Consulta y alta profesional de vías públicas.  
+                Las calles siempre se gestionan vinculadas a provincia, municipio y tipo de vía.
+            </p>
+        </div>
+        <div class="page-meta">
+            <div>Ubicación · Vías públicas</div>
+            <div>
+                <span class="tag">Contexto obligatorio: provincia, municipio, tipo de vía</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- =====================================================================
+         GRID PRINCIPAL DE 3 COLUMNAS
+         Filtros (30%) | Resultados (45%) | Alta (25%)
+         ===================================================================== -->
+    <main class="page-main">
+
+        <!-- =================================================================
+             COLUMNA 1: PANEL DE FILTROS
+             Selección de provincia, municipio, tipo de vía y texto de búsqueda
+             ================================================================= -->
+        <section class="card">
+            <div class="card-header">
+                <h2>Filtro de búsqueda</h2>
+                <p>
+                    Selecciona primero la provincia, después el municipio y el tipo de vía.
+                    La búsqueda de calles siempre se realiza con esos tres elementos definidos.
+                </p>
+            </div>
+
+            <form id="form-buscar-calles">
+                <div class="form-grid">
+
+                    <div class="form-field">
+                        <label for="provincia">Provincia</label>
+                        <select id="provincia" name="provincia"></select>
+                    </div>
+
+                    <div class="form-field">
+                        <label for="municipio">Municipio</label>
+                        <select id="municipio" name="municipio"></select>
+                    </div>
+
+                    <div class="form-field">
+                        <label for="tipo_via">Tipo de vía</label>
+                        <select id="tipo_via" name="tipo_via"></select>
+                    </div>
+
+                    <div class="form-field">
+                        <label for="texto_calle">Texto de calle</label>
+                        <input type="text" id="texto_calle" name="texto_calle"
+                               placeholder="Ej.: Mayor, Valladolid, San...">
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" id="btn-limpiar">
+                        Limpiar filtros
+                    </button>
+                    <button type="button" class="btn btn-primary" id="btn-buscar">
+                        Buscar calles
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        <!-- =================================================================
+             COLUMNA 2: PANEL DE RESULTADOS
+             Badges alfabéticos + tabla con scroll
+             ================================================================= -->
+        <section class="card">
+            <div class="card-header">
+                <h2>Resultados</h2>
+                <p>
+                    Listado de calles filtradas por provincia, municipio y tipo de vía seleccionados.
+                    Haz clic en las letras para filtrar alfabéticamente.
+                </p>
+            </div>
+
+            <!-- Resumen de contexto y total -->
+            <div class="results-header">
+                <div>
+                    <span class="results-tag" id="resumen-contexto">
+                        Sin resultados todavía
+                    </span>
+                </div>
+                <div id="resumen-total">
+                    0 registros
+                </div>
+            </div>
+
+            <!-- Badges alfabéticos - Filtros por letra -->
+            <div class="alfabetico-container" id="alfabetico-container" style="display:none;">
+                <span class="alfabetico-label">Filtrar por letra:</span>
+                <div class="alfabetico-badges" id="alfabetico-badges">
+                    <!-- Se rellena dinámicamente por JavaScript -->
+                </div>
+            </div>
+
+            <!-- Tabla con scroll - SOLO la tabla tiene scroll -->
+            <div class="results-table-wrapper">
+                <div class="results-table-scroll">
+                    <table id="tabla-calles">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Tipo vía</th>
+                                <th>Calle</th>
+                                <th>Código postal</th>
+                                <th>Barrio</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Se rellena dinámicamente por JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="results-footer">
+                Las operaciones de alta de calles se realizan en el panel derecho,
+                donde se exige siempre provincia, municipio y tipo de vía seleccionados.
+            </div>
+        </section>
+
+        <!-- =================================================================
+             COLUMNA 3: PANEL DE ALTA DE CALLE
+             Formulario para crear nuevas calles
+             ================================================================= -->
+        <section class="card">
+            <div class="card-header">
+                <h2>Alta de calle</h2>
+                <p>
+                    La calle quedará registrada siempre vinculada a la provincia,
+                    municipio y tipo de vía actualmente seleccionados en el panel de filtros.
+                </p>
+            </div>
+
+            <form id="form-alta-calle">
+                <!-- Campos ocultos con el contexto actual -->
+                <input type="hidden" id="idtbl_provincias_alta"    name="idtbl_provincias">
+                <input type="hidden" id="idtbl_municipios_alta"    name="idtbl_municipios">
+                <input type="hidden" id="idtbl_tipos_de_vias_alta" name="idtbl_tipos_de_vias">
+
+                <div class="form-grid">
+                    <div class="form-field">
+                        <label>Contexto actual</label>
+                        <div style="font-size:.78rem;color:var(--muted);" id="contexto-alta">
+                            Provincia: – · Municipio: – · Tipo de vía: –
+                        </div>
+                    </div>
+
+                    <div class="form-field">
+                        <label for="nombre_calle">Nombre de calle</label>
+                        <input type="text" id="nombre_calle" name="calles"
+                               placeholder="Ej.: Avenida de Castilla y León">
+                    </div>
+
+                    <div class="form-field">
+                        <label for="cp">Código postal</label>
+                        <input type="text" id="cp" name="Codigopostal" placeholder="Ej.: 47001">
+                    </div>
+
+                    <div class="form-field">
+                        <label for="barrio">Barrio / zona</label>
+                        <input type="text" id="barrio" name="Barrio" placeholder="Opcional">
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-primary" id="btn-alta-calle">
+                        Guardar calle
+                    </button>
+                </div>
+
+                <div class="results-footer">
+                    Si falta provincia, municipio o tipo de vía, el sistema no permitirá
+                    guardar la calle. Tras un alta correcta se mantendrán los filtros
+                    y se recargará el listado.
+                </div>
+            </form>
+        </section>
+
+    </main>
+</div>
+
+<script>
+// =============================================================================
+// VARIABLES GLOBALES
+// =============================================================================
+
+// Almacena todas las calles recuperadas de la BD
+let todasLasCalles = [];
+
+// Letra actualmente filtrada (null = mostrar todas)
+let letraActiva = null;
+
+// =============================================================================
+// 1️⃣ INICIALIZACIÓN AL CARGAR LA PÁGINA
+// =============================================================================
+document.addEventListener("DOMContentLoaded", function () {
+    // Cargar catálogos iniciales
+    cargarProvincias();
+    cargarTiposVia();
+
+    // Event listeners para cambios en los selects
+    document.getElementById("provincia").addEventListener("change", function () {
+        cargarMunicipios();
+        limpiarResultados();
+        actualizarContextoAlta();
+    });
+
+    document.getElementById("municipio").addEventListener("change", function () {
+        limpiarResultados();
+        actualizarContextoAlta();
+    });
+
+    document.getElementById("tipo_via").addEventListener("change", function () {
+        limpiarResultados();
+        actualizarContextoAlta();
+    });
+
+    // Event listeners para botones
+    document.getElementById("btn-buscar").addEventListener("click", buscarCalles);
+    document.getElementById("btn-limpiar").addEventListener("click", limpiarFiltros);
+    document.getElementById("btn-alta-calle").addEventListener("click", altaCalle);
+});
+
+// =============================================================================
+// 2️⃣ UTILIDADES DE CONTEXTO VISUAL
+// Actualizan los textos de resumen en pantalla
+// =============================================================================
+
+/**
+ * Actualiza el texto de resumen de contexto en el panel de resultados
+ * Formato: "Provincia: Ávila · Municipio: Ávila · Tipo de vía: Calle"
+ */
+function actualizarResumenContexto() {
+    const provSel = document.getElementById("provincia");
+    const munSel  = document.getElementById("municipio");
+    const viaSel  = document.getElementById("tipo_via");
+
+    const provinciaTxt = provSel.options[provSel.selectedIndex]?.textContent || "–";
+    const municipioTxt = munSel.options[munSel.selectedIndex]?.textContent || "–";
+    const viaTxt       = viaSel.options[viaSel.selectedIndex]?.textContent || "–";
+
+    const resumen = document.getElementById("resumen-contexto");
+    if (resumen) {
+        resumen.textContent = `Provincia: ${provinciaTxt} · Municipio: ${municipioTxt} · Tipo de vía: ${viaTxt}`;
+    }
+}
+
+/**
+ * Actualiza el contexto en el panel de alta de calle
+ * Sincroniza los campos ocultos con los valores seleccionados
+ */
+function actualizarContextoAlta() {
+    const provSel = document.getElementById("provincia");
+    const munSel  = document.getElementById("municipio");
+    const viaSel  = document.getElementById("tipo_via");
+
+    const provinciaTxt = provSel.options[provSel.selectedIndex]?.textContent || "–";
+    const municipioTxt = munSel.options[munSel.selectedIndex]?.textContent || "–";
+    const viaTxt       = viaSel.options[viaSel.selectedIndex]?.textContent || "–";
+
+    const idProv = provSel.value || "";
+    const idMun  = munSel.value  || "";
+    const idVia  = viaSel.value  || "";
+
+    document.getElementById("idtbl_provincias_alta").value    = idProv;
+    document.getElementById("idtbl_municipios_alta").value    = idMun;
+    document.getElementById("idtbl_tipos_de_vias_alta").value = idVia;
+
+    const ctx = document.getElementById("contexto-alta");
+    if (ctx) {
+        ctx.textContent = `Provincia: ${provinciaTxt} · Municipio: ${municipioTxt} · Tipo de vía: ${viaTxt}`;
+    }
+}
+
+/**
+ * Actualiza el contador de registros mostrados
+ * @param {number} n - Número de registros
+ */
+function actualizarTotalRegistros(n) {
+    const lbl = document.getElementById("resumen-total");
+    if (lbl) {
+        lbl.textContent = `${n} registro${n === 1 ? "" : "s"}`;
+    }
+}
+
+/**
+ * Limpia la tabla de resultados y oculta los badges alfabéticos
+ */
+function limpiarResultados() {
+    const tbody = document.querySelector("#tabla-calles tbody");
+    if (tbody) {
+        tbody.innerHTML = "";
+    }
+    todasLasCalles = [];
+    letraActiva = null;
+    document.getElementById("alfabetico-container").style.display = "none";
+    actualizarTotalRegistros(0);
+}
+
+// =============================================================================
+// 3️⃣ CARGA DE CATÁLOGOS DESDE EL BACKEND
+// Funciones que hacen fetch a los endpoints de helpers_vias
+// =============================================================================
+
+/**
+ * Carga todas las provincias disponibles
+ * Endpoint: GET /helpers_vias/provincias
+ */
+function cargarProvincias() {
+    fetch("{{ url_for('helpers_vias_bp.api_provincias') }}")
+        .then(r => r.json())
+        .then(data => {
+            const sel = document.getElementById("provincia");
+            sel.innerHTML = "";
+            (data.provincias || []).forEach(p => {
+                const opt = document.createElement("option");
+                opt.value = p.idtbl_provincias;
+                opt.textContent = p.provincias;
+                sel.appendChild(opt);
+            });
+            cargarMunicipios();
+            actualizarResumenContexto();
+            actualizarContextoAlta();
+        })
+        .catch(err => {
+            console.error("Error cargando provincias:", err);
+            alert("Error cargando provincias");
+        });
+}
+
+/**
+ * Carga los municipios de la provincia seleccionada
+ * Endpoint: GET /helpers_vias/municipios?id_provincia=X
+ */
+function cargarMunicipios() {
+    const idProv = document.getElementById("provincia").value;
+    const selMun = document.getElementById("municipio");
+    selMun.innerHTML = "";
+
+    if (!idProv) {
+        actualizarResumenContexto();
+        actualizarContextoAlta();
+        return;
+    }
+
+    const url = new URL("{{ url_for('helpers_vias_bp.api_municipios') }}", window.location.origin);
+    url.searchParams.set("id_provincia", idProv);
+
+    fetch(url)
+        .then(r => r.json())
+        .then(data => {
+            (data.municipios || []).forEach(m => {
+                const opt = document.createElement("option");
+                opt.value = m.idtbl_municipios;
+                opt.textContent = m.municipios;
+                selMun.appendChild(opt);
+            });
+            actualizarResumenContexto();
+            actualizarContextoAlta();
+        })
+        .catch(err => {
+            console.error("Error cargando municipios:", err);
+            alert("Error cargando municipios");
+        });
+}
+
+/**
+ * Carga todos los tipos de vía disponibles
+ * Endpoint: GET /helpers_vias/tipos_via
+ */
+function cargarTiposVia() {
+    fetch("{{ url_for('helpers_vias_bp.api_tipos_via') }}")
+        .then(r => r.json())
+        .then(data => {
+            const sel = document.getElementById("tipo_via");
+            sel.innerHTML = "";
+            (data.tipos_via || []).forEach(t => {
+                const opt = document.createElement("option");
+                opt.value = t.idtbl_tipos_de_vias;
+                opt.textContent = t.tipos_de_vias;
+                sel.appendChild(opt);
+            });
+            actualizarResumenContexto();
+            actualizarContextoAlta();
+        })
+        .catch(err => {
+            console.error("Error cargando tipos de vía:", err);
+            alert("Error cargando tipos de vía");
+        });
+}
+
+// =============================================================================
+// 4️⃣ BÚSQUEDA DE CALLES Y GENERACIÓN DE BADGES ALFABÉTICOS
+// =============================================================================
+
+/**
+ * Busca calles según los filtros seleccionados
+ * Endpoint: GET /helpers_vias/calles?id_municipio=X&id_tipo_via=Y&q=Z
+ * 
+ * Flujo:
+ * 1. Validar que haya provincia, municipio y tipo de vía seleccionados
+ * 2. Hacer fetch al backend
+ * 3. Guardar resultados en todasLasCalles
+ * 4. Generar badges alfabéticos
+ * 5. Renderizar tabla
+ */
+function buscarCalles() {
+    const idMun  = document.getElementById("municipio").value;
+    const idTipo = document.getElementById("tipo_via").value;
+    const texto  = document.getElementById("texto_calle").value || "";
+
+    // Validar contexto obligatorio
+    if (!idMun || !idTipo) {
+        alert("Debes seleccionar provincia, municipio y tipo de vía antes de buscar.");
+        return;
+    }
+
+    // Construir URL con parámetros
+    const url = new URL("{{ url_for('helpers_vias_bp.api_calles') }}", window.location.origin);
+    url.searchParams.set("id_municipio", idMun);
+    url.searchParams.set("id_tipo_via", idTipo);
+    url.searchParams.set("q", texto);
+
+    fetch(url)
+        .then(r => r.json())
+        .then(data => {
+            // Guardar resultados globalmente
+            todasLasCalles = data.calles || [];
+            
+            // Resetear filtro activo
+            letraActiva = null;
+            
+            // Generar badges alfabéticos
+            generarBadgesAlfabeticos(todasLasCalles);
+            
+            // Renderizar tabla completa
+            renderizarTabla(todasLasCalles);
+            
+            // Actualizar contexto
+            actualizarResumenContexto();
+            actualizarContextoAlta();
+            actualizarTotalRegistros(todasLasCalles.length);
+        })
+        .catch(err => {
+            console.error("Error buscando calles:", err);
+            alert("Error buscando calles");
+        });
+}
+
+/**
+ * Genera los badges alfabéticos basados en las calles recuperadas
+ * 
+ * @param {Array} calles - Array de objetos calle
+ * 
+ * Algoritmo:
+ * 1. Agrupar calles por primera letra (normalizada, sin acentos)
+ * 2. Crear un badge por cada letra que tenga al menos 1 calle
+ * 3. Agregar badge "Todas" al final
+ * 4. Asignar event listeners para filtrado
+ */
+function generarBadgesAlfabeticos(calles) {
+    const container = document.getElementById("alfabetico-badges");
+    container.innerHTML = "";
+
+    if (!calles || calles.length === 0) {
+        document.getElementById("alfabetico-container").style.display = "none";
+        return;
+    }
+
+    // Agrupar por primera letra
+    const grupos = {};
+    calles.forEach(c => {
+        const nombre = c.calles || "";
+        if (!nombre) return;
+        
+        // Obtener primera letra normalizada (sin acentos, mayúscula)
+        const letra = nombre.charAt(0).toUpperCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, ""); // Elimina acentos
+        
+        if (!grupos[letra]) {
+            grupos[letra] = 0;
+        }
+        grupos[letra]++;
+    });
+
+    // Ordenar letras alfabéticamente
+    const letrasOrdenadas = Object.keys(grupos).sort();
+
+    // Crear badges
+    letrasOrdenadas.forEach(letra => {
+        const badge = document.createElement("span");
+        badge.className = "badge-letra";
+        badge.textContent = `${letra}:${grupos[letra]}`;
+        badge.dataset.letra = letra;
+        
+        // Event listener para filtrar
+        badge.addEventListener("click", function() {
+            filtrarPorLetra(letra);
+        });
+        
+        container.appendChild(badge);
+    });
+
+    // Badge "Todas"
+    const badgeTodas = document.createElement("span");
+    badgeTodas.className = "badge-letra todas activo"; // Activo por defecto
+    badgeTodas.textContent = `Todas:${calles.length}`;
+    badgeTodas.addEventListener("click", function() {
+        filtrarPorLetra(null);
+    });
+    container.appendChild(badgeTodas);
+
+    // Mostrar container
+    document.getElementById("alfabetico-container").style.display = "block";
+}
+
+/**
+ * Filtra la tabla por la letra seleccionada
+ * 
+ * @param {string|null} letra - Letra a filtrar (null = mostrar todas)
+ * 
+ * Flujo:
+ * 1. Actualizar badge activo visualmente
+ * 2. Filtrar array de calles
+ * 3. Renderizar tabla filtrada
+ * 4. Actualizar contador
+ */
+function filtrarPorLetra(letra) {
+    letraActiva = letra;
+
+    // Actualizar badges activos
+    document.querySelectorAll(".badge-letra").forEach(b => {
+        b.classList.remove("activo");
+    });
+
+    if (letra === null) {
+        // Activar "Todas"
+        document.querySelector(".badge-letra.todas").classList.add("activo");
+        renderizarTabla(todasLasCalles);
+        actualizarTotalRegistros(todasLasCalles.length);
+    } else {
+        // Activar badge de la letra seleccionada
+        document.querySelectorAll(".badge-letra").forEach(b => {
+            if (b.dataset.letra === letra) {
+                b.classList.add("activo");
+            }
+        });
+
+        // Filtrar calles
+        const callesFiltradas = todasLasCalles.filter(c => {
+            const nombre = c.calles || "";
+            const primeraLetra = nombre.charAt(0).toUpperCase()
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "");
+            return primeraLetra === letra;
+        });
+
+        renderizarTabla(callesFiltradas);
+        actualizarTotalRegistros(callesFiltradas.length);
+    }
+}
+
+/**
+ * Renderiza la tabla con el array de calles proporcionado
+ * 
+ * @param {Array} calles - Array de objetos calle a mostrar
+ */
+function renderizarTabla(calles) {
+    const tbody = document.querySelector("#tabla-calles tbody");
+    tbody.innerHTML = "";
+
+    calles.forEach(c => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td>${c.idtbl_calles}</td>
+            <td><span class="badge">${c.idtbl_tipos_de_vias}</span></td>
+            <td>${c.calles}</td>
+            <td>${c.Codigopostal || ""}</td>
+            <td>${c.Barrio || ""}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+// =============================================================================
+// 5️⃣ LIMPIAR FILTROS
+// =============================================================================
+
+/**
+ * Resetea todos los filtros y recarga los catálogos
+ */
+function limpiarFiltros() {
+    document.getElementById("texto_calle").value = "";
+    cargarProvincias();
+    cargarTiposVia();
+    limpiarResultados();
+}
+
+// =============================================================================
+// 6️⃣ ALTA DE CALLE
+// =============================================================================
+
+/**
+ * Crea una nueva calle en la base de datos
+ * Endpoint: POST /helpers_vias/crear_calle
+ * 
+ * Validaciones:
+ * - Provincia, municipio y tipo de vía obligatorios
+ * - Nombre de calle obligatorio
+ * - Código postal y barrio opcionales
+ */
+function altaCalle() {
+    const idProv = document.getElementById("idtbl_provincias_alta").value;
+    const idMun  = document.getElementById("idtbl_municipios_alta").value;
+    const idVia  = document.getElementById("idtbl_tipos_de_vias_alta").value;
+
+    // Validar contexto
+    if (!idProv || !idMun || !idVia) {
+        alert("No se puede guardar la calle sin provincia, municipio y tipo de vía seleccionados.");
+        return;
+    }
+
+    // Validar nombre
+    const nombre = document.getElementById("nombre_calle").value.trim();
+    if (!nombre) {
+        alert("El nombre de la calle es obligatorio.");
+        return;
+    }
+
+    // Preparar payload
+    const payload = {
+        idtbl_provincias:    idProv,
+        idtbl_municipios:    idMun,
+        idtbl_tipos_de_vias: idVia,
+        calles:              nombre,
+        Codigopostal:        document.getElementById("cp").value.trim(),
+        Barrio:              document.getElementById("barrio").value.trim(),
+    };
+
+    // Enviar al backend
+    fetch("{{ url_for('helpers_vias_bp.crear_calle') }}", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(payload),
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.ok) {
+            alert("✅ Calle creada correctamente.");
+            
+            // Recargar búsqueda para mostrar la nueva calle
+            buscarCalles();
+            
+            // Limpiar formulario de alta
+            document.getElementById("nombre_calle").value = "";
+            document.getElementById("cp").value = "";
+            document.getElementById("barrio").value = "";
+        } else {
+            alert("❌ Error al crear calle: " + (data.error || ""));
+        }
+    })
+    .catch(err => {
+        console.error("Error en alta de calle:", err);
+        alert("Error técnico al crear calle");
+    });
+}
+</script>
+</body>
+</html>

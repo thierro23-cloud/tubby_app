@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Módulo control vía pública{% endblock %}
+
+{% block content %}
+<div class="container mt-3">
+
+  <h1 class="h4 mb-3">🛣️ Módulo control vía pública (super_admin)</h1>
+
+  <div class="row">
+
+    {% for modulo in modulos %}
+    <div class="col-md-6 col-lg-4 mb-3">
+
+      <div class="card shadow-sm h-100">
+
+        <!-- HEADER -->
+        <div class="card-header bg-primary text-white py-2">
+          <span class="fw-semibold">
+            {{ modulo.nombre | replace("_", " ") | capitalize }}
+          </span>
+        </div>
+
+        <!-- BODY -->
+        <div class="card-body py-3">
+
+          <!-- ESTADO -->
+          <p class="small mb-2 text-success">
+            ✅ Módulo disponible
+          </p>
+
+          <!-- BOTÓN PRINCIPAL -->
+          {% if modulo.ruta %}
+            <a href="{{ modulo.ruta }}"
+               class="btn btn-sm btn-primary w-100 mb-2">
+              Abrir módulo
+            </a>
+          {% else %}
+            <button class="btn btn-sm btn-outline-secondary w-100 mb-2" disabled>
+              Módulo no disponible
+            </button>
+          {% endif %}
+
+          <!-- BOTONES EXTRA -->
+          <div class="d-flex flex-wrap gap-1">
+            {% for b in modulo.botones %}
+              <a href="{{ b.ruta }}"
+                 class="btn btn-sm btn-outline-primary">
+                {{ b.nombre }}
+              </a>
+            {% endfor %}
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+    {% endfor %}
+
+  </div>
+
+</div>
+{% endblock %}

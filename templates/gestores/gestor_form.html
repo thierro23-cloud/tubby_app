@@ -1,0 +1,696 @@
+{# ============================================================================
+   📄 PLANTILLA: gestor_form.html
+   🎯 PROPÓSITO: Formulario de alta/edición de gestores SIN SCROLL
+   📦 USADO POR:
+       · panel_gestores_bp.nuevo_gestor   (alta)
+       · panel_gestores_bp.editar_gestor  (edición)
+   ✨ CARACTERÍSTICAS:
+       · Layout 100% de altura sin scroll en página
+       · Panel izquierdo (25%) con campos fijos sin scroll
+       · Panel derecho (75%) con tabla con scroll interno
+       · Sistema de ubicación España integrado
+       · Diseño ultracompacto y profesional
+   ============================================================================ #}
+
+{% extends "base.html" %}
+{% block title %}{{ 'Editar gestor' if gestor else 'Nuevo gestor' }}{% endblock %}
+
+{% block content %}
+
+<!-- ========================================================================== -->
+<!-- 1️⃣ ESTILOS CSS - LAYOUT SIN SCROLL                                         -->
+<!-- ========================================================================== -->
+<style>
+  /* 1.1. Variables globales de diseño */
+  :root {
+    --grad-primary: linear-gradient(135deg, #60a5fa 0%, #3b82f6 50%, #2563eb 100%);
+    --grad-success: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+    --glass: rgba(255,255,255,0.96);
+    --shadow: 0 2px 12px rgba(15,23,42,0.1);
+    --radius: 10px;
+  }
+
+  /* 1.2. Reset de márgenes del container Bootstrap */
+  .gestor-wrapper {
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: 100% !important;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* 1.3. Layout principal - 100% altura sin scroll */
+  .gestor-layout {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: linear-gradient(135deg, #e0f2fe 0%, #dbeafe 40%, #bfdbfe 100%);
+  }
+
+  /* 1.4. Header compacto y fijo */
+  .gestor-header {
+    background: var(--grad-primary);
+    color: white;
+    padding: 0.6rem 1.2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(37,99,235,0.2);
+  }
+
+  .gestor-header h1 {
+    font-size: 1.15rem !important;
+    margin: 0;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  /* 1.5. Área de contenido - Split 25%/75% */
+  .gestor-content {
+    flex: 1;
+    display: flex;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    overflow: hidden;
+    min-height: 0; /* Fix para Firefox */
+  }
+
+  /* 1.6. Panel izquierdo - SIN SCROLL (25%) */
+  .panel-izquierdo {
+    width: 25%;
+    background: var(--glass);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* Sin scroll */
+  }
+
+  /* 1.7. Panel derecho - CON SCROLL INTERNO (75%) */
+  .panel-derecho {
+    width: 75%;
+    background: var(--glass);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* 1.8. Área con scroll SOLO en tabla del panel derecho */
+  .tabla-scroll {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 0.5rem;
+  }
+
+  /* 1.9. Scrollbar personalizado */
+  .tabla-scroll::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .tabla-scroll::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 4px;
+  }
+
+  .tabla-scroll::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+  }
+
+  .tabla-scroll::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+
+  /* 1.10. Secciones con títulos compactos */
+  .seccion {
+    margin-bottom: 0.8rem;
+  }
+
+  .seccion-title {
+    font-size: 0.8rem !important;
+    font-weight: 600;
+    color: #1e293b;
+    margin-bottom: 0.4rem;
+    padding-bottom: 0.3rem;
+    border-bottom: 2px solid #e0f2fe;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+
+  /* 1.11. Inputs y selects ultracompactos */
+  .campo {
+    margin-bottom: 0.5rem;
+  }
+
+  .campo label {
+    font-size: 0.7rem !important;
+    font-weight: 500;
+    margin-bottom: 0.2rem !important;
+    color: #475569;
+    display: block;
+  }
+
+  .campo input,
+  .campo select {
+    width: 100%;
+    font-size: 0.8rem !important;
+    padding: 0.35rem 0.5rem !important;
+    height: 30px !important;
+    border: 1px solid #cbd5e1;
+    border-radius: 5px;
+    background: #f8fafc;
+    transition: all 0.2s;
+  }
+
+  .campo input:focus,
+  .campo select:focus {
+    border-color: #3b82f6;
+    background: white;
+    box-shadow: 0 0 0 0.15rem rgba(59,130,246,0.2);
+    outline: none;
+  }
+
+  .campo .form-text {
+    font-size: 0.65rem !important;
+    margin-top: 0.2rem !important;
+    color: #64748b;
+  }
+
+  /* 1.12. Grid de 2 columnas para panel izquierdo */
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+
+  /* 1.13. Botones compactos */
+  .btn-compact {
+    font-size: 0.8rem !important;
+    padding: 0.4rem 0.9rem !important;
+    height: 34px;
+    border-radius: 6px;
+    font-weight: 500;
+    transition: all 0.2s;
+  }
+
+  .btn-compact:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+
+  /* 1.14. Footer de acciones fijo */
+  .gestor-footer {
+    padding: 0.6rem 1.2rem;
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
+  /* 1.15. Badge de estado */
+  .badge-estado {
+    font-size: 0.7rem !important;
+    padding: 0.25rem 0.6rem;
+    border-radius: 12px;
+  }
+
+  /* 1.16. Tabla en panel derecho */
+  .tabla-gestores {
+    width: 100%;
+    font-size: 0.8rem !important;
+  }
+
+  .tabla-gestores th {
+    background: #f1f5f9;
+    font-size: 0.75rem !important;
+    font-weight: 600;
+    color: #475569;
+    padding: 0.4rem 0.5rem !important;
+    border-bottom: 2px solid #cbd5e1;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  .tabla-gestores td {
+    padding: 0.4rem 0.5rem !important;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .tabla-gestores tbody tr:hover {
+    background: #f8fafc;
+  }
+
+  /* 1.17. Ajuste para required fields */
+  .campo label.required::after {
+    content: " *";
+    color: #ef4444;
+    font-weight: 700;
+  }
+</style>
+
+<!-- ========================================================================== -->
+<!-- 2️⃣ ESTRUCTURA HTML - LAYOUT SIN SCROLL                                     -->
+<!-- ========================================================================== -->
+
+<div class="gestor-wrapper">
+  <form method="post" id="formGestor">
+    <div class="gestor-layout">
+
+      <!-- ========== 2.1. HEADER - TÍTULO Y BOTONES ========== -->
+      <div class="gestor-header">
+        <h1>
+          <i class="bi bi-person-badge"></i>
+          {{ 'Editar gestor' if gestor else 'Nuevo gestor' }}
+        </h1>
+        <div class="d-flex gap-2">
+          <a href="{{ url_for('super_admin_bp.listar_gestores') }}"
+             class="btn btn-light btn-compact">
+            <i class="bi bi-arrow-left"></i> Volver
+          </a>
+          <button type="submit" class="btn btn-success btn-compact">
+            <i class="bi bi-check-circle"></i> {{ 'Guardar cambios' if gestor else 'Crear gestor' }}
+          </button>
+        </div>
+      </div>
+
+      <!-- ========== 2.2. CONTENIDO - SPLIT 25%/75% ========== -->
+      <div class="gestor-content">
+
+        <!-- ========== 2.2.1. PANEL IZQUIERDO - FORMULARIO SIN SCROLL (25%) ========== -->
+        <div class="panel-izquierdo">
+
+          <!-- Sección 1: Datos personales -->
+          <div class="seccion">
+            <div class="seccion-title">
+              <i class="bi bi-person-circle text-primary"></i>
+              Datos personales
+            </div>
+
+            <div class="campo">
+              <label class="required">Nombre</label>
+              <input type="text" name="nombre" required
+                     value="{{ gestor.nombre if gestor else '' }}">
+            </div>
+
+            <div class="grid-2">
+              <div class="campo">
+                <label class="required">1er apellido</label>
+                <input type="text" name="apellido1" required
+                       value="{{ gestor.apellido1 if gestor else '' }}">
+              </div>
+
+              <div class="campo">
+                <label>2º apellido</label>
+                <input type="text" name="apellido2"
+                       value="{{ gestor.apellido2 if gestor else '' }}">
+              </div>
+            </div>
+
+            <div class="campo">
+              <label class="required">Email</label>
+              <input type="email" name="email" required
+                     value="{{ gestor.email if gestor else '' }}">
+            </div>
+
+            <div class="grid-2">
+              <div class="campo">
+                <label>DNI</label>
+                <input type="text" name="DNI"
+                       value="{{ gestor.DNI if gestor else '' }}">
+              </div>
+
+              <div class="campo">
+                <label>Teléfono</label>
+                <input type="text" name="telefono"
+                       value="{{ gestor.telefono if gestor else '' }}">
+              </div>
+            </div>
+
+            <div class="grid-2">
+              <div class="campo">
+                <label>Extensión</label>
+                <input type="text" name="extension"
+                       value="{{ gestor.extension if gestor else '' }}">
+              </div>
+
+              <div class="campo">
+                <label>Nº profesional</label>
+                <input type="text" name="numero_profesional"
+                       value="{{ gestor.numero_profesional if gestor else '' }}">
+              </div>
+            </div>
+
+            <div class="grid-2">
+              <div class="campo">
+                <label>Activo</label>
+                <select name="activo">
+                  {% set activo_val = gestor.activo if gestor is not none else 1 %}
+                  <option value="1" {{ 'selected' if activo_val == 1 else '' }}>Sí</option>
+                  <option value="0" {{ 'selected' if activo_val == 0 else '' }}>No</option>
+                </select>
+              </div>
+
+              <div class="campo">
+                <label class="required">Rol</label>
+                <select name="idtbl_roles" required>
+                  <option value="">-- Rol --</option>
+                  {% for rol in roles %}
+                    <option value="{{ rol.idtbl_roles }}"
+                            {% if gestor and rol.idtbl_roles == gestor.idtbl_roles %}selected{% endif %}>
+                      {{ rol.nombre_rol }}
+                    </option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sección 2: Dirección -->
+          <div class="seccion">
+            <div class="seccion-title">
+              <i class="bi bi-geo-alt-fill text-success"></i>
+              Dirección
+            </div>
+
+            <div class="campo">
+              <label>Provincia</label>
+              <select name="idtbl_provincias" id="provincia">
+                <option value="">-- Sin provincia --</option>
+                {% for prov in provincias %}
+                  {% set prov_id = prov.idtbl_provincias or prov.id %}
+                  <option value="{{ prov_id }}"
+                    {% if gestor and prov_id == gestor.idtbl_provincias %}selected{% endif %}>
+                    {{ prov.nombre_provincia or prov.nombre }}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="campo">
+              <label>Municipio</label>
+              <select name="idtbl_municipios" id="municipio">
+                <option value="">-- Sin municipio --</option>
+              </select>
+            </div>
+
+            <div class="campo">
+              <label>Tipo de vía</label>
+              <select name="idtbl_tipos_de_vias" id="tipo_via">
+                <option value="">-- Tipo vía --</option>
+                {% for tv in tipos_vias %}
+                  {% set tv_id = tv.idtbl_tipos_de_vias or tv.id %}
+                  <option value="{{ tv_id }}"
+                    {% if gestor and tv_id == gestor.idtbl_tipos_de_vias %}selected{% endif %}>
+                    {{ tv.nombre_tipo_via or tv.nombre }}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="campo">
+              <label>Calle</label>
+              <select name="idtbl_calles" id="calle">
+                <option value="">-- Sin calle --</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Sección 3: Seguridad -->
+          <div class="seccion">
+            <div class="seccion-title">
+              <i class="bi bi-shield-lock-fill text-danger"></i>
+              Seguridad
+            </div>
+
+            <div class="campo">
+              <label {% if not gestor %}class="required"{% endif %}>
+                {{ 'Nueva contraseña' if gestor else 'Contraseña' }}
+              </label>
+              <input type="password" name="password"
+                     {% if not gestor %}required{% endif %}>
+              <div class="form-text">
+                {% if gestor %}
+                  Dejar vacío para mantener la actual
+                {% else %}
+                  Mínimo 6 caracteres
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="campo">
+              <label>Cambiar en próximo acceso</label>
+              <select name="must_change">
+                {% set must_val = gestor.must_change if gestor is not none else 1 %}
+                <option value="1" {{ 'selected' if must_val == 1 else '' }}>Sí</option>
+                <option value="0" {{ 'selected' if must_val == 0 else '' }}>No</option>
+              </select>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ========== 2.2.2. PANEL DERECHO - TABLA CON SCROLL (75%) ========== -->
+        <div class="panel-derecho">
+          
+          <div class="seccion-title mb-3">
+            <i class="bi bi-table text-info"></i>
+            Listado de gestores existentes
+            <span class="badge bg-primary ms-auto">
+              {{ gestores|length if gestores else 0 }} registros
+            </span>
+          </div>
+
+          <!-- Tabla con scroll interno -->
+          <div class="tabla-scroll">
+            <table class="tabla-gestores table table-sm table-hover">
+              <thead>
+                <tr>
+                  <th style="width: 5%;">ID</th>
+                  <th style="width: 20%;">Nombre completo</th>
+                  <th style="width: 20%;">Email</th>
+                  <th style="width: 15%;">Rol</th>
+                  <th style="width: 10%;">DNI</th>
+                  <th style="width: 10%;">Teléfono</th>
+                  <th style="width: 8%;">Activo</th>
+                  <th style="width: 12%;" class="text-center">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% if gestores %}
+                  {% for g in gestores %}
+                    <tr {% if gestor and g.idtbl_gestores == gestor.idtbl_gestores %}
+                          class="table-active"
+                        {% endif %}>
+                      <td>{{ g.idtbl_gestores }}</td>
+                      <td>
+                        {{ g.nombre }} {{ g.apellido1 }}
+                        {% if g.apellido2 %}{{ g.apellido2 }}{% endif %}
+                      </td>
+                      <td class="text-muted small">{{ g.email }}</td>
+                      <td>
+                        <span class="badge bg-info-subtle text-info">
+                          {{ g.rol_nombre if g.rol_nombre else 'Sin rol' }}
+                        </span>
+                      </td>
+                      <td class="small">{{ g.DNI if g.DNI else '-' }}</td>
+                      <td class="small">{{ g.telefono if g.telefono else '-' }}</td>
+                      <td class="text-center">
+                        {% if g.activo %}
+                          <span class="badge bg-success-subtle text-success">Sí</span>
+                        {% else %}
+                          <span class="badge bg-danger-subtle text-danger">No</span>
+                        {% endif %}
+                      </td>
+                      <td class="text-center">
+                        <a href="{{ url_for('super_admin_bp.editar_gestor', id_gestor=g.idtbl_gestores) }}"
+                           class="btn btn-sm btn-outline-primary"
+                           style="font-size: 0.7rem; padding: 0.2rem 0.5rem;"
+                           title="Editar">
+                          <i class="bi bi-pencil"></i>
+                        </a>
+                      </td>
+                    </tr>
+                  {% endfor %}
+                {% else %}
+                  <tr>
+                    <td colspan="8" class="text-center text-muted">
+                      No hay gestores registrados
+                    </td>
+                  </tr>
+                {% endif %}
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- ========== 2.3. FOOTER - INFORMACIÓN ADICIONAL ========== -->
+      <div class="gestor-footer">
+        <div class="text-muted small">
+          <i class="bi bi-info-circle"></i>
+          Los campos marcados con <span class="text-danger fw-bold">*</span> son obligatorios
+        </div>
+        <div class="text-muted small">
+          {% if gestor %}
+            Editando gestor ID: <strong>{{ gestor.idtbl_gestores }}</strong>
+          {% else %}
+            Creando nuevo gestor
+          {% endif %}
+        </div>
+      </div>
+
+    </div>
+  </form>
+</div>
+
+{% endblock %}
+
+<!-- ========================================================================== -->
+<!-- 3️⃣ SCRIPTS - SISTEMA DE UBICACIÓN ESPAÑA                                   -->
+<!-- ========================================================================== -->
+{% block extra_js %}
+
+<!-- 3.1. Cargar módulos del sistema de ubicación -->
+<script src="{{ url_for('static', filename='js/ubicacion/core.js') }}"></script>
+<script src="{{ url_for('static', filename='js/ubicacion/catalogos.js') }}"></script>
+<script src="{{ url_for('static', filename='js/ubicacion/filtros.js') }}"></script>
+<script src="{{ url_for('static', filename='js/ubicacion/alta.js') }}"></script>
+<script src="{{ url_for('static', filename='js/ubicacion/espana.js') }}?v=2.0"></script>
+
+<!-- 3.2. Lógica específica para gestores -->
+<script>
+  /**
+   * ========== 3.2.1. INICIALIZACIÓN AL CARGAR EL DOM ==========
+   * Carga municipios si estamos en modo edición y hay provincia preseleccionada
+   */
+  document.addEventListener('DOMContentLoaded', async function() {
+    console.log('✅ DOM cargado - Inicializando formulario de gestor');
+    
+    const provinciaSelect = document.getElementById('provincia');
+    const municipioSelect = document.getElementById('municipio');
+    
+    // ========== MODO EDICIÓN: Cargar municipios preseleccionados ==========
+    {% if gestor and gestor.idtbl_provincias %}
+      const provinciaId = {{ gestor.idtbl_provincias }};
+      const municipioId = {{ gestor.idtbl_municipios if gestor.idtbl_municipios else 'null' }};
+      
+      console.log('🔄 Modo edición detectado');
+      console.log('   📍 Provincia ID:', provinciaId);
+      console.log('   🏘️  Municipio ID:', municipioId);
+      
+      if (provinciaId) {
+        try {
+          // Intentar múltiples URLs para cargar municipios
+          const urls = [
+            `/helpers_vias/municipios?id_provincia=${provinciaId}`,
+            `/helpers_vias/municipios?prov_id=${provinciaId}`,
+            `/comunes/proveedores/api/municipios?prov_id=${provinciaId}`
+          ];
+          
+          let municipios = null;
+          let urlExitosa = null;
+          
+          // Probar cada URL hasta encontrar una que funcione
+          for (const url of urls) {
+            try {
+              console.log(`   🌐 Probando URL: ${url}`);
+              const res = await fetch(url);
+              
+              if (res.ok) {
+                municipios = await res.json();
+                urlExitosa = url;
+                console.log(`   ✅ URL exitosa: ${url}`);
+                break;
+              }
+            } catch (e) {
+              console.log(`   ⚠️ URL falló: ${url}`);
+              continue;
+            }
+          }
+          
+          if (municipios && municipios.length > 0) {
+            console.log(`   ✅ ${municipios.length} municipios cargados`);
+            
+            // Limpiar select de municipios
+            municipioSelect.innerHTML = '<option value="">-- Sin municipio --</option>';
+            
+            // Agregar opciones de municipios
+            municipios.forEach(mun => {
+              const option = document.createElement('option');
+              option.value = mun.id;
+              option.textContent = mun.nombre;
+              
+              // Preseleccionar si coincide con el municipio del gestor
+              if (municipioId && mun.id == municipioId) {
+                option.selected = true;
+                console.log(`   🎯 Municipio preseleccionado: ${mun.nombre}`);
+              }
+              
+              municipioSelect.appendChild(option);
+            });
+            
+            municipioSelect.disabled = false;
+          } else {
+            console.warn('   ⚠️ No se pudieron cargar municipios desde ninguna URL');
+            console.warn('   📋 URLs probadas:', urls);
+          }
+          
+        } catch (e) {
+          console.error('   ❌ Error al cargar municipios:', e);
+        }
+      }
+    {% else %}
+      console.log('📝 Modo creación - Formulario vacío');
+    {% endif %}
+  });
+
+  /**
+   * ========== 3.2.2. VALIDACIÓN ANTES DE ENVIAR ==========
+   * Opcional: Validaciones adicionales del formulario
+   */
+  const formGestor = document.getElementById('formGestor');
+  if (formGestor) {
+    formGestor.addEventListener('submit', function(e) {
+      console.log('📤 Enviando formulario de gestor...');
+      
+      // Aquí puedes agregar validaciones personalizadas
+      // Ejemplo: validar formato de email, DNI, etc.
+      
+      const email = document.querySelector('[name="email"]').value;
+      if (email && !email.includes('@')) {
+        alert('⚠️ El email no parece válido');
+        e.preventDefault();
+        return false;
+      }
+      
+      console.log('✅ Validaciones pasadas, enviando...');
+    });
+  }
+
+  /**
+   * ========== 3.2.3. LOGS DE DEBUG (ELIMINAR EN PRODUCCIÓN) ==========
+   */
+  console.log('📊 Información del formulario:');
+  console.log('   - Modo:', '{{ "Edición" if gestor else "Alta" }}');
+  console.log('   - Provincia select:', document.getElementById('provincia') ? '✅' : '❌');
+  console.log('   - Municipio select:', document.getElementById('municipio') ? '✅' : '❌');
+  console.log('   - Tipo vía select:', document.getElementById('tipo_via') ? '✅' : '❌');
+  console.log('   - Calle select:', document.getElementById('calle') ? '✅' : '❌');
+</script>
+
+{% endblock %}

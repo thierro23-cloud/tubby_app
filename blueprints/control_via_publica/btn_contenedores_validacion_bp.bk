@@ -1,0 +1,363 @@
+#============================================================================
+# 🚛 1️⃣ MÓDULO DE VALIDACIÓN CONTENEDORES · VERSIÓN ARQUITECTURA NUEVA
+# =============================================================================
+#
+# 🎯 OBJETIVO
+# -----------------------------------------------------------------------------
+# Gestionar el flujo completo de **validación de contenedores** detectados
+# automáticamente desde PDF, siguiendo la arquitectura:
+#
+#   PANEL  → panel_control_via_publica_bp  (control_via_publica)
+#   MÓDULO → modulo_control_via_publica_contenedores_bp
+#             (módulo lógico: control_via_publica_contenedores)
+#   BOTÓN  → ESTE BLUEPRINT:
+#       - contenedores_validacion       (entrada al flujo / botón visible)
+#       - listar_pendientes             (workflow secuencial uno a uno)
+#       - serve_pdf                     (visualización PDF original)
+#       - calles_por_tipo               (AJAX para combos)
+#       - guardar_validacion            (inserción/eliminación de pendientes)
+#
+# 💡 DIFERENCIAS CLAVE VS CÓDIGO ORIGINAL
+# -----------------------------------------------------------------------------
+# - Se elimina el sistema de registry manual de tarjetas/acciones.
+# - Se renombra el blueprint y sus rutas al esquema de BOTÓN del módulo:
+#       · Archivo   : contenedores_validacion_bp.py
+#       · Blueprint : contenedores_validacion_bp
+#       · Vista     : contenedores_validacion
+#       · Plantilla : contenedores_validacion.html
+# - Se conserva la lógica de negocio y consultas SQL, reorganizadas en un
+#   único blueprint especializado para la validación de contenedores.
+#
+#===============================================================
+
+#============================================================================
+# 🧩 2️⃣ IMPORTS Y CONFIGURACIÓN DEL MÓDULO
+# =============================================================================
+# En esta sección se cargan todas las dependencias necesarias:
+#   - json y os para manejo de datos y rutas locales de PDFs.
+#   - Flask (Blueprint, render, redirects, JSON, envío de ficheros, logging).
+#   - Helpers de autenticación/roles.
+#   - Acceso a base de datos mediante helpers ejecutar_query / ejecutar_non_query.
+#===============================================================
+
+import json
+import os
+
+from flask import (
+    Blueprint,
+    render_template,
+    request,
+    redirect,
+    url_for,
+    jsonify,
+    send_from_directory,
+    current_app,
+    flash,
+)
+
+from db import ejecutar_query, ejecutar_non_query
+from services.helpers import login_required, rol_required
+
+
+#============================================================================
+# 🧱 3️⃣ BLUEPRINT · BOTÓN DE VALIDACIÓN CONTENEDORES
+# =============================================================================
+# En la arquitectura actual usamos un único blueprint de botón para
+# la validación de contenedores:
+#
+#   · Archivo   : contenedores_validacion_bp.py
+#   · Blueprint : contenedores_validacion_bp
+#   · Prefijo   : /control_via_publica/contenedores/validacion
+#
+# Bajo este blueprint cuelgan todas las rutas del flujo:
+#   - contenedores_validacion       (entrada al flujo / botón)
+#   - listar_pendientes             (workflow secuencial de pendientes)
+#   - serve_pdf                     (visualización PDF original)
+#   - calles_por_tipo               (AJAX para filtrar calles)
+#   - guardar_validacion            (procesamiento del formulario)
+#
+# Esto encapsula todo el flujo como un "botón funcional" del módulo
+# control_via_publica_contenedores.
+#===============================================================
+
+btn_contenedores_validacion_bp = Blueprint(
+    "btn_contenedores_validacion",
+    __name__,
+    url_prefix="/control_via_publica/contenedores/validacion",
+)
+
+
+#============================================================================
+# 🧠 4️⃣ CONSULTAS SQL · CAPA DE ACCESO A DATOS REUTILIZABLE
+# =============================================================================
+# Aquí definimos todas las consultas SQL necesarias para el workflow
+# de validación. Están desacopladas de las vistas Flask para favorecer
+# su reutilización y testeo independiente:
+#
+#   - SQL_PENDIENTE   : obtiene un contenedor pendiente por ID.
+#   - SQL_PROVEEDORES : proveedores que colocan contenedores.
+#   - SQL_TIPOS_VIA   : tipos de vía disponibles.
+#   - SQL_CALLES      : todas las calles del municipio.
+#   - SQL_CALLES_TIPO : calles filtradas por tipo de vía.
+#   - SQL_DIMENSIONES : dimensiones posibles de contenedores.
+#===============================================================
+
+SQL_PENDIENTE = """
+SELECT *
+FROM tbl_contenedores_pendientes
+WHERE idtbl_contenedores_pendientes = %s
+"""
+
+SQL_PROVEEDORES = """
+SELECT idtbl_proveedores, nombre_razon_social, nif
+FROM tbl_proveedores
+WHERE coloca_contenedores = 1
+ORDER BY nombre_razon_social
+"""
+
+SQL_TIPOS_VIA = """
+SELECT idtbl_tipos_de_vias, tipos_de_vias
+FROM bd_tbl_comunes.tbl_tipos_de_vias
+ORDER BY tipos_de_vias
+"""
+
+SQL_CALLES = """
+SELECT idtbl_calles, calles
+FROM bd_tbl_comunes.tbl_calles
+WHERE idtbl_municipios = 395
+ORDER BY calles
+"""
+
+SQL_CALLES_TIPO = """
+SELECT idtbl_calles, calles
+FROM bd_tbl_comunes.tbl_calles
+WHERE idtbl_municipios = 395
+AND idtbl_tipos_de_vias = %s
+ORDER BY calles
+"""
+
+SQL_DIMENSIONES = """
+SELECT idtbl_dimensiones, descripcion
+FROM bd_tbl_comunes.tbl_dimensiones
+ORDER BY descripcion
+"""
+
+
+#============================================================================
+# 📄 5️⃣ SERVIR PDF ORIGINAL · VISUALIZACIÓN
+# =============================================================================
+# Esta ruta permite mostrar el PDF original asociado a un contenedor pendiente.
+#
+#   GET /control_via_publica/contenedores/validacion/pdf/<filename>
+#
+# Lógica:
+#   - Construye la ruta al directorio de PDFs:
+#         <root_app>/contenedores/pendientes_validacion
+#   - Emite un log con la ruta final para depuración.
+#   - Envía el fichero con mimetype application/pdf usando send_from_directory.
+#===============================================================
+
+@btn_contenedores_validacion_bp.route("/pdf/<path:filename>")
+@login_required
+@rol_required("gestor", "super_admin")
+def serve_pdf(filename):
+    """
+    5.1️⃣ 📄 Devuelve el PDF asociado al contenedor pendiente para su visualización.
+
+    - Busca el fichero dentro de:
+        <root_app>/contenedores/pendientes_validacion
+    - Lo envía con mimetype application/pdf.
+    """
+    carpeta = os.path.join(
+        current_app.root_path,
+        "contenedores",
+        "pendientes_validacion",
+    )
+
+    current_app.logger.info(f"📂 PDF -> {carpeta}/{filename}")
+
+    return send_from_directory(
+        carpeta,
+        filename,
+        mimetype="application/pdf",
+    )
+
+
+#============================================================================
+# 🔁 6️⃣ LISTADO SECUENCIAL · WORKFLOW UNO A UNO
+# =============================================================================
+# Ruta principal del workflow secuencial de validación.
+#
+#   GET /control_via_publica/contenedores/validacion/pendientes?i=0
+#
+# Comportamiento:
+#   - `i` es el índice dentro de la lista ordenada por fecha_creacion.
+#   - Se obtiene el ID del pendiente n-ésimo con un SELECT + OFFSET.
+#   - Se recupera el registro completo usando SQL_PENDIENTE.
+#   - Si existe JSON en datos_extraidos_json, se parsea para autocompletar.
+#   - Se cargan combos auxiliares:
+#       · proveedores
+#       · tipos_vias
+#       · calles
+#       · dimensiones
+#   - Se renderiza la plantilla contenedores_validacion.html con:
+#       · pendiente
+#       · datos JSON autocompletados
+#       · combos
+#       · índice actual
+#       · id_pendiente
+#===============================================================
+
+@btn_contenedores_validacion_bp.route("/pendientes")
+@login_required
+@rol_required("gestor", "super_admin")
+def listar_pendientes():
+    """
+    6.1️⃣ 🔁 Navegación secuencial de contenedores pendientes.
+
+    Permite avanzar contenedor a contenedor usando el índice `i`:
+      - ?i=0 → primer pendiente
+      - ?i=1 → segundo pendiente, etc.
+    """
+    indice = max(request.args.get("i", 0, type=int), 0)
+
+    # Buscamos el ID del pendiente n-ésimo
+    resultado = ejecutar_query(
+        """
+        SELECT idtbl_contenedores_pendientes
+        FROM tbl_contenedores_pendientes
+        ORDER BY fecha_creacion ASC
+        LIMIT 1 OFFSET %s
+        """,
+        (indice,),
+        nombre_bd="control_via_publica",
+    )
+
+    if not resultado:
+        flash("No hay más pendientes", "info")
+        return redirect(url_for(".listar_pendientes", i=0))
+
+    id_actual = resultado[0]["idtbl_contenedores_pendientes"]
+
+    pendiente = ejecutar_query(
+        SQL_PENDIENTE,
+        (id_actual,),
+        nombre_bd="control_via_publica",
+    )[0]
+
+    # Intentamos parsear el JSON con datos extraídos
+    datos = {}
+    if pendiente.get("datos_extraidos_json"):
+        try:
+            datos = json.loads(pendiente["datos_extraidos_json"])
+        except Exception:
+            datos = {}
+
+    return render_template(
+        "contenedores_validacion.html",
+        pendiente=pendiente,
+        datos=datos,
+        proveedores=ejecutar_query(SQL_PROVEEDORES, (), "bd_tbl_comunes"),
+        tipos_vias=ejecutar_query(SQL_TIPOS_VIA, (), "bd_tbl_comunes"),
+        calles=ejecutar_query(SQL_CALLES, (), "bd_tbl_comunes"),
+        dimensiones=ejecutar_query(SQL_DIMENSIONES, (), "bd_tbl_comunes"),
+        indice=indice,
+        id_pendiente=id_actual,
+    )
+
+
+#============================================================================
+# 🌐 7️⃣ AJAX · FILTRO DINÁMICO DE CALLES POR TIPO DE VÍA
+# =============================================================================
+# Endpoint usado por la UI para cargar calles según el tipo de vía
+# seleccionado en el formulario de validación.
+#
+#   GET /control_via_publica/contenedores/validacion/calles_por_tipo/<id_tipo>
+#
+# Comportamiento:
+#   - Recibe el id_tipo de vía.
+#   - Ejecuta SQL_CALLES_TIPO para obtener las calles del municipio filtradas.
+#   - Devuelve un JSON con la lista de calles.
+#===============================================================
+
+@btn_contenedores_validacion_bp.route("/calles_por_tipo/<int:id_tipo>")
+@login_required
+@rol_required("gestor", "super_admin")
+def calles_por_tipo(id_tipo):
+    """
+    7.1️⃣ 🌐 Devuelve JSON con las calles del municipio filtradas por tipo de vía.
+    """
+    return jsonify(
+        ejecutar_query(SQL_CALLES_TIPO, (id_tipo,), "bd_tbl_comunes")
+    )
+
+
+#=============================================================================
+# 🔘 8️⃣ BOTÓN PRINCIPAL DEL MÓDULO · ENTRADA DESDE PANEL/MÓDULO
+# =============================================================================
+# Este es el **botón oficial** que verá el usuario en el módulo
+# control_via_publica_contenedores.
+#
+#   GET /control_via_publica/contenedores/validacion
+#
+# Comportamiento:
+#   - Se usa como "entrada" al flujo de validación desde el panel/módulo.
+#   - Su responsabilidad es redirigir al workflow secuencial de pendientes
+#     comenzando en el índice 0 (primer pendiente).
+#===============================================================
+
+@btn_contenedores_validacion_bp.route("/", methods=["GET"])
+@login_required
+@rol_required("gestor", "super_admin")
+def contenedores_validacion():
+    """
+    8.1️⃣ 🔘 Entrada al flujo de VALIDACIÓN DE CONTENEDORES.
+
+    - Usado como "botón" desde el módulo/panel.
+    - Redirige a la vista secuencial de pendientes (i=0).
+    """
+    return redirect(
+        url_for(".listar_pendientes", i=0)
+    )
+
+
+#=============================================================================
+# ✅ 9️⃣ GUARDAR VALIDACIÓN · INSERCIÓN + LIMPIEZA
+# =============================================================================
+# Aquí se procesa el formulario de validación:
+#
+#   POST /control_via_publica/contenedores/validacion/guardar/<id>
+#
+# Para simplificar:
+#   - Se borra el registro de la tabla de pendientes.
+#   - (En tu código completo, aquí iría también la inserción en la tabla
+#      definitiva de contenedores en producción).
+#===============================================================
+
+@btn_contenedores_validacion_bp.route("/guardar/<int:id>", methods=["POST"])
+@login_required
+@rol_required("gestor", "super_admin")
+def guardar_validacion(id):
+    """
+    9.1️⃣ ✅ Guardar validación de contenedor pendiente.
+
+    - Aquí insertaría en la tabla de producción (no mostrado).
+    - Elimina el registro de tbl_contenedores_pendientes.
+    - Muestra notificación de éxito.
+    - Redirige al flujo secuencial (siguiente pendiente).
+    """
+
+    # TODO: Insertar en tabla definitiva de contenedores (producción).
+
+    ejecutar_non_query(
+        """
+        DELETE FROM tbl_contenedores_pendientes
+        WHERE idtbl_contenedores_pendientes = %s
+        """,
+        (id,),
+        nombre_bd="control_via_publica",
+    )
+
+    flash("Contenedor validado correctamente", "success")
+
+    return redirect(url_for(".listar_pendientes"))

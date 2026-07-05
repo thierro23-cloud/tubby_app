@@ -1,0 +1,79 @@
+{# =============================================================================
+  PLANTILLA: RÍO TORÍO · PADRÓN JUNTOS (SELECCIÓN MES / AÑO)
+  RUTA: templates/parquin/rio_torio/rio_torio_padron_juntos.html
+===============================================================================
+  INTRODUCCIÓN
+  ------------
+  Esta plantilla muestra un formulario sencillo para que el usuario seleccione
+  el MES y el AÑO del padrón del parking de camiones Río Torío (versión JUNTOS).
+
+  Al enviar el formulario:
+    - Se hace POST a la vista btn_rio_torio_padron_juntos().
+    - La vista genera un documento Word donde, por cada abonado, se incluye
+      una fila con:
+        · Nombre / Razón social.
+        · NIF.
+        · Plazas asociadas (códigos separados por comas) en una celda.
+        · Total de plazas (número) en la celda contigua.
+============================================================================= #}
+
+{% extends "base.html" %}
+
+{% block title %}Padrón Río Torío (Juntos){% endblock %}
+
+{% block content %}
+
+<div class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+      <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white text-center py-2">
+          <h5 class="mb-0">Padrón Río Torío · Formato Juntos</h5>
+        </div>
+        <div class="card-body">
+          <p class="small text-muted">
+            Selecciona el mes y el año para generar el padrón mensual con las
+            plazas de cada abonado en una celda y el total en la celda contigua.
+          </p>
+
+          <form method="post" action="{{ url_for('btn_rio_torio_padron_juntos_bp.btn_rio_torio_padron_juntos') }}">
+            <div class="mb-3">
+              <label for="mes" class="form-label">Mes</label>
+              <select class="form-select" id="mes" name="mes" required>
+                {% for num_mes in range(1, 13) %}
+                  <option value="{{ num_mes }}"
+                          {% if num_mes == mes_defecto %}selected{% endif %}>
+                    {{ meses[num_mes] | capitalize }}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="mb-3">
+              <label for="anio" class="form-label">Año</label>
+              <input
+                type="number"
+                class="form-control"
+                id="anio"
+                name="anio"
+                value="{{ anio_defecto }}"
+                min="2000"
+                max="2100"
+                required
+              >
+            </div>
+
+            <div class="d-flex justify-content-end mt-3">
+  <button type="submit" class="btn btn-primary btn-sm">
+    Generar padrón (juntos)
+  </button>
+</div>
+          </form>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

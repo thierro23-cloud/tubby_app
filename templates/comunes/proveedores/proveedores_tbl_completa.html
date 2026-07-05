@@ -1,0 +1,112 @@
+{# ============================================================================
+  templates/proveedores/tabla_completa_proveedores.html
+  📋 TABLA COMPLETA DE PROVEEDORES (EDICIÓN EN LÍNEA + ALTA)
+  -----------------------------------------------------------------------------
+  - Muestra todos los registros de tbl_proveedores en una sola tabla.
+  - Cada fila es editable directamente.
+  - La última fila vacía permite dar de alta un nuevo proveedor.
+  - Todo se guarda con un único envío del formulario.
+  ============================================================================ #}
+
+{% extends "base.html" %}
+{% block title %}Tabla completa de proveedores{% endblock %}
+
+{% block content %}
+<div class="container mt-3">
+
+  <h1 class="h5 mb-3">📋 Tabla completa de proveedores</h1>
+  <p class="text-muted small">
+    Edita directamente en la tabla. La última fila vacía sirve para dar de alta
+    un nuevo proveedor. Al pulsar <strong>Guardar cambios</strong> se aplican
+    todas las modificaciones y altas a la vez.
+  </p>
+
+  <form method="post">
+    <table class="table table-sm table-bordered align-middle">
+      <thead class="table-light">
+        <tr>
+          <th style="width: 5%">ID</th>
+          <th style="width: 15%">NIF</th>
+          <th style="width: 40%">Nombre / Razón social</th>
+          <th style="width: 20%">Alias</th>
+          <th style="width: 20%">Teléfono</th>
+        </tr>
+      </thead>
+      <tbody>
+        {# 🔁 Filas existentes: cada una editable en sitio #}
+        {% for prov in proveedores %}
+          <tr>
+            <td>
+              {{ prov.Idtbl_proveedores }}
+              <input type="hidden" name="id[]" value="{{ prov.Idtbl_proveedores }}">
+            </td>
+            <td>
+              <input type="text"
+                     name="nif[]"
+                     value="{{ prov.NIF }}"
+                     class="form-control form-control-sm">
+            </td>
+            <td>
+              <input type="text"
+                     name="nombre[]"
+                     value="{{ prov.Nombre_Razon_Social }}"
+                     class="form-control form-control-sm">
+            </td>
+            <td>
+              <input type="text"
+                     name="alias[]"
+                     value="{{ prov.ALIAS }}"
+                     class="form-control form-control-sm">
+            </td>
+            <td>
+              <input type="text"
+                     name="telefono[]"
+                     value="{{ prov.Telefono }}"
+                     class="form-control form-control-sm">
+            </td>
+          </tr>
+        {% endfor %}
+
+        {# ➕ Fila vacía para insertar un nuevo proveedor #}
+        <tr class="table-success">
+          <td>
+            Nuevo
+            <input type="hidden" name="id[]" value="">
+          </td>
+          <td>
+            <input type="text"
+                   name="nif[]"
+                   class="form-control form-control-sm"
+                   placeholder="NIF nuevo">
+          </td>
+          <td>
+            <input type="text"
+                   name="nombre[]"
+                   class="form-control form-control-sm"
+                   placeholder="Nombre / Razón social">
+          </td>
+          <td>
+            <input type="text"
+                   name="alias[]"
+                   class="form-control form-control-sm"
+                   placeholder="Alias">
+          </td>
+          <td>
+            <input type="text"
+                   name="telefono[]"
+                   class="form-control form-control-sm"
+                   placeholder="Teléfono">
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="d-flex justify-content-end">
+      <button type="submit" class="btn btn-sm btn-primary">
+        💾 Guardar cambios
+      </button>
+    </div>
+  </form>
+
+</div>
+{% endblock %}

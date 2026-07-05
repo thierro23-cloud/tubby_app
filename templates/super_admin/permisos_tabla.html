@@ -1,0 +1,300 @@
+<!-- =============================================================================
+🔐 PANEL DE PERMISOS DINÁMICOS · SUPER ADMIN
+=============================================================================
+
+🎯 PROPÓSITO:
+Este bloque permite gestionar los permisos de acceso por rol a cada tabla
+del sistema de forma dinámica.
+
+👉 Permite:
+✔ Activar/desactivar acceso por rol
+✔ Controlar seguridad sin tocar código
+✔ Gestionar permisos desde UI
+
+-------------------------------------------------------------------------------
+🧠 ORIGEN DE DATOS (BACKEND · FLASK)
+
+Este template depende del blueprint:
+👉 super_admin_bp
+
+Ruta asociada:
+👉 super_admin_bp.permisos_guardar
+
+Variables que llegan desde Flask:
+
+- tablas → lista de tablas del sistema
+  Ej: ["usuarios", "plazas", "accesos"]
+
+- permisos → diccionario con estado actual
+  Ej:
+  {
+    "usuarios": {"gestores": True, "policias": False},
+    "plazas": {"vigilantes": True}
+  }
+
+-------------------------------------------------------------------------------
+🔁 FLUJO COMPLETO:
+
+1. Flask genera "tablas" y "permisos"
+2. Jinja renderiza checkboxes dinámicos
+3. Usuario marca/desmarca permisos
+4. Formulario POST → super_admin_bp.permisos_guardar
+5. Backend guarda configuración
+
+============================================================================= -->
+
+
+
+<!-- =============================================================================
+📦 SECCIÓN 1 · CONTENEDOR PRINCIPAL
+=============================================================================
+
+👉 Contenedor visual del panel de permisos
+👉 Encapsula todo el formulario
+
+============================================================================= -->
+
+<h3>Permisos</h3>
+
+<div class="permiso-panel">
+
+
+
+  <!-- ==========================================================================
+  🧾 SECCIÓN 2 · FORMULARIO PRINCIPAL
+  ==========================================================================
+
+  👉 Envia datos al backend
+  👉 Método POST para guardar cambios
+
+  -------------------------------------------------------------------------- -->
+
+  <form method="post" action="{{ url_for('super_admin_bp.permisos_guardar') }}">
+
+
+    <!-- -----------------------------------------------------------------------
+    🔐 2.1 TOKEN CSRF (SEGURIDAD)
+    -----------------------------------------------------------------------
+
+    👉 Protege contra ataques CSRF
+    👉 Solo se renderiza si está definido
+
+    ----------------------------------------------------------------------- -->
+    {% csrf_token() if csrf_token is defined %}
+
+
+
+    <!-- -----------------------------------------------------------------------
+    🔁 2.2 LOOP DE TABLAS
+    -----------------------------------------------------------------------
+
+    👉 Recorre cada tabla del sistema
+    👉 Genera un bloque de permisos por tabla
+
+    ----------------------------------------------------------------------- -->
+    {% for tabla in tablas %}
+
+
+      <!-- ---------------------------------------------------------------------
+      🧱 2.2.1 FILA DE PERMISOS POR TABLA
+      -----------------------------------------------------------------------
+
+      👉 Cada tabla tiene:
+      - título
+      - lista de roles (checkboxes)
+
+      --------------------------------------------------------------------- -->
+      <div class="permiso-row">
+
+
+        <!-- ---------------------------------------------------------------
+        🏷️ 2.2.1.1 NOMBRE DE LA TABLA
+        --------------------------------------------------------------- -->
+        <div class="permiso-titulo">
+          <b>{{ tabla }}</b>
+        </div>
+
+
+
+        <!-- ---------------------------------------------------------------
+        🎯 2.2.1.2 OPCIONES DE PERMISOS (ROLES)
+        ---------------------------------------------------------------
+
+        👉 Cada checkbox representa un rol:
+        - gestores
+        - policias
+        - vigilantes
+        - usuarios
+
+        👉 FORMATO DEL NAME:
+        perm[tabla][rol]
+
+        Ejemplo real enviado:
+        perm[usuarios][gestores] = 1
+
+        --------------------------------------------------------------- -->
+        <div class="permiso-opciones">
+
+
+          <!-- 🔹 ROL: GESTORES -->
+          <label class="permiso-pill">
+            <input type="checkbox"
+                   name="perm[{{ tabla }}][gestores]"
+                   value="1"
+                   {% if permisos.get(tabla, {}).get('gestores') %}checked{% endif %}>
+            gestores
+          </label>
+
+
+          <!-- 🔹 ROL: POLICIAS -->
+          <label class="permiso-pill">
+            <input type="checkbox"
+                   name="perm[{{ tabla }}][policias]"
+                   value="1"
+                   {% if permisos.get(tabla, {}).get('policias') %}checked{% endif %}>
+            policias
+          </label>
+
+
+          <!-- 🔹 ROL: VIGILANTES -->
+          <label class="permiso-pill">
+            <input type="checkbox"
+                   name="perm[{{ tabla }}][vigilantes]"
+                   value="1"
+                   {% if permisos.get(tabla, {}).get('vigilantes') %}checked{% endif %}>
+            vigilantes
+          </label>
+
+
+          <!-- 🔹 ROL: USUARIOS -->
+          <label class="permiso-pill">
+            <input type="checkbox"
+                   name="perm[{{ tabla }}][usuarios]"
+                   value="1"
+                   {% if permisos.get(tabla, {}).get('usuarios') %}checked{% endif %}>
+            usuarios
+          </label>
+
+        </div> <!-- /permiso-opciones -->
+
+      </div> <!-- /permiso-row -->
+
+
+    {% endfor %}
+
+
+
+    <!-- -----------------------------------------------------------------------
+    💾 2.3 BOTÓN DE GUARDADO
+    -----------------------------------------------------------------------
+
+    👉 Envía todos los permisos al backend
+    👉 Se procesa en super_admin_bp.permisos_guardar
+
+    ----------------------------------------------------------------------- -->
+    <div class="permiso-footer">
+      <button type="submit" class="btn btn-primary btn-sm">
+        Guardar permisos
+      </button>
+    </div>
+
+  </form>
+
+</div> <!-- /permiso-panel -->
+
+
+
+<!-- =============================================================================
+🎨 SECCIÓN 3 · ESTILOS (UI)
+=============================================================================
+
+👉 Define el diseño visual del panel
+👉 Estilo limpio tipo SaaS admin
+
+============================================================================= -->
+
+<style>
+
+  /* --------------------------------------------------------------------------
+  🧱 3.1 CONTENEDOR PRINCIPAL
+  -------------------------------------------------------------------------- */
+  .permiso-panel {
+    width: 100%;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 10px 12px;
+    background: #f8fafc;
+  }
+
+
+  /* --------------------------------------------------------------------------
+  📦 3.2 FILA POR TABLA
+  -------------------------------------------------------------------------- */
+  .permiso-row {
+    display: flex;
+    flex-direction: column;   /* título arriba, checks debajo */
+    align-items: flex-start;
+    padding: 6px 0;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 13px;
+  }
+
+  .permiso-row:last-child {
+    border-bottom: none;
+  }
+
+
+  /* --------------------------------------------------------------------------
+  🏷️ 3.3 TITULO TABLA
+  -------------------------------------------------------------------------- */
+  .permiso-titulo {
+    width: 100%;
+    margin-bottom: 4px;
+    color: #0f172a;
+  }
+
+
+  /* --------------------------------------------------------------------------
+  🎯 3.4 CONTENEDOR CHECKBOXES
+  -------------------------------------------------------------------------- */
+  .permiso-opciones {
+    width: 100%;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+
+  /* --------------------------------------------------------------------------
+  💊 3.5 ESTILO TIPO "PILL"
+  -------------------------------------------------------------------------- */
+  .permiso-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #e5f0ff;
+    border: 1px solid #bfdbfe;
+    color: #1e293b;
+  }
+
+
+  /* --------------------------------------------------------------------------
+  ☑️ 3.6 CHECKBOX AJUSTE
+  -------------------------------------------------------------------------- */
+  .permiso-opciones input[type="checkbox"] {
+    width: auto;
+    margin: 0;
+  }
+
+
+  /* --------------------------------------------------------------------------
+  💾 3.7 BOTÓN GUARDAR
+  -------------------------------------------------------------------------- */
+  .permiso-footer {
+    margin-top: 10px;
+    text-align: right;
+  }
+
+</style>

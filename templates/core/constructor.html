@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<!-- =============================================================================
+🚀 FORMULARIO DINÁMICO · CREAR PANEL / MÓDULO / BOTÓN
+=============================================================================
+
+🎯 PROPÓSITO:
+Permitir crear elementos del sistema dinámicamente desde la interfaz:
+
+✔ Panel → nivel superior
+✔ Módulo → pertenece a un panel
+✔ Botón → pertenece a un módulo
+
+🧠 FUNCIONAMIENTO:
+- El usuario selecciona el tipo
+- Se muestran campos dinámicos según selección
+- Se envía al backend vía POST
+
+💡 UX:
+- Interfaz simple
+- Campos dinámicos (JS)
+- Diseño limpio tipo SaaS
+
+============================================================================= -->
+
+
+<!-- =============================================================================
+🧱 SECCIÓN 1 · CONTENEDOR PRINCIPAL
+============================================================================= -->
+
+<div class="container mt-4 form-wrapper">
+
+  <!-- -------------------------------------------------------------------------
+  🏷️ 1.1 TÍTULO
+  --------------------------------------------------------------------------- -->
+  <h2 class="mb-4">🚀 Crear panel / módulo / botón</h2>
+
+
+  <!-- =============================================================================
+  📋 SECCIÓN 2 · FORMULARIO
+  ============================================================================= -->
+
+  <form method="POST" class="form-card">
+
+    <!-- -----------------------------------------------------------------------
+    🔹 2.1 SELECT · TIPO DE ELEMENTO
+    -------------------------------------------------------------------------
+    👉 Controla el comportamiento del formulario
+    👉 Activa/desactiva campos dinámicos
+    ----------------------------------------------------------------------- -->
+    <div class="mb-3">
+      <label class="form-label">Tipo</label>
+
+      <select name="tipo" id="tipo" class="form-select">
+        <option value="panel">Panel</option>
+        <option value="modulo">Módulo</option>
+        <option value="btn">Botón</option>
+      </select>
+    </div>
+
+
+    <!-- -----------------------------------------------------------------------
+    🔹 2.2 INPUT · NOMBRE
+    -------------------------------------------------------------------------
+    👉 Nombre del elemento a crear
+    👉 Se usa para registrar panel/modulo/botón
+    ----------------------------------------------------------------------- -->
+    <div class="mb-3">
+      <label class="form-label">Nombre</label>
+
+      <input type="text"
+             name="nombre"
+             class="form-control"
+             placeholder="Ej: control_vias"
+             required>
+    </div>
+
+
+    <!-- -----------------------------------------------------------------------
+    🔹 2.3 INPUT DINÁMICO · MÓDULO (SOLO BOTONES)
+    -------------------------------------------------------------------------
+    👉 Solo visible si tipo == btn
+    👉 Define a qué módulo pertenece el botón
+    ----------------------------------------------------------------------- -->
+    <div class="mb-3" id="modulo_div" style="display:none;">
+
+      <label class="form-label">Módulo</label>
+
+      <input type="text"
+             name="modulo"
+             class="form-control"
+             placeholder="Ej: control_vias">
+
+    </div>
+
+
+    <!-- -----------------------------------------------------------------------
+    🔹 2.4 BOTÓN DE ENVÍO
+    -------------------------------------------------------------------------
+    👉 Envía datos al backend (POST)
+    ----------------------------------------------------------------------- -->
+    <button class="btn btn-primary w-100">
+      Crear elemento
+    </button>
+
+  </form>
+
+</div>
+
+
+
+<!-- =============================================================================
+⚙️ SECCIÓN 3 · LÓGICA JS (DINÁMICA)
+=============================================================================
+
+🧠 FUNCIONAMIENTO:
+- Detecta cambio en "tipo"
+- Si es botón → muestra campo módulo
+- Si no → lo oculta
+
+============================================================================= -->
+
+<script>
+
+  document.getElementById("tipo").addEventListener("change", function() {
+
+    const moduloDiv = document.getElementById("modulo_div");
+
+    moduloDiv.style.display =
+      this.value === "btn" ? "block" : "none";
+
+  });
+
+</script>
+
+
+
+<!-- =============================================================================
+🎨 SECCIÓN 4 · ESTILOS (UI SaaS)
+============================================================================= -->
+
+<style>
+
+/* ---------------------------------------------------------------------------
+📦 CONTENEDOR GENERAL
+--------------------------------------------------------------------------- */
+.form-wrapper {
+  max-width: 500px;
+}
+
+/* ---------------------------------------------------------------------------
+🪪 TARJETA FORMULARIO
+--------------------------------------------------------------------------- */
+.form-card {
+  background: #1e293b;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+
+/* ---------------------------------------------------------------------------
+🧠 LABELS
+--------------------------------------------------------------------------- */
+.form-label {
+  color: #cbd5f5;
+  font-weight: 500;
+}
+
+/* ---------------------------------------------------------------------------
+🧾 INPUTS
+--------------------------------------------------------------------------- */
+.form-control,
+.form-select {
+  background: #0f172a;
+  color: white;
+  border: 1px solid #334155;
+}
+
+.form-control::placeholder {
+  color: #64748b;
+}
+
+/* ---------------------------------------------------------------------------
+🔘 BOTÓN
+--------------------------------------------------------------------------- */
+.btn-primary {
+  background: #3b82f6;
+  border: none;
+}
+
+.btn-primary:hover {
+  background: #2563eb;
+}
+
+</style>
+
+
+{% endblock %}

@@ -1,0 +1,291 @@
+{# 1️⃣ FRANJA SUPERIOR · ENCABEZADO + BUSCADOR + FICHA #}
+<div class="strip strip-top">
+  <div class="header-glow-orbit"></div>
+
+  <div class="header-left">
+    <div class="header-top">
+      <div class="pill-tag">
+        <span>CONTROL VÍA PÚBLICA</span><span>·</span><span>VADOS</span>
+      </div>
+      <div class="hero-title">Panorama total de vados · Ávila</div>
+      <div class="hero-subtitle">
+        Selecciona una plaza por número de placa o NIF para ver su ficha, históricos
+        y datos OT de la base antigua, todo en una sola pantalla.
+      </div>
+
+      {# 1.1️⃣ Buscador por nº de vado y NIF OT #}
+      <form method="get" class="search-form">
+        <input type="text" name="numero_vado" placeholder="Buscar por nº de vado"
+               value="{{ numero_vado_q or '' }}">
+        <input type="text" name="nif" placeholder="Buscar por NIF (OT)"
+               value="{{ nif_q or '' }}">
+        <button type="submit">Buscar</button>
+      </form>
+    </div>
+
+    {# 1.2️⃣ Ficha del vado seleccionado #}
+    <div class="header-bottom">
+      {% if vado_seleccionado %}
+        <div class="ficha-vado" style="grid-template-columns: repeat(4, minmax(0, 1fr));">
+          {# 1.2.1️⃣ Datos básicos #}
+          <div>
+            <div class="ficha-label">ID vado</div>
+            <div class="ficha-value">{{ vado_seleccionado.idtbl_vados }}</div>
+          </div>
+          <div>
+            <div class="ficha-label">Nº vado</div>
+            <div class="ficha-value">
+              <span class="badge-numero">🚗 {{ vado_seleccionado.numero_vado }}</span>
+            </div>
+          </div>
+          <div>
+            <div class="ficha-label">Proveedor (id)</div>
+            <div class="ficha-value">{{ vado_seleccionado.idtbl_proveedores or '—' }}</div>
+          </div>
+          <div>
+            <div class="ficha-label">Puerta</div>
+            <div class="ficha-value">{{ vado_seleccionado.Puerta or '—' }}</div>
+          </div>
+
+          {# 1.2.2️⃣ Localización #}
+          <div>
+            <div class="ficha-label">Tipo vía (id)</div>
+            <div class="ficha-value">{{ vado_seleccionado.idtbl_tipos_de_vias or '—' }}</div>
+          </div>
+          <div>
+            <div class="ficha-label">Calle (id)</div>
+            <div class="ficha-value">{{ vado_seleccionado.idtbl_calles or '—' }}</div>
+          </div>
+          <div>
+            <div class="ficha-label">Municipio (id)</div>
+            <div class="ficha-value">{{ vado_seleccionado.idtbl_municipios or '—' }}</div>
+          </div>
+          <div>
+            <div class="ficha-label">Gestor (id)</div>
+            <div class="ficha-value">{{ vado_seleccionado.idtbl_gestores or '—' }}</div>
+          </div>
+
+          {# 1.2.3️⃣ Encadenamientos y fechas #}
+          <div>
+            <div class="ficha-label">Vado anterior (id)</div>
+            <div class="ficha-value">{{ vado_seleccionado.idtbl_vado_anterior or '—' }}</div>
+          </div>
+          <div>
+            <div class="ficha-label">Prop. anterior (id)</div>
+            <div class="ficha-value">{{ vado_seleccionado.idtbl_propietario_anterior or '—' }}</div>
+          </div>
+          <div>
+            <div class="ficha-label">F. alta</div>
+            <div class="ficha-value">{{ vado_seleccionado.fecha_alta or '—' }}</div>
+          </div>
+          <div>
+            <div class="ficha-label">F. baja</div>
+            <div class="ficha-value">{{ vado_seleccionado.fecha_baja or '—' }}</div>
+          </div>
+
+          {# 1.2.4️⃣ Estado y medidas #}
+          <div>
+            <div class="ficha-label">F. cambio</div>
+            <div class="ficha-value">{{ vado_seleccionado.fecha_cambio or '—' }}</div>
+          </div>
+          <div>
+            <div class="ficha-label">Tipo operación</div>
+            <div class="ficha-value">{{ vado_seleccionado.tipo_operacion or '—' }}</div>
+          </div>
+          <div>
+            <div class="ficha-label">Estado</div>
+            <div class="ficha-value">{{ vado_seleccionado.baja == 0 and 'ACTIVO' or 'BAJA' }}</div>
+          </div>
+          <div>
+            <div class="ficha-label">Superficie</div>
+            <div class="ficha-value">{{ vado_seleccionado.superficie or '—' }}</div>
+          </div>
+
+          <div>
+            <div class="ficha-label">Anchura</div>
+            <div class="ficha-value">{{ vado_seleccionado.anchura or '—' }}</div>
+          </div>
+
+          {# 1.2.5️⃣ Datos OT de referencia #}
+          <div>
+            <div class="ficha-label">NIF SP OT</div>
+            <div class="ficha-value">{{ vado_seleccionado.NIF_SP_OT or '—' }}</div>
+          </div>
+          <div>
+            <div class="ficha-label">Nombre SP OT</div>
+            <div class="ficha-value">{{ vado_seleccionado.Nombre_SP_OT or '—' }}</div>
+          </div>
+          <div>
+            <div class="ficha-label">Desc. OT</div>
+            <div class="ficha-value">{{ vado_seleccionado.Desc_OT or '—' }}</div>
+          </div>
+
+          {# 1.3️⃣ Botón para editar el vado seleccionado #}
+          <div style="grid-column: 1 / -1; text-align: right; margin-top: 4px;">
+            <a href="{{ url_for('btn_vados_gestion_bp.vados_editar',
+                                idtbl_vados=vado_seleccionado.idtbl_vados) }}"
+               class="btn btn-xs btn-outline-warning rounded-pill">
+              ✏️ Editar este vado
+            </a>
+          </div>
+        </div>
+      {% else %}
+        <div class="ficha-vado">
+          <div class="ficha-value">
+            No hay vado seleccionado. Usa el buscador por número o NIF.
+          </div>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  {# 1.4️⃣ Panel derecho: estado general y contadores #}
+  <div class="header-right">
+    <div class="status-pill">SISTEMA EN LÍNEA</div>
+    <div class="header-metadata">
+      <div class="meta-chip">
+        Vados filtrados: <strong>&nbsp;{{ vados|length }}</strong>
+      </div>
+      <div class="meta-chip">
+        Hist. números: <strong>&nbsp;{{ historico_numeros|length }}</strong>
+      </div>
+      <div class="meta-chip">
+        Hist. titulares: <strong>&nbsp;{{ historico_titulares|length }}</strong>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# 2️⃣ FRANJA CENTRAL · HISTÓRICOS DEL VADO SELECCIONADO #}
+<div class="strip strip-middle">
+  {# 2.1️⃣ Históricos de número #}
+  <div class="middle-left">
+    <div class="panel-header">
+      <div class="panel-title">Históricos de número</div>
+      <div class="panel-count">{{ historico_numeros|length }} registro(s)</div>
+    </div>
+
+    <div class="historicos-wrapper">
+      <div class="historico-block">
+        <div class="historico-header">
+          <div class="historico-title">Últimos cambios</div>
+          <div class="panel-count">Top 6</div>
+        </div>
+        <div class="historico-body">
+          {% for h in historico_numeros[:6] %}
+            <div class="historico-item">
+              <div>
+                <div class="historico-label">De</div>
+                <div class="historico-value">{{ h.numero_anterior }}</div>
+                <div class="historico-label">A</div>
+                <div class="historico-value">{{ h.numero_nuevo }}</div>
+              </div>
+              <div>
+                <div class="historico-label">Fecha</div>
+                <div class="historico-value">{{ h.fecha_cambio }}</div>
+                <div class="historico-label">Gestor</div>
+                <div class="historico-value">{{ h.idtbl_gestores or '—' }}</div>
+                <div class="historico-label">Obs.</div>
+                <div class="historico-value">{{ h.observaciones or '—' }}</div>
+              </div>
+            </div>
+          {% else %}
+            <div class="historico-item">
+              <div class="historico-value">Sin históricos de número para este vado.</div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# 2.2️⃣ Históricos de titular #}
+  <div class="middle-right">
+    <div class="panel-header">
+      <div class="panel-title">Históricos de titular</div>
+      <div class="panel-count">{{ historico_titulares|length }} registro(s)</div>
+    </div>
+
+    <div class="historicos-wrapper">
+      <div class="historico-block">
+        <div class="historico-header">
+          <div class="historico-title">Últimos cambios</div>
+          <div class="panel-count">Top 6</div>
+        </div>
+        <div class="historico-body">
+          {% for h in historico_titulares[:6] %}
+            <div class="historico-item">
+              <div>
+                <div class="historico-label">De</div>
+                <div class="historico-value">{{ h.idtbl_proveedor_anterior }}</div>
+                <div class="historico-label">A</div>
+                <div class="historico-value">{{ h.idtbl_proveedor_nuevo }}</div>
+              </div>
+              <div>
+                <div class="historico-label">Fecha</div>
+                <div class="historico-value">{{ h.fecha_cambio }}</div>
+                <div class="historico-label">Gestor</div>
+                <div class="historico-value">{{ h.idtbl_gestores or '—' }}</div>
+                <div class="historico-label">Obs.</div>
+                <div class="historico-value">{{ h.observaciones or '—' }}</div>
+              </div>
+            </div>
+          {% else %}
+            <div class="historico-item">
+              <div class="historico-value">Sin históricos de titular para este vado.</div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# 3️⃣ FRANJA INFERIOR · TABLA VADOS #}
+<div class="strip strip-bottom">
+  <div class="bottom-header">
+    <div class="bottom-title">Vados (lista filtrada)</div>
+    <div class="panel-count">{{ vados|length }} registro(s)</div>
+  </div>
+
+  <table class="bottom-table">
+    <thead>
+      <tr>
+        {# 3.1️⃣ Campos normalizados #}
+        <th><span class="tag-normalizado">ID</span></th>
+        <th><span class="tag-normalizado">Nº vado</span></th>
+        <th><span class="tag-normalizado">Tipo vía</span></th>
+        <th><span class="tag-normalizado">Calle</span></th>
+        <th><span class="tag-normalizado">Municipio</span></th>
+        <th><span class="tag-normalizado">Proveedor</span></th>
+        <th><span class="tag-normalizado">F. alta</span></th>
+        <th><span class="tag-normalizado">Estado</span></th>
+        {# 3.2️⃣ Campos OT #}
+        <th><span class="tag-ot">NIF SP OT</span></th>
+        <th><span class="tag-ot">Nombre SP OT</span></th>
+        <th><span class="tag-ot">Desc. OT</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for v in vados[:10] %}
+        <tr>
+          <td>{{ v.idtbl_vados }}</td>
+          <td>{{ v.numero_vado }}</td>
+          <td>{{ v.idtbl_tipos_de_vias }}</td>
+          <td>{{ v.idtbl_calles }}</td>
+          <td>{{ v.idtbl_municipios }}</td>
+          <td>{{ v.idtbl_proveedores }}</td>
+          <td>{{ v.fecha_alta }}</td>
+          <td>{{ v.baja == 0 and 'ACTIVO' or 'BAJA' }}</td>
+          <td>{{ v.NIF_SP_OT }}</td>
+          <td>{{ v.Nombre_SP_OT }}</td>
+          <td>{{ v.Desc_OT }}</td>
+        </tr>
+      {% else %}
+        <tr>
+          <td colspan="11">No hay vados para mostrar.</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>

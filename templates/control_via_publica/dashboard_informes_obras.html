@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>📊 Estadísticas Control de Obras</h1>
+
+<div style="margin-bottom:20px">
+
+<select id="anio">
+<option value="2024">2024</option>
+<option value="2025">2025</option>
+<option value="2026">2026</option>
+</select>
+
+<select id="mes">
+<option value="1">Enero</option>
+<option value="2">Febrero</option>
+<option value="3">Marzo</option>
+<option value="4">Abril</option>
+<option value="5">Mayo</option>
+<option value="6">Junio</option>
+<option value="7">Julio</option>
+<option value="8">Agosto</option>
+<option value="9">Septiembre</option>
+<option value="10">Octubre</option>
+<option value="11">Noviembre</option>
+<option value="12">Diciembre</option>
+</select>
+
+<button onclick="cargar()">Actualizar</button>
+
+</div>
+
+
+<canvas id="graficoProveedores"></canvas>
+
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+
+async function cargar(){
+
+let anio=document.getElementById("anio").value
+let mes=document.getElementById("mes").value
+
+let r=await fetch(`/api/estadisticas_obras/proveedores?anio=${anio}&mes=${mes}`)
+
+let data=await r.json()
+
+let labels=data.map(x=>x.proveedor)
+let valores=data.map(x=>x.inspecciones)
+
+new Chart(document.getElementById("graficoProveedores"),{
+
+type:"bar",
+
+data:{
+labels:labels,
+datasets:[{
+label:"Inspecciones",
+data:valores
+}]
+}
+
+})
+
+}
+
+cargar()
+
+</script>
+
+{% endblock %}

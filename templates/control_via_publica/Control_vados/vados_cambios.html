@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Cambios en vados</title>
+    <style>
+        /* Colores suaves y tipografía básica */
+        :root {
+            --bg-main: #f5f7fb;
+            --bg-panel: #ffffff;
+            --bg-panel-alt: #f0f4ff;
+            --border-soft: #d4d9e6;
+            --accent: #4c7bd9;
+            --accent-soft: #e0ebff;
+            --text-main: #1f2933;
+            --text-muted: #6b7280;
+            --danger: #e11d48;
+            --success: #059669;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: var(--bg-main);
+            color: var(--text-main);
+        }
+
+        .page {
+            max-width: 960px;
+            margin: 32px auto;
+            padding: 0 16px;
+        }
+
+        .card {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-soft);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 8px 16px rgba(15, 23, 42, 0.03);
+        }
+
+        h1 {
+            margin: 0 0 8px;
+            font-size: 1.6rem;
+        }
+
+        p.subtitle {
+            margin: 0 0 24px;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        .grid {
+            display: grid;
+            gap: 16px;
+        }
+
+        @media (min-width: 768px) {
+            .grid-2 {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        .panel {
+            border-radius: 10px;
+            padding: 16px 18px;
+            background: var(--bg-panel-alt);
+            border: 1px solid var(--border-soft);
+        }
+
+        .panel-title {
+            margin: 0 0 8px;
+            font-size: 1.05rem;
+        }
+
+        .panel-subtitle {
+            margin: 0 0 12px;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        .field {
+            margin-bottom: 12px;
+        }
+
+        .field label {
+            display: block;
+            margin-bottom: 4px;
+            font-size: 0.9rem;
+        }
+
+        .field input,
+        .field textarea,
+        .field select {
+            width: 100%;
+            padding: 8px 10px;
+            border-radius: 6px;
+            border: 1px solid var(--border-soft);
+            font-size: 0.9rem;
+            font-family: inherit;
+            color: var(--text-main);
+            background: #ffffff;
+        }
+
+        .field textarea {
+            min-height: 70px;
+            resize: vertical;
+        }
+
+        .field input:focus,
+        .field textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 1px var(--accent-soft);
+        }
+
+        .actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .btn {
+            appearance: none;
+            border-radius: 999px;
+            border: 1px solid transparent;
+            padding: 8px 16px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            font-family: inherit;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: #ffffff;
+        }
+
+        .btn-primary:hover {
+            background: #395fb0;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border-color: var(--border-soft);
+            color: var(--text-main);
+        }
+
+        .btn-outline:hover {
+            background: #e5e7f3;
+        }
+
+        .tag {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            background: var(--accent-soft);
+            color: var(--accent);
+        }
+
+        .divider {
+            height: 1px;
+            background: var(--border-soft);
+            margin: 18px 0;
+        }
+
+        .output {
+            margin-top: 20px;
+            padding: 14px 16px;
+            border-radius: 10px;
+            background: #f9fafb;
+            border: 1px solid var(--border-soft);
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            font-size: 0.85rem;
+            max-height: 260px;
+            overflow: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .output.ok {
+            border-color: rgba(5, 150, 105, 0.5);
+        }
+
+        .output.error {
+            border-color: rgba(225, 29, 72, 0.5);
+        }
+
+        .output-title {
+            margin: 0 0 6px;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .badge-ok {
+            color: var(--success);
+        }
+
+        .badge-error {
+            color: var(--danger);
+        }
+
+        .sugerencias {
+            border-radius: 8px;
+            border: 1px solid var(--border-soft);
+            background: #ffffff;
+            max-height: 160px;
+            overflow-y: auto;
+            font-size: 0.85rem;
+        }
+
+        .sugerencia-item {
+            padding: 6px 8px;
+            cursor: pointer;
+            border-bottom: 1px solid #eef1f7;
+        }
+
+        .sugerencia-item:last-child {
+            border-bottom: none;
+        }
+
+        .sugerencia-item:hover {
+            background: var(--accent-soft);
+        }
+
+        .sugerencia-nif {
+            font-weight: 600;
+        }
+
+        .sugerencia-nombre {
+            display: block;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+<div class="page">
+    <div class="card">
+        <h1>Cambios en vados</h1>
+        <p class="subtitle">
+            Introduce el número del vado y utiliza uno de los formularios para
+            cambiar el número o el titular. Los cambios quedarán registrados en las tablas
+            históricas correspondientes.
+        </p>
+
+        <!-- Campo común: número de vado -->
+        <div class="field">
+            <label for="numero_vado">Número de vado (numero_vado)</label>
+            <input type="text" id="numero_vado" placeholder="Ej: 5255">
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="grid grid-2">
+            <!-- Panel: cambio de número -->
+            <div class="panel">
+                <div class="tag">Cambio de número</div>
+                <h2 class="panel-title">Número de vado</h2>
+                <p class="panel-subtitle">
+                    Actualiza el número de vado y guarda el anterior en
+                    <strong>tbl_vados_historico_numeros</strong>.
+                </p>
+
+                <div class="field">
+                    <label for="numero_vado_nuevo">Número nuevo</label>
+                    <input type="text" id="numero_vado_nuevo" placeholder="Ej: 6000">
+                </div>
+
+                <div class="field">
+                    <label for="motivo_cambio_numero">Motivo del cambio</label>
+                    <input type="text" id="motivo_cambio_numero" placeholder="Ej: Reordenación de numeración">
+                </div>
+
+                <div class="field">
+                    <label for="observaciones_numero">Observaciones (opcional)</label>
+                    <textarea id="observaciones_numero" placeholder="Comentarios adicionales..."></textarea>
+                </div>
+
+                <div class="actions">
+                    <button type="button" class="btn btn-primary" onclick="enviarCambioNumero()">
+                        Guardar cambio de número
+                    </button>
+                </div>
+            </div>
+
+            <!-- Panel: cambio de titular -->
+            <div class="panel">
+                <div class="tag">Cambio de titular</div>
+                <h2 class="panel-title">Titular / proveedor</h2>
+                <p class="panel-subtitle">
+                    Busca el proveedor por NIF, selecciónalo y se rellenará automáticamente
+                    el identificador que se usará en el cambio de titular.
+                </p>
+
+                <!-- Búsqueda por NIF con sugerencias -->
+                <div class="field">
+                    <label for="nif_busqueda">NIF proveedor (búsqueda)</label>
+                    <input type="text" id="nif_busqueda" placeholder="Ej: 6581160D">
+                </div>
+
+                <div class="field">
+                    <label for="idtbl_proveedor_nuevo">ID proveedor nuevo (idtbl_proveedores)</label>
+                    <input type="number" id="idtbl_proveedor_nuevo" placeholder="Selecciona un NIF..." readonly>
+                </div>
+
+                <div class="field">
+                    <label>Coincidencias</label>
+                    <div id="sugerencias_proveedores" class="sugerencias"></div>
+                </div>
+
+                <div class="field">
+                    <label for="observaciones_titular">Observaciones (opcional)</label>
+                    <textarea id="observaciones_titular" placeholder="Motivo, referencia expediente, etc."></textarea>
+                </div>
+
+                <div class="actions">
+                    <button type="button" class="btn btn-primary" onclick="enviarCambioTitular()">
+                        Guardar cambio de titular
+                    </button>
+
+                    <!-- Botón para ir a la gestión de proveedores -->
+                    <!-- Ajusta href a la ruta correcta; si usas url_for, cámbialo a Jinja -->
+                    <a href="/comunes/proveedores/gestionar" class="btn btn-outline" target="_blank">
+                        Gestionar proveedor
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Salida de resultados -->
+        <div id="output" class="output" style="display:none;">
+            <div class="output-title">
+                Resultado de la operación
+                <span id="output-status"></span>
+            </div>
+            <pre id="output-body"></pre>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Mostrar respuesta JSON en el recuadro inferior
+    function mostrarResultado(ok, data) {
+        const box = document.getElementById('output');
+        const statusSpan = document.getElementById('output-status');
+        const body = document.getElementById('output-body');
+
+        box.style.display = 'block';
+        box.classList.remove('ok', 'error');
+
+        if (ok) {
+            box.classList.add('ok');
+            statusSpan.className = 'badge-ok';
+            statusSpan.textContent = ' · OK';
+        } else {
+            box.classList.add('error');
+            statusSpan.className = 'badge-error';
+            statusSpan.textContent = ' · ERROR';
+        }
+
+        body.textContent = JSON.stringify(data, null, 2);
+    }
+
+    // Cambio de número: usa numero_vado_actual y numero_vado_nuevo
+    async function enviarCambioNumero() {
+        const numero_vado_actual = document.getElementById('numero_vado').value;
+        const numero_vado_nuevo = document.getElementById('numero_vado_nuevo').value;
+        const motivo_cambio = document.getElementById('motivo_cambio_numero').value;
+        const observaciones = document.getElementById('observaciones_numero').value;
+
+        if (!numero_vado_actual || !numero_vado_nuevo || !motivo_cambio) {
+            mostrarResultado(false, {error: "Debes rellenar número de vado actual, número nuevo y motivo."});
+            return;
+        }
+
+        try {
+            const resp = await fetch("/vados_cambios/numero", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-Requested-With": "XMLHttpRequest"
+                },
+                body: JSON.stringify({
+                    numero_vado_actual: numero_vado_actual,
+                    numero_vado_nuevo: numero_vado_nuevo,
+                    motivo_cambio: motivo_cambio,
+                    observaciones: observaciones
+                })
+            });
+
+            const data = await resp.json();
+            mostrarResultado(resp.ok && data.ok, data);
+        } catch (e) {
+            mostrarResultado(false, {error: String(e)});
+        }
+    }
+
+    // Cambio de titular: usa numero_vado y idtbl_proveedor_nuevo
+    async function enviarCambioTitular() {
+        const numero_vado = document.getElementById('numero_vado').value;
+        const idtbl_proveedor_nuevo = document.getElementById('idtbl_proveedor_nuevo').value;
+        const observaciones = document.getElementById('observaciones_titular').value;
+
+        if (!numero_vado || !idtbl_proveedor_nuevo) {
+            mostrarResultado(false, {error: "Debes rellenar número de vado y seleccionar un proveedor."});
+            return;
+        }
+
+        try {
+            const resp = await fetch("/vados_cambios/titular", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-Requested-With": "XMLHttpRequest"
+                },
+                body: JSON.stringify({
+                    numero_vado: numero_vado,
+                    idtbl_proveedor_nuevo: idtbl_proveedor_nuevo,
+                    observaciones: observaciones
+                })
+            });
+
+            const data = await resp.json();
+            mostrarResultado(resp.ok && data.ok, data);
+        } catch (e) {
+            mostrarResultado(false, {error: String(e)});
+        }
+    }
+
+    // Autocomplete de NIF → /vados_cambios/api/buscar_proveedores_por_nif
+    document.addEventListener('DOMContentLoaded', () => {
+        const nifInput = document.getElementById('nif_busqueda');
+        let timeoutId = null;
+
+        nifInput.addEventListener('input', () => {
+            const q = nifInput.value.trim();
+
+            if (!q) {
+                renderSugerencias([]);
+                return;
+            }
+
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => {
+                buscarProveedoresPorNif(q);
+            }, 250);
+        });
+    });
+
+    async function buscarProveedoresPorNif(q) {
+        try {
+            const resp = await fetch(`/vados_cambios/api/buscar_proveedores_por_nif?q=${encodeURIComponent(q)}`, {
+                headers: {
+                    "X-Requested-With": "XMLHttpRequest"
+                }
+            });
+            if (!resp.ok) {
+                renderSugerencias([]);
+                return;
+            }
+            const data = await resp.json();
+            renderSugerencias(data);
+        } catch (e) {
+            renderSugerencias([]);
+        }
+    }
+
+    function renderSugerencias(lista) {
+        const cont = document.getElementById('sugerencias_proveedores');
+        const inputId = document.getElementById('idtbl_proveedor_nuevo');
+        cont.innerHTML = "";
+
+        if (!lista || lista.length === 0) {
+            inputId.value = "";
+            const vacio = document.createElement('div');
+            vacio.className = 'sugerencia-item';
+            vacio.textContent = "Sin coincidencias";
+            cont.appendChild(vacio);
+            return;
+        }
+
+        lista.forEach(p => {
+            const item = document.createElement('div');
+            item.className = 'sugerencia-item';
+            item.innerHTML = `
+                <span class="sugerencia-nif">${p.NIF}</span>
+                <span class="sugerencia-nombre">${p.Nombre_Razon_Social}</span>
+            `;
+            item.addEventListener('click', () => {
+                document.getElementById('nif_busqueda').value = p.NIF;
+                inputId.value = p.idtbl_proveedores;
+                cont.innerHTML = "";
+            });
+            cont.appendChild(item);
+        });
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,51 @@
+/* ============================================================
+   2️⃣ LAYOUT.CSS
+   ============================================================
+
+   Define la estructura del layout principal:
+
+   - header
+   - main
+   - footer
+
+   ============================================================ */
+
+header {
+    background-color: #1f2937;
+    color: white;
+
+    padding: 15px 20px;
+
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+header h1 {
+    margin: 0;
+    font-size: 1.8rem;
+}
+
+header nav a {
+    color: white;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+header nav a:hover {
+    text-decoration: underline;
+}
+
+main {
+    padding: 20px;
+}
+
+footer {
+    text-align: center;
+    padding: 15px 0;
+
+    background-color: #1f2937;
+    color: white;
+
+    margin-top: 30px;
+}

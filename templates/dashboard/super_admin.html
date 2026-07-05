@@ -1,0 +1,16 @@
+{% extends "dashboard/base_dashboard.html" %}
+
+{% block title %}Panel Super Admin{% endblock %}
+
+{% block role_content %}
+<h2>Bienvenido Super Admin</h2>
+<div class="tarjetas">
+    <div class="tarjeta">Gestores</div>
+    <div class="tarjeta">Vigilantes</div>
+    <div class="tarjeta">Policías</div>
+</div>
+<div class="botones">
+    <button>Administrar Usuarios</button>
+    <button>Ver Auditorías</button>
+</div>
+{% endblock %}

@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>Plazas usuario Río Torío</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            margin: 0;
+            padding: 1.5rem;
+            background-color: #f5f5f5;
+        }
+
+        .contenedor {
+            background: #ffffff;
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.9rem;
+        }
+
+        th {
+            background-color: #f0f0f0;
+            text-align: left;
+        }
+
+        tbody tr:nth-child(odd) {
+            background-color: #f9fafb;
+        }
+
+        tbody tr:nth-child(even) {
+            background-color: #eef2ff;
+        }
+
+        tbody tr:hover {
+            background-color: #e0f2fe;
+        }
+
+        .btn-volver {
+            display: inline-block;
+            font-size: 0.8rem;
+            padding: 0.3rem 0.7rem;
+            border-radius: 999px;
+            border: 1px solid #9ca3af;
+            background-color: #e5e7eb;
+            color: #111827;
+            text-decoration: none;
+            margin-top: 1rem;
+        }
+
+        .btn-volver:hover {
+            background-color: #d1d5db;
+        }
+    </style>
+</head>
+<body>
+<div class="contenedor">
+    <h1>Plazas del usuario {{ id_usuario }}</h1>
+
+    {% if plazas %}
+        <table>
+            <thead>
+                <tr>
+                    <th>ID plaza</th>
+                    <th>Fila</th>
+                    <th>Número de plaza</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for plaza in plazas %}
+                <tr>
+                    <td>{{ plaza.idtbl_plazas }}</td>
+                    <td>{{ plaza.fila }}</td>
+                    <td>{{ plaza.numero_plaza }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>Este usuario no tiene plazas asignadas.</p>
+    {% endif %}
+
+    <a href="{{ request.referrer or url_for('btn_rio_torio_listar_usuarios_bp.btn_rio_torio_listar_usuarios') }}"
+       class="btn-volver">
+        ⬅️ Volver al listado de usuarios
+    </a>
+</div>
+</body>
+</html>

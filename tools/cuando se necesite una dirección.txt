@@ -1,0 +1,14 @@
+#cuando se necesite una dirección con desplegable#
+
+{% from "macros/direccion.html" import direccion_fields %}
+
+<form method="post">
+    {{ form.hidden_tag() }}
+
+    <!-- Otros campos del formulario -->
+
+    <h5 class="mt-3 mb-2">Dirección</h5>
+    {{ direccion_fields(form.direccion, provincias, municipios, tipos_via) }}
+
+    <button type="submit" class="btn btn-primary mt-3">Guardar</button>
+</form>

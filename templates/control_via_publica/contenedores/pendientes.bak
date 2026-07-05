@@ -1,0 +1,526 @@
+{# =============================================================================
+  🌐 PLANTILLA: control_via_publica/contenedores/validacion.html
+  VALIDACIÓN DE CONTENEDORES PENDIENTES (PDF + FORM EN UNA SOLA PANTALLA)
+=============================================================================
+🧠 CONTEXTO QUE RECIBE DESDE EL BACKEND (listar_pendientes):
+
+  pendiente   → fila de tbl_contenedores_pendientes (SELECT * ...)
+  datos       → dict con json.loads(datos_extraidos_json) o {}
+  proveedores → lista de proveedores (SQL_PROVEEDORES)
+  tipos_vias  → lista de tipos de vía (SQL_TIPOS_VIA)
+  calles      → lista de calles (SQL_CALLES)
+  dimensiones → lista de dimensiones (SQL_DIMENSIONES)
+  indice      → índice i del carrusel
+  id_pendiente→ idtbl_contenedores_pendientes actual
+
+🎯 OBJETIVO DE ESTA PLANTILLA
+
+  - Mostrar PDF a la izquierda (pendiente.ruta_pdf).
+  - Mostrar formulario compacto a la derecha, sin scroll global.
+  - Rellenar automáticamente tantos campos como sea posible usando:
+      ▸ datos.<campo>  (JSON del PDF)
+      ▸ pendiente.<campo> (si quieres reaprovechar algo de la tabla)
+  - Que el formulario tenga estos names (para tbl_control_contenedores):
+
+      idtbl_proveedores
+      nombre_solicitante
+      nif
+      telefono
+      fecha_colocacion
+      fecha_retirada
+      fecha_colocacion
+      fecha_firma_inicial
+      idtbl_dimensiones
+      observaciones
+      idtbl_tipos_de_vias
+      idtbl_calles
+      csv
+      csv_retirada
+      numero_solicitud
+      numero_colocacion
+      numero_expediente
+      n_solicitud_retirada
+
+  - El endpoint de POST será:
+      btn_contenedores_listar_pendientes_bp.guardar_validacion (id=id_pendiente)
+
+============================================================================= #}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Validación contenedor pendiente</title>
+
+{# =============================================================================
+   🎨 1. ESTILOS · LAYOUT 2 COLUMNAS SIN SCROLL GLOBAL
+============================================================================= #}
+<style>
+  /* Vista global: 100% alto, sin scroll en body */
+  html, body {
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+  }
+
+  /* Contenedor raíz: dos columnas (PDF + FORM) */
+  .layout {
+      display: flex;
+      height: 100vh;
+  }
+
+  /* Columna izquierda: PDF a pantalla completa */
+  .pdf {
+      width: 50%;
+      background: #1e1e1e;
+  }
+  .pdf iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+  }
+
+  /* Columna derecha: formulario compacto */
+  .form {
+      width: 50%;
+      background: #eef3f8;
+      display: flex;
+      flex-direction: column;
+      font-size: 11px;
+  }
+
+  /* Bloques de sección dentro del formulario (borde azul lateral) */
+  .bloque {
+      background: #ffffff;
+      margin: 4px;
+      padding: 4px;
+      border-left: 3px solid #3498db;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+  }
+
+  /* Contenedor de cada campo (label + input/select/textarea) */
+  .campo {
+      display: flex;
+      flex-direction: column;
+  }
+
+  .campo label {
+      font-size: 9px;
+      font-weight: bold;
+      margin-bottom: 1px;
+  }
+
+  /* Anchuras compactas para encajar todo sin scroll */
+  .xs { width: 80px; }
+  .sm { width: 100px; }
+  .md { width: 140px; }
+  .lg { width: 190px; }
+  .xl { width: 230px; }
+
+  input, select, textarea {
+      font-size: 11px;
+      padding: 2px 3px;
+  }
+  textarea {
+      resize: vertical;
+      min-height: 40px;
+  }
+
+  /* Footer inferior con navegación y botón Guardar */
+  .footer {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px;
+      margin-top: auto; /* empuja el footer al fondo de la columna */
+  }
+
+  button {
+      background: #3498db;
+      color: white;
+      border: none;
+      padding: 4px 8px;
+      font-size: 11px;
+      cursor: pointer;
+  }
+  button[disabled] {
+      opacity: 0.5;
+      cursor: default;
+  }
+
+  a {
+      text-decoration: none;
+  }
+
+  .nav-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 26px;
+      height: 22px;
+      background: #3498db;
+      color: #ffffff;
+      border-radius: 3px;
+      font-size: 12px;
+      border: none;
+      cursor: pointer;
+  }
+
+  .nav-btn.disabled {
+      pointer-events: none;
+      opacity: 0.5;
+      cursor: default;
+  }
+</style>
+</head>
+
+<body>
+
+<div class="layout">
+
+  {# ===========================================================================
+     🧾 2. COLUMNA IZQUIERDA · PDF DEL PENDIENTE
+     - Se muestra el PDF directamente en un iframe.
+     - ruta_pdf viene del JSON o de la tabla; aquí usamos pendiente.ruta_pdf.
+  ========================================================================== #}
+  
+<div class="pdf">
+    <iframe src="{{
+        url_for(
+          'btn_contenedores_listar_pendientes_bp.serve_pdf',
+          filename=pendiente.nombre_pdf
+        )
+    }}"></iframe>
+</div>
+
+  {# ===========================================================================
+     🧾 3. COLUMNA DERECHA · FORMULARIO DE VALIDACIÓN
+     - Método: POST
+     - Acción: guardar_validacion(id_pendiente) del mismo blueprint
+  ========================================================================== #}
+  <form
+      method="POST"
+      class="form"
+      action="{{ url_for('btn_contenedores_listar_pendientes_bp.guardar_validacion',
+                         id=id_pendiente) }}"
+  >
+
+      {# -----------------------------------------------------------------------
+         3.1 BLOQUE DOCUMENTO / IDENTIFICACIÓN ADMINISTRATIVA
+         - Muestra nombre del PDF (solo lectura).
+         - Permite editar números relacionados con expediente/solicitudes.
+      ----------------------------------------------------------------------- #}
+      <div class="bloque">
+
+          <div class="campo lg">
+              <label>Nombre archivo PDF</label>
+              <input
+                  type="text"
+                  value="{{ pendiente.nombre_pdf }}"
+                  readonly
+              >
+          </div>
+
+          <div class="campo md">
+              <label>Nº expediente</label>
+              <input
+                  type="text"
+                  name="numero_expediente"
+                  value="{{ datos.numero_expediente or pendiente.numero_expediente or '' }}"
+              >
+          </div>
+
+          <div class="campo sm">
+              <label>Nº solicitud</label>
+              <input
+                  type="text"
+                  name="numero_solicitud"
+                  value="{{ datos.numero_solicitud or pendiente.numero_solicitud or '' }}"
+              >
+          </div>
+
+          <div class="campo sm">
+              <label>Nº colocación</label>
+              <input
+                  type="text"
+                  name="numero_colocacion"
+                  value="{{ datos.numero_colocacion or pendiente.numero_colocacion or '' }}"
+              >
+          </div>
+
+          <div class="campo sm">
+              <label>Nº sol. retirada</label>
+              <input
+                  type="text"
+                  name="n_solicitud_retirada"
+                  value="{{ datos.n_solicitud_retirada or pendiente.n_solicitud_retirada or '' }}"
+              >
+          </div>
+
+      </div>
+
+      {# 3.2 BLOQUE PROVEEDOR / SOLICITANTE #}
+<div class="bloque">
+
+  <div class="campo lg">
+    <label>Proveedor</label>
+    {% set proveedor_id = datos.get('idtbl_proveedores', pendiente.idtbl_proveedores) %}
+    <select name="idtbl_proveedores" id="proveedor">
+      {% for p in proveedores %}
+      <option
+        value="{{ p.idtbl_proveedores }}"
+        data-nif="{{ p.nif }}"
+        data-telefono="{{ p.telefono or '' }}"
+        {% if proveedor_id == p.idtbl_proveedores %}selected{% endif %}
+      >
+        {{ p.nombre_razon_social }}
+      </option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="campo lg">
+    <label>Nombre solicitante</label>
+    <input
+      type="text"
+      name="nombre_solicitante"
+      value="{{ datos.get('nombre_solicitante', pendiente.nombre_solicitante or '') }}"
+    >
+  </div>
+
+  <div class="campo sm">
+    <label>NIF</label>
+    <input
+      type="text"
+      name="nif"
+      value="{{ datos.get('nif', pendiente.nif or '') }}"
+    >
+  </div>
+
+  <div class="campo sm">
+    <label>Teléfono</label>
+    <input
+      type="text"
+      name="telefono"
+      value="{{ datos.get('telefono', pendiente.telefono or '') }}"
+    >
+  </div>
+
+</div>
+{# 3.3 BLOQUE UBICACIÓN #}
+<div class="bloque">
+
+  <div class="campo xs">
+    <label>Tipo vía</label>
+    {% set tipo_via_id = datos.get('idtbl_tipos_de_vias', pendiente.idtbl_tipos_de_vias) %}
+    <select id="tipo_via" name="idtbl_tipos_de_vias">
+      {% for t in tipos_vias %}
+      <option
+        value="{{ t.idtbl_tipos_de_vias }}"
+        {% if tipo_via_id == t.idtbl_tipos_de_vias %}selected{% endif %}
+      >
+        {{ t.tipos_de_vias }}
+      </option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="campo lg">
+    <label>Calle</label>
+    {% set calle_id = datos.get('idtbl_calles', pendiente.idtbl_calles) %}
+    <select id="calle" name="idtbl_calles">
+      {% for c in calles %}
+      <option
+        value="{{ c.idtbl_calles }}"
+        {% if calle_id == c.idtbl_calles %}selected{% endif %}
+      >
+        {{ c.calles }}
+      </option>
+      {% endfor %}
+    </select>
+  </div>
+
+</div>
+      {# -----------------------------------------------------------------------
+         3.4 BLOQUE FECHAS
+         - fecha_colocacion
+         - fecha_retirada
+         - fecha_colocacion
+         - fecha_firma_inicial
+         Cada una se intenta rellenar con JSON si existe.
+      ----------------------------------------------------------------------- #}
+      <div class="bloque">
+
+          <div class="campo sm">
+              <label>F. colocación</label>
+              <input
+                  type="date"
+                  name="fecha_colocacion"
+                  value="{{ datos.fecha_colocacion or pendiente.fecha_colocacion or '' }}"
+              >
+          </div>
+
+          <div class="campo sm">
+              <label>F. retirada</label>
+              <input
+                  type="date"
+                  name="fecha_retirada"
+                  value="{{ datos.fecha_retirada or pendiente.fecha_retirada or '' }}"
+              >
+          </div>
+
+          <div class="campo sm">
+              <label>F. instalación</label>
+              <input
+                  type="date"
+                  name="fecha_colocacion"
+                  value="{{ datos.fecha_colocacion or pendiente.fecha_colocacion or '' }}"
+              >
+          </div>
+
+          <div class="campo sm">
+              <label>F. firma inicial</label>
+              <input
+                  type="date"
+                  name="fecha_firma_inicial"
+                  value="{{ datos.fecha_firma_inicial or pendiente.fecha_firma_inicial or '' }}"
+              >
+          </div>
+
+      </div>
+
+      {# -----------------------------------------------------------------------
+         3.5 BLOQUE TAMAÑO / CSVs
+         - Dimensión (combo)      → idtbl_dimensiones
+         - CSV alta                → csv
+         - CSV retirada            → csv_retirada
+      ----------------------------------------------------------------------- #}
+     <div class="campo sm">
+  <label>Dimensión</label>
+  {% set dimension_id = datos.get('idtbl_dimensiones', pendiente.idtbl_dimensiones) %}
+  <select name="idtbl_dimensiones">
+    {% for d in dimensiones %}
+    <option
+      value="{{ d.idtbl_dimensiones }}"
+      {% if dimension_id == d.idtbl_dimensiones %}selected{% endif %}
+    >
+      {{ d.descripcion }}
+    </option>
+    {% endfor %}
+  </select>
+</div>
+
+          <div class="campo xl">
+              <label>CSV alta</label>
+              <input
+                  type="text"
+                  name="csv"
+                  value="{{ datos.csv or pendiente.csv or '' }}"
+              >
+          </div>
+
+          <div class="campo xl">
+              <label>CSV retirada</label>
+              <input
+                  type="text"
+                  name="csv_retirada"
+                  value="{{ datos.csv_retirada or pendiente.csv_retirada or '' }}"
+              >
+          </div>
+
+      </div>
+
+      {# -----------------------------------------------------------------------
+         3.6 BLOQUE OBSERVACIONES
+         - Campo texto libre para cualquier nota adicional.
+      ----------------------------------------------------------------------- #}
+      <div class="bloque">
+          <div class="campo xl">
+              <label>Observaciones</label>
+              <textarea
+                  name="observaciones"
+              >{{ datos.observaciones or pendiente.observaciones or '' }}</textarea>
+          </div>
+      </div>
+
+      {# -----------------------------------------------------------------------
+         (3.7) FOOTER · NAVEGACIÓN SECUENCIAL + GUARDAR
+         (3.7.1) Flecha izquierda: índice i - 1.
+         (3.7.2) Botón Guardar: POST al endpoint guardar_validacion.
+         (3.7.3) Flecha derecha: índice i + 1.
+      ----------------------------------------------------------------------- #}
+            <div class="footer">
+
+          {# (3.7.4) Botón anterior: deshabilitado si indice == 0 #}
+          {% if indice > 0 %}
+            <a
+              class="nav-btn"
+              href="{{ url_for('btn_contenedores_listar_pendientes_bp.btn_contenedores_listar_pendientes',
+                               i=indice - 1) }}"
+              aria-label="Pendiente anterior"
+            >
+              ⬅
+            </a>
+          {% else %}
+            <span class="nav-btn disabled" aria-hidden="true">⬅</span>
+          {% endif %}
+
+          {# (3.7.5) Botón principal de guardado del formulario #}
+          <button type="submit">
+              Guardar
+          </button>
+
+          {# (3.7.6) Botón siguiente: avanza al índice i + 1 #}
+          <a
+            class="nav-btn"
+            href="{{ url_for('btn_contenedores_listar_pendientes_bp.btn_contenedores_listar_pendientes',
+                             i=indice + 1) }}"
+            aria-label="Pendiente siguiente"
+          >
+            ➡
+          </a>
+
+      </div>
+
+  </form>
+
+</div>
+
+{# =============================================================================
+   🧠 4. JS · AUTOCOMPLETAR Y (OPCIONAL) AJAX CALLES
+============================================================================= #}
+<script>
+  // 4.1 AUTOCOMPLETAR NIF/TELÉFONO AL CAMBIAR PROVEEDOR
+  document.getElementById("proveedor").addEventListener("change", function () {
+      const selected = this.options[this.selectedIndex];
+      document.querySelector("[name='nif']").value =
+          selected.dataset.nif || "";
+      document.querySelector("[name='telefono']").value =
+          selected.dataset.telefono || "";
+  });
+
+  // 4.2 (OPCIONAL) CARGAR CALLES VÍA AJAX AL CAMBIAR TIPO DE VÍA
+  // Si quieres usar AJAX en vez de pasar todas las calles desde el backend,
+  // descomenta este bloque y ajusta la URL al endpoint calles_por_tipo.
+  /*
+  document.getElementById("tipo_via").addEventListener("change", function () {
+      const id = this.value;
+      fetch(`/control_via_publica/contenedores/pendientes/calles_por_tipo/${id}`)
+          .then(res => res.json())
+          .then(data => {
+              const calle = document.getElementById("calle");
+              calle.innerHTML = "";
+              data.forEach(c => {
+                  const option = document.createElement("option");
+                  option.value = c.idtbl_calles;
+                  option.textContent = c.calles;
+                  calle.appendChild(option);
+              });
+          });
+  });
+  */
+</script>
+
+</body>
+</html>

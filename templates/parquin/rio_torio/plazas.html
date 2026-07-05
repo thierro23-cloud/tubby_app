@@ -1,0 +1,107 @@
+{# ============================================================
+   🅿️ templates/parquin/plazas.html - Listado de plazas
+   - Muestra todas las plazas en formato tabla (tipo Excel).
+   - Columnas: Código plaza, Fila, Usuario/Proveedor, Estado.
+   - Cada fila tiene un botón "Ver detalle" → ver_plaza.html.
+   ============================================================ #}
+{% extends "base.html" %}  {# 🧱 Heredamos de base.html (navbar, flashes, etc.) #}
+
+{% block title %}Listado de plazas{% endblock %}  {# 🏷️ Título de la pestaña #}
+
+{% block content %}
+<div class="container mt-3">  {# 📦 Contenedor principal #}
+
+  {# 🔹 SECCIÓN 1: Título y resumen #}
+  <h1 class="h4 mb-2">🅿️ Listado de plazas</h1>  {# 🏁 Título principal de la pantalla #}
+  <p class="text-muted mb-3">
+    Total: <strong>{{ total }}</strong> ·
+    Libres: <strong class="text-success">{{ libres }}</strong> ·
+    Ocupadas: <strong class="text-danger">{{ ocupadas }}</strong>
+  </p>
+
+  {# 🔹 SECCIÓN 2: Filtros de fila y estado #}
+  <form method="get" class="row g-2 mb-3">
+    <div class="col-auto">
+      <label class="form-label mb-1">📐 Fila</label>
+      <input type="number"
+             name="fila"
+             class="form-control form-control-sm"
+             value="{{ fila or '' }}"
+             min="1">
+    </div>
+    <div class="col-auto">
+      <label class="form-label mb-1">📌 Estado</label>
+      <select name="estado" class="form-select form-select-sm">
+        <option value="">(Todos)</option>
+        <option value="libre"   {% if estado == 'libre' %}selected{% endif %}>Libres</option>
+        <option value="ocupada" {% if estado == 'ocupada' %}selected{% endif %}>Ocupadas</option>
+      </select>
+    </div>
+    <div class="col-auto align-self-end">
+      <button type="submit" class="btn btn-sm btn-primary">
+        🔎 Filtrar
+      </button>
+      <a href="{{ url_for('plazas_bp.inicio_plazas') }}"
+         class="btn btn-sm btn-secondary">
+        ♻️ Limpiar
+      </a>
+    </div>
+    <div class="col-auto align-self-end ms-auto">
+      <a href="{{ url_for('plazas_bp.exportar_plazas_excel', fila=fila, estado=estado) }}"
+         class="btn btn-sm btn-success">
+        📤 Exportar a Excel
+      </a>
+    </div>
+  </form>
+
+  {# 🔹 SECCIÓN 3: Tabla tipo Excel #}
+  <div class="table-responsive">
+    <table class="table table-sm table-striped align-middle">
+      <thead class="table-light">
+        <tr>
+          <th>🏷️ Código plaza</th>      {# Código visible de la plaza #}
+          <th>📐 Fila</th>              {# Fila de la plaza #}
+          <th>👤 Usuario / Proveedor</th> {# Resumen de asignación #}
+          <th>⚙️ Estado</th>            {# Libre / Ocupada #}
+          <th style="width: 130px;">🔍 Acciones</th> {# Botón ver detalle #}
+        </tr>
+      </thead>
+      <tbody>
+        {% for plaza in plazas %}  {# 🔁 Recorremos cada plaza #}
+        <tr>
+          <td>{{ plaza.codigo_plazas }}</td>  {# 🏷️ Código plaza #}
+          <td>{{ plaza.fila }}</td>           {# 📐 Fila #}
+          <td>
+            {% if plaza.idtbl_usuarios %}
+              {# Plaza ocupada: mostramos proveedor y NIF si los hay #}
+              <span class="text-danger">
+                {{ plaza.proveedor or 'Sin nombre' }}
+              </span>
+              {% if plaza.proveedor_nif %}
+                <small class="text-muted"> ({{ plaza.proveedor_nif }})</small>
+              {% endif %}
+            {% else %}
+              <span class="text-success">Libre</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if plaza.idtbl_usuarios %}
+              <span class="badge bg-danger">Ocupada</span>
+            {% else %}
+              <span class="badge bg-success">Libre</span>
+            {% endif %}
+          </td>
+          <td>
+            <a href="{{ url_for('plazas_bp.ver_plaza', plaza_id=plaza.idtbl_plazas) }}"
+               class="btn btn-sm btn-outline-primary">
+              👁️ Ver detalle
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+</div>
+{% endblock %}

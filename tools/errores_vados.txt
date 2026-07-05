@@ -1,0 +1,34 @@
+detalle_errores": [
+    {
+      "NIF": "H05101704",
+      "error": "idtbl_tipos_de_vias o idtbl_calles vac\u00edo (idtbl_tipos_de_vias='', idtbl_calles='355')",
+      "fila": 3423,
+      "idtbl_calles": "355",
+      "idtbl_tipos_de_vias": "",
+      "numero_vado": "4712"
+    },
+    {
+      "NIF": "45066988Y",
+      "error": "idtbl_tipos_de_vias o idtbl_calles vac\u00edo (idtbl_tipos_de_vias='', idtbl_calles='354')",
+      "fila": 3727,
+      "idtbl_calles": "354",
+      "idtbl_tipos_de_vias": "",
+      "numero_vado": "4030"
+    },
+    {
+      "NIF": "B05141940",
+      "error": "idtbl_tipos_de_vias o idtbl_calles vac\u00edo (idtbl_tipos_de_vias='', idtbl_calles='355')",
+      "fila": 3800,
+      "idtbl_calles": "355",
+      "idtbl_tipos_de_vias": "",
+      "numero_vado": "4071"
+    }
+  ],
+  "errores": 3,
+  "insertados": 4441,
+  "mensaje": "Importaci\u00f3n correcta. Se han insertado las filas v\u00e1lidas.",
+  "ok": true,
+  "porcentaje_ok": 99.93,
+  "status": "ok",
+  "total_filas": 4444,
+  "validas": 4441

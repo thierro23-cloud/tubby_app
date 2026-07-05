@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plano del Parquin - Supertinito App</title>
+<style>
+body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background:#f5f6fa; padding:20px;}
+.container { max-width: 900px; margin:auto; text-align:center;}
+h2 { margin-bottom:25px; color:#333; }
+.plazas { display:grid; grid-template-columns: repeat(auto-fill, minmax(80px,1fr)); gap:10px; justify-items:center;}
+.plaza { width:70px; height:70px; border-radius:8px; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:bold; font-size:14px;}
+.libre { background:#28a745; }
+.ocupada { background:#dc3545; }
+</style>
+</head>
+<body>
+<div class="container">
+<h2>Plano del Parquin</h2>
+<div class="plazas">
+    {% for plaza in plazas %}
+        <div class="plaza {% if plaza.activo %}ocupada{% else %}libre{% endif %}">
+            {{ plaza.codigo_plaza }}
+        </div>
+    {% endfor %}
+</div>
+</div>
+</body>
+</html>

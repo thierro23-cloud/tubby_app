@@ -1,0 +1,138 @@
+{# =========================================================
+   templates/proveedores/asignar_proveedores_plazas.html
+   🤝 ASIGNAR VARIAS PLAZAS A UN PROVEEDOR
+   ========================================================= #}
+
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+
+  <!-- 🏷️ TÍTULO PRINCIPAL -->
+  <h1 class="mb-4">
+    🤝 Asignar plazas a un proveedor
+  </h1>
+
+  <!-- 💬 MENSAJES FLASH -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+        </div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  <!-- 🧩 FORMULARIO PRINCIPAL -->
+  <form method="post">
+
+    <!-- 👥 SELECT DE PROVEEDOR (YA VIENE ORDENADO EN LA CONSULTA SQL) -->
+    <div class="mb-3">
+      <label for="proveedor_id" class="form-label">
+        👥 Proveedor con parquin
+      </label>
+      <select name="proveedor_id" id="proveedor_id" class="form-select" required>
+        <option value="">-- Selecciona un proveedor --</option>
+        {% for prov in proveedores %}
+          <option value="{{ prov.Idtbl_proveedores }}">
+            {{ prov.Nombre_Razon_Social }}
+          </option>
+        {% endfor %}
+      </select>
+      <div class="form-text">
+        Solo aparecen proveedores que tienen activado el parquin (parquin = 1).
+      </div>
+    </div>
+
+    <!-- 🟢 TABLA DE PLAZAS LIBRES (SE PUEDEN MARCAR) -->
+    <div class="card mb-3">
+      <div class="card-header">
+        🟢 Plazas libres (se pueden asignar)
+      </div>
+      <div class="card-body p-0">
+        <table class="table table-sm table-striped mb-0">
+          <thead class="table-light">
+            <tr>
+              <th style="width: 40px;"></th>   <!-- ✔ Checkbox -->
+              <th>Plaza</th>                   <!-- 🔢 código_plazas -->
+              <th>Fila</th>                    <!-- 📏 fila -->
+            </tr>
+          </thead>
+          <tbody>
+            {% for plaza in plazas_libres %}
+              <tr>
+                <td>
+                  <input type="checkbox"
+                         name="plazas_ids"
+                         value="{{ plaza.idtbl_plazas }}">
+                </td>
+                <td>{{ plaza.codigo_plazas }}</td>
+                <td>{{ plaza.fila }}</td>
+              </tr>
+            {% else %}
+              <tr>
+                <td colspan="3" class="text-center text-muted">
+                  No hay plazas libres disponibles.
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="card-footer small text-muted">
+        Marca las plazas libres que quieras asignar al proveedor seleccionado.
+      </div>
+    </div>
+
+    <!-- 🔴 TABLA DE PLAZAS OCUPADAS (SOLO INFORMATIVA) -->
+    <div class="card mb-3">
+      <div class="card-header">
+        🔴 Plazas ocupadas (solo información)
+      </div>
+      <div class="card-body p-0">
+        <table class="table table-sm table-striped mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Plaza</th>
+              <th>Fila</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for plaza in plazas_ocupadas %}
+              <tr>
+                <td>{{ plaza.codigo_plazas }}</td>
+                <td>{{ plaza.fila }}</td>
+                <td>
+                  <span class="badge bg-danger">🔴 Ocupada</span>
+                </td>
+              </tr>
+            {% else %}
+              <tr>
+                <td colspan="3" class="text-center text-muted">
+                  No hay plazas ocupadas ahora mismo.
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="card-footer small text-muted">
+        Estas plazas no se pueden marcar porque ya tienen un usuario/proveedor.
+      </div>
+    </div>
+
+    <!-- 💾 BOTONES -->
+    <button type="submit" class="btn btn-primary">
+      💾 Guardar asignación
+    </button>
+    <a href="{{ url_for('parquin_bp.parquin') }}" class="btn btn-secondary ms-2">
+      ⬅ Volver al parquin
+    </a>
+
+  </form>
+
+</div>
+{% endblock %}

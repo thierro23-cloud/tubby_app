@@ -1,0 +1,14 @@
+COMO USARLO EN APP.PY INICIAR LA VIGILANCIA DE LA CARPTEA CONTENEDORES
+
+
+from flask import Flask
+from blueprints.control_obras.control_obras_bp import control_obras_bp, iniciar_vigilancia
+
+app = Flask(__name__)
+app.register_blueprint(control_obras_bp)
+
+# Iniciar la vigilancia automática al arrancar la app
+iniciar_vigilancia(app)
+
+if __name__ == "__main__":
+    app.run(debug=True)

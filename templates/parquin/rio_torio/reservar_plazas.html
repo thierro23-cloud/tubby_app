@@ -1,0 +1,202 @@
+{# ============================================================
+   🅿️ templates/parquin/reservar_plazas.html
+   ------------------------------------------------------------
+   💡 PROPÓSITO:
+   - Mostrar un formulario COMPACTO para reservar una plaza libre.
+   - Evitar scroll vertical en escritorio organizando todo en 2 columnas.
+   - Recoger datos de: 🏢 proveedor, 👤 usuario, 🚚 camión, 🕒 fechas.
+   ============================================================ #}
+{% extends "base.html" %}  {# 🧱 LÍNEA 1: Heredamos la plantilla base (navbar, estilos globales) #}
+
+{% block title %}Reservar plaza de parking{% endblock %}  {# 🏷️ LÍNEA 2: Título de la pestaña del navegador #}
+
+{% block content %}  {# 🧩 LÍNEA 3: Inicio del contenido específico de esta vista #}
+<div class="container mt-2">  {# 📦 LÍNEA 4: Contenedor Bootstrap con pequeño margen superior #}
+
+  {# ====================================================== #}
+  {# 🏁 SECCIÓN 1: CABECERA (título + botones)              #}
+  {# - Muestra el título de la pantalla.
+     - A la derecha, botones de navegación (volver / salir).
+     - Todo muy compacto para no ocupar demasiada altura.   #}
+  {# ====================================================== #}
+  <div class="d-flex justify-content-between align-items-start mb-2">  {# 📏 LÍNEA 11: Fila flex con título a izq. y botones a dcha. #}
+    <div>  {# 📄 LÍNEA 12: Columna izquierda: título + subtítulo #}
+      <h1 class="h5 mb-1">🅿️ Reservar plaza libre</h1>  {# 🏷️ LÍNEA 13: Título principal, tamaño reducido h5 #}
+      <p class="text-muted mb-0" style="font-size: 0.8rem;">  {# 📝 LÍNEA 14: Subtítulo en letra pequeña y gris #}
+        Selecciona una plaza libre e introduce datos básicos de proveedor, usuario y camión. 📅
+      </p>
+    </div>
+
+    <div class="d-flex flex-row gap-1">  {# 🎛️ LÍNEA 18: Columna derecha: grupo de botones en fila #}
+
+      {# 🔜 (Opcional futuro) Botón "Página 2" para pantallas con más campos
+      <a href="#" class="btn btn-sm btn-outline-secondary">
+        Página 2 ➜
+      </a>
+      #}
+
+      <a href="{{ url_for('plazas_bp.inicio_plazas') }}"  {# 🔙 LÍNEA 25: Botón para volver al listado de plazas #}
+         class="btn btn-sm btn-secondary">
+        ← Plazas
+      </a>
+      <a href="{{ url_for('auth_bp.logout') }}"  {# 🚪 LÍNEA 28: Botón para cerrar sesión (logout) #}
+         class="btn btn-sm btn-danger">
+        Salir
+      </a>
+    </div>
+  </div>
+
+  {# ====================================================== #}
+  {# 📋 SECCIÓN 2: FORMULARIO COMPACTO SIN SCROLL           #}
+  {# - Un único formulario <form>.
+     - Distribuido en una fila con dos columnas (col-md-6 + col-md-6).
+     - Cada bloque (proveedor, usuario, camión, fechas) va encajado
+       en cajas con poco padding para ahorrar espacio vertical.       #}
+  {# ====================================================== #}
+  <form method="post">  {# 📤 LÍNEA 40: Formulario que envía datos por POST a la misma ruta #}
+    <div class="row g-2">  {# 📐 LÍNEA 41: Fila Bootstrap con separación pequeña entre columnas #}
+
+      {# ---------------------------------------------- #}
+      {# 2.1 SUBSECCIÓN: Selección de plaza libre       #}
+      {# - Ocupa toda la anchura (col-12).
+         - Muestra un <select> con todas las plazas libres
+           que viene en 'plazas_libres' desde el blueprint. #}
+      {# ---------------------------------------------- #}
+      <div class="col-12">  {# 📍 LÍNEA 48: Columna de ancho completo para el combo de plazas #}
+        <label class="form-label mb-1" style="font-size: 0.85rem;">🅿️ Plaza libre</label>  {# 🏷️ LÍNEA 49: Etiqueta del campo #}
+        <select name="idtbl_plazas"  {# 🔢 LÍNEA 50: Nombre del campo que enviaremos al backend (id de la plaza) #}
+                class="form-select form-select-sm"
+                required
+                style="font-size: 0.8rem;">
+          <option value="">(Selecciona una plaza libre)</option>  {# 🧩 LÍNEA 54: Opción vacía por defecto #}
+          {% for p in plazas_libres %}  {# 🔁 LÍNEA 55: Recorremos la lista de plazas libres #}
+            <option value="{{ p.idtbl_plazas }}">  {# 🔑 LÍNEA 56: Valor = ID de la plaza #}
+              Fila {{ p.fila }} · Plaza {{ p.codigo_plazas }}  {# 📝 LÍNEA 57: Texto visible: fila y código plaza #}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      {# ---------------------------------------------- #}
+      {# 2.2 SUBSECCIÓN: Columna izquierda (md-6)       #}
+      {# - Contiene:
+         - Bloque PROVEEDOR (nombre + NIF)
+         - Bloque FECHAS (inicio + fin)                #}
+      {# ---------------------------------------------- #}
+      <div class="col-md-6">  {# 📦 LÍNEA 66: Columna izquierda en pantallas medianas/grandes #}
+
+        {# 🏢 SUB-BLOQUE: Datos del proveedor #}
+        <div class="border rounded p-2 mb-2" style="font-size: 0.8rem;">  {# 🧩 LÍNEA 69: Caja con borde y padding mínimo #}
+          <div class="fw-semibold mb-1">🏢 Proveedor</div>  {# 🏷️ LÍNEA 70: Título del sub-bloque proveedor #}
+          <div class="mb-1">
+            <label class="form-label mb-0">Nombre / Razón social</label>  {# 🏷️ LÍNEA 72: Etiqueta nombre proveedor #}
+            <input type="text"
+                   name="prov_nombre"              {# 🔤 LÍNEA 74: Campo para nombre del proveedor #}
+                   class="form-control form-control-sm"
+                   required>
+          </div>
+          <div>
+            <label class="form-label mb-0">NIF</label>  {# 🏷️ LÍNEA 79: Etiqueta NIF #}
+            <input type="text"
+                   name="prov_nif"                 {# 🔤 LÍNEA 81: Campo para NIF (opcional) #}
+                   class="form-control form-control-sm">
+          </div>
+        </div>
+
+        {# 🕒 SUB-BLOQUE: Fechas de la reserva #}
+        <div class="border rounded p-2" style="font-size: 0.8rem;">  {# 🧩 LÍNEA 87: Caja para fechas inicio/fin #}
+          <div class="fw-semibold mb-1">🕒 Fechas de reserva</div>  {# 🏷️ LÍNEA 88: Título del sub-bloque fechas #}
+          <div class="mb-1">
+            <label class="form-label mb-0">Fecha inicio</label>  {# 🏷️ LÍNEA 90: Etiqueta fecha inicio #}
+            <input type="date"
+                   name="fecha_inicio"            {# 🕒 LÍNEA 92: Campo tipo date para fecha_inicio #}
+                   class="form-control form-control-sm"
+                   required>
+          </div>
+          <div>
+            <label class="form-label mb-0">Fecha fin</label>  {# 🏷️ LÍNEA 97: Etiqueta fecha fin #}
+            <input type="date"
+                   name="fecha_fin"               {# 🕒 LÍNEA 99: Campo tipo date para fecha_fin #}
+                   class="form-control form-control-sm"
+                   required>
+          </div>
+        </div>
+
+      </div>  {# 🔚 LÍNEA 105: Fin de columna izquierda #}
+
+      {# ---------------------------------------------- #}
+      {# 2.3 SUBSECCIÓN: Columna derecha (md-6)         #}
+      {# - Contiene:
+         - Bloque USUARIO (nombre, email, teléfono)
+         - Bloque CAMIÓN (matrícula, marca, modelo)    #}
+      {# ---------------------------------------------- #}
+      <div class="col-md-6">  {# 📦 LÍNEA 112: Columna derecha en pantallas medianas/grandes #}
+
+        {# 👤 SUB-BLOQUE: Datos del usuario #}
+        <div class="border rounded p-2 mb-2" style="font-size: 0.8rem;">  {# 🧩 LÍNEA 115: Caja para datos de usuario #}
+          <div class="fw-semibold mb-1">👤 Usuario</div>  {# 🏷️ LÍNEA 116: Título del sub-bloque usuario #}
+          <div class="mb-1">
+            <label class="form-label mb-0">Nombre</label>  {# 🏷️ LÍNEA 118: Etiqueta nombre usuario #}
+            <input type="text"
+                   name="usu_nombre"              {# 🔤 LÍNEA 120: Campo para nombre del usuario #}
+                   class="form-control form-control-sm"
+                   required>
+          </div>
+          <div class="mb-1">
+            <label class="form-label mb-0">Email</label>  {# 🏷️ LÍNEA 125: Etiqueta email usuario #}
+            <input type="email"
+                   name="usu_email"               {# 🔤 LÍNEA 127: Campo email usuario (opcional) #}
+                   class="form-control form-control-sm">
+          </div>
+          <div>
+            <label class="form-label mb-0">Teléfono</label>  {# 🏷️ LÍNEA 132: Etiqueta teléfono usuario #}
+            <input type="text"
+                   name="usu_telefono"            {# 🔤 LÍNEA 134: Campo teléfono usuario (opcional) #}
+                   class="form-control form-control-sm">
+          </div>
+        </div>
+
+        {# 🚚 SUB-BLOQUE: Datos del camión #}
+        <div class="border rounded p-2" style="font-size: 0.8rem;">  {# 🧩 LÍNEA 140: Caja para datos del camión #}
+          <div class="fw-semibold mb-1">🚚 Camión</div>  {# 🏷️ LÍNEA 141: Título sub-bloque camión #}
+          <div class="mb-1">
+            <label class="form-label mb-0">Matrícula</label>  {# 🏷️ LÍNEA 143: Etiqueta matrícula #}
+            <input type="text"
+                   name="cam_matricula"           {# 🔤 LÍNEA 145: Campo matrícula (obligatorio) #}
+                   class="form-control form-control-sm"
+                   required>
+          </div>
+          <div class="mb-1">
+            <label class="form-label mb-0">Marca</label>  {# 🏷️ LÍNEA 150: Etiqueta marca camión #}
+            <input type="text"
+                   name="cam_marca"               {# 🔤 LÍNEA 152: Campo marca camión (opcional) #}
+                   class="form-control form-control-sm">
+          </div>
+          <div>
+            <label class="form-label mb-0">Modelo</label>  {# 🏷️ LÍNEA 157: Etiqueta modelo camión #}
+            <input type="text"
+                   name="cam_modelo"              {# 🔤 LÍNEA 159: Campo modelo camión (opcional) #}
+                   class="form-control form-control-sm">
+          </div>
+        </div>
+
+      </div>  {# 🔚 LÍNEA 165: Fin de columna derecha #}
+
+    </div>  {# 🔚 LÍNEA 167: Fin de row g-2 #}
+
+    {# ====================================================== #}
+    {# 🧾 SECCIÓN 3: BOTONES DE ACCIÓN                       #}
+    {# - Botón principal para enviar el formulario.
+       - Alineado a la derecha y con poco margen superior
+         para no ocupar altura extra.                        #}
+    {# ====================================================== #}
+    <div class="mt-2 d-flex justify-content-end">  {# 📐 LÍNEA 176: Contenedor de botones alineados a la derecha #}
+      <button type="submit" class="btn btn-sm btn-primary">  {# 💾 LÍNEA 177: Botón "Reservar plaza" #}
+        💾 Reservar plaza
+      </button>
+    </div>
+
+  </form>
+
+</div>  {# 🔚 LÍNEA 183: Fin del container principal #}
+{% endblock %}  {# 🔚 LÍNEA 184: Fin del bloque content #}

@@ -1,0 +1,526 @@
+{# =============================================================================
+   🧩 ADMIN AUTO · CONFIRMACIÓN DE CAMBIO DE ESQUEMA (PLANTILLA AUTÓNOMA PRO)
+   Archivo: templates/admin_auto/admin_auto_esquema_confirm.html
+
+   ✅ Recibe:
+      - schema: str
+      - tabla: str
+      - accion: add_column | change_type | drop_column
+      - Para add_column:
+          · nombre_columna, tipo_columna, permitir_null, valor_defecto, posicion
+      - Para change_type / drop_column:
+          · columna_objetivo, tipo_columna (solo change_type)
+============================================================================= #}
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Confirmar cambio de esquema · {{ schema }}.{{ tabla }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- Bootstrap 5 -->
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  >
+
+  <!-- Fuente suave y moderna -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap"
+    rel="stylesheet"
+  >
+
+  <style>
+    :root {
+      --bg-main: #020617;
+      --bg-gradient-a: #0f172a;
+      --bg-gradient-b: #020617;
+      --border-soft: #1e293b;
+      --text-main: #e5e7eb;
+      --text-soft: #9ca3af;
+      --accent: #38bdf8;
+      --accent-soft: #0ea5e9;
+      --danger: #f97373;
+      --danger-strong: #ef4444;
+      --warning-soft: #facc15;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 10% 0, #1d4ed8 0, transparent 55%),
+        radial-gradient(circle at 90% 100%, #22c55e 0, transparent 55%),
+        radial-gradient(circle at 0 100%, #0ea5e9 0, transparent 45%),
+        var(--bg-main);
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.75rem 1.25rem;
+    }
+
+    .shell {
+      width: 100%;
+      max-width: 960px;
+    }
+
+    .card-esquema {
+      border-radius: 1.4rem;
+      border: 1px solid rgba(148, 163, 184, 0.45);
+      background:
+        radial-gradient(circle at top, rgba(15, 23, 42, 0.9) 0, #020617 55%, #020617 100%);
+      box-shadow:
+        0 34px 88px rgba(0, 0, 0, 0.85),
+        0 0 0 1px rgba(15, 23, 42, 0.7);
+      overflow: hidden;
+      backdrop-filter: blur(6px);
+    }
+
+    .card-header-esquema {
+      padding: 1.1rem 1.6rem 0.6rem 1.6rem;
+      border-bottom: 1px solid rgba(51, 65, 85, 0.9);
+      background: linear-gradient(
+        135deg,
+        rgba(15, 23, 42, 0.98) 0%,
+        rgba(15, 23, 42, 0.9) 45%,
+        rgba(15, 23, 42, 0.98) 100%
+      );
+    }
+
+    .title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 1rem;
+    }
+
+    .title-main {
+      margin: 0;
+      font-size: 1.35rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+      color: #f9fafb;
+    }
+
+    .title-main span.emoji {
+      font-size: 1.8rem;
+    }
+
+    .subtitle-main {
+      margin: 0.25rem 0 0 0;
+      font-size: 0.86rem;
+      color: var(--text-soft);
+    }
+
+    .pill-target {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      border-radius: 999px;
+      padding: 0.3rem 0.95rem;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.7);
+      font-size: 0.8rem;
+      color: var(--text-soft);
+    }
+
+    .pill-target code {
+      font-size: 0.82em;
+      color: #e5e7eb;
+    }
+
+    .badge-mode {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: rgba(248, 250, 252, 0.06);
+      border-radius: 999px;
+      padding: 0.32rem 0.95rem;
+      font-size: 0.8rem;
+      color: var(--danger);
+      border: 1px solid rgba(239, 68, 68, 0.45);
+      margin-top: 0.35rem;
+    }
+
+    .badge-mode span.dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--danger-strong);
+      box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.25);
+    }
+
+    .card-body-esquema {
+      padding: 1.3rem 1.6rem 1.35rem 1.6rem;
+      background: radial-gradient(circle at top, rgba(15,23,42,0.9) 0, #020617 50%, #020617 100%);
+    }
+
+    .block-warning {
+      border-radius: 1rem;
+      border: 1px solid rgba(248, 250, 252, 0.04);
+      background: linear-gradient(150deg, rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 0.98));
+      padding: 0.9rem 1.05rem;
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 0.6rem 0.9rem;
+      align-items: center;
+      margin-bottom: 1.2rem;
+    }
+
+    .block-warning-icon {
+      width: 2.5rem;
+      height: 2.5rem;
+      border-radius: 0.95rem;
+      background: rgba(239, 68, 68, 0.18);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fee2e2;
+      font-size: 1.5rem;
+      flex-shrink: 0;
+    }
+
+    .block-warning-text h3 {
+      margin: 0;
+      font-size: 0.98rem;
+      font-weight: 600;
+      color: #fee2e2;
+    }
+
+    .block-warning-text p {
+      margin: 0.25rem 0 0 0;
+      font-size: 0.84rem;
+      color: var(--text-soft);
+    }
+
+    .block-summary {
+      border-radius: 1rem;
+      border: 1px solid rgba(148, 163, 184, 0.38);
+      background:
+        radial-gradient(circle at top left, rgba(56, 189, 248, 0.16) 0, transparent 55%),
+        radial-gradient(circle at bottom right, rgba(234, 179, 8, 0.12) 0, transparent 55%),
+        rgba(15, 23, 42, 0.98);
+      padding: 0.95rem 1.05rem;
+      margin-bottom: 1.15rem;
+      font-size: 0.9rem;
+      color: #e5e7eb;
+    }
+
+    .block-summary ul {
+      margin: 0.4rem 0 0.2rem 0;
+      padding-left: 1.1rem;
+      font-size: 0.86rem;
+      color: var(--text-soft);
+    }
+
+    .block-summary li + li {
+      margin-top: 0.12rem;
+    }
+
+    .pseudo-sql {
+      margin-top: 0.5rem;
+      padding: 0.75rem 0.85rem;
+      border-radius: 0.85rem;
+      background: rgba(15, 23, 42, 0.96);
+      border: 1px solid rgba(148, 163, 184, 0.55);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 0.82rem;
+      color: #e5e7eb;
+      overflow-x: auto;
+      line-height: 1.4;
+    }
+
+    .pseudo-sql span.keyword { color: #93c5fd; }
+    .pseudo-sql span.name { color: #a5b4fc; }
+    .pseudo-sql span.type { color: #6ee7b7; }
+    .pseudo-sql span.num { color: #facc15; }
+
+    .confirm-block {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      margin-top: 0.5rem;
+    }
+
+    .confirm-check {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.55rem;
+      font-size: 0.88rem;
+      color: var(--text-soft);
+    }
+
+    .confirm-check input[type="checkbox"] {
+      width: 1rem;
+      height: 1rem;
+      border-radius: 0.35rem;
+      border: 1px solid rgba(148, 163, 184, 0.7);
+      background-color: rgba(15, 23, 42, 0.9);
+      margin-top: 0.15rem;
+      flex-shrink: 0;
+    }
+
+    .actions-row {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.7rem;
+      margin-top: 0.7rem;
+    }
+
+    .btn-soft-secondary {
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.9);
+      background: rgba(15, 23, 42, 0.95);
+      color: var(--text-soft);
+      font-size: 0.82rem;
+      padding: 0.42rem 1rem;
+    }
+
+    .btn-soft-secondary:hover {
+      background: rgba(15, 23, 42, 1);
+      color: #e5e7eb;
+    }
+
+    .btn-soft-danger {
+      border-radius: 999px;
+      border: 1px solid rgba(248, 113, 113, 0.95);
+      background: linear-gradient(135deg, #f97316 0%, #ef4444 35%, #b91c1c 100%);
+      color: #fef2f2;
+      font-size: 0.82rem;
+      padding: 0.44rem 1.1rem;
+      box-shadow:
+        0 10px 25px rgba(248, 113, 113, 0.45),
+        0 0 0 1px rgba(127, 29, 29, 0.7);
+    }
+
+    .btn-soft-danger:hover {
+      background: linear-gradient(135deg, #ea580c 0%, #b91c1c 60%, #7f1d1d 100%);
+      color: #fee2e2;
+    }
+
+    .footer-note {
+      margin-top: 0.8rem;
+      font-size: 0.78rem;
+      color: var(--text-soft);
+      text-align: right;
+    }
+
+    code {
+      font-size: 0.86em;
+      color: #facc15;
+      background: rgba(30, 64, 175, 0.55);
+      border-radius: 0.25rem;
+      padding: 0.08rem 0.28rem;
+    }
+
+    @media (max-width: 768px) {
+      body {
+        padding: 1.25rem 0.8rem;
+      }
+      .title-row {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="shell">
+  <div class="card-esquema">
+    <div class="card-header-esquema">
+      <div class="title-row">
+        <div>
+          <p class="title-main">
+            <span class="emoji">🧨</span>
+            <span>Confirmar cambio de esquema</span>
+          </p>
+          <p class="subtitle-main">
+            Vas a modificar la estructura física de la tabla; revisa bien antes de ejecutar.
+          </p>
+        </div>
+        <div class="text-end">
+          <div class="pill-target mb-1">
+            <span>Destino:</span>
+            <code>{{ schema }}.{{ tabla }}</code>
+          </div>
+          <div class="badge-mode">
+            <span class="dot"></span>
+            Modo sensible · Riesgo de pérdida de datos
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-body-esquema">
+
+      <div class="block-warning">
+        <div class="block-warning-icon">
+          ⚠
+        </div>
+        <div class="block-warning-text">
+          <h3>Revisa con cuidado antes de aplicar</h3>
+          <p>
+            Los cambios de esquema afectan a todos los datos presentes y futuros.
+            No hay un botón de “deshacer” automático. Haz copia de seguridad si tienes dudas.
+          </p>
+        </div>
+      </div>
+
+      <div class="block-summary">
+        <div>
+          Estás a punto de ejecutar:
+        </div>
+
+        {% if accion == "add_column" %}
+          <div class="mt-1">
+            <strong>➕ Añadir columna</strong> a
+            <code>{{ schema }}.{{ tabla }}</code>:
+          </div>
+          <ul class="mb-1 mt-1">
+            <li>Nombre: <code>{{ nombre_columna }}</code></li>
+            <li>Tipo: <code>{{ tipo_columna }}</code></li>
+            <li>Permitir NULL: <strong>{{ "Sí" if permitir_null else "No" }}</strong></li>
+            <li>Valor por defecto:
+              {% if valor_defecto %}
+                <code>{{ valor_defecto }}</code>
+              {% else %}
+                <span class="text-muted">sin valor por defecto</span>
+              {% endif %}
+            </li>
+            <li>Posición:
+              {% if posicion and posicion != "final" %}
+                AFTER <code>{{ posicion }}</code>
+              {% else %}
+                <span class="text-muted">al final de la tabla</span>
+              {% endif %}
+            </li>
+          </ul>
+
+          <div class="pseudo-sql">
+            <span class="keyword">ALTER TABLE</span>
+            <span class="name">`{{ schema }}`.`{{ tabla }}`</span>
+            <br>
+            &nbsp;&nbsp;<span class="keyword">ADD COLUMN</span>
+            <span class="name">`{{ nombre_columna }}`</span>
+            <span class="type">{{ tipo_columna }}</span>
+            {% if not permitir_null %}<span class="keyword">NOT NULL</span>{% endif %}
+            {% if valor_defecto %}<span class="keyword">DEFAULT</span> {{ valor_defecto }}{% endif %}
+            {% if posicion and posicion != "final" %}
+              <span class="keyword">AFTER</span> <span class="name">`{{ posicion }}`</span>
+            {% endif %};
+          </div>
+
+        {% elif accion == "change_type" %}
+          <div class="mt-1">
+            <strong>✏️ Cambiar tipo de columna</strong> en
+            <code>{{ schema }}.{{ tabla }}</code>:
+          </div>
+          <ul class="mb-1 mt-1">
+            <li>Columna: <code>{{ columna_objetivo }}</code></li>
+            <li>Nuevo tipo: <code>{{ tipo_columna }}</code></li>
+          </ul>
+
+          <div class="pseudo-sql">
+            <span class="keyword">ALTER TABLE</span>
+            <span class="name">`{{ schema }}`.`{{ tabla }}`</span><br>
+            &nbsp;&nbsp;<span class="keyword">MODIFY COLUMN</span>
+            <span class="name">`{{ columna_objetivo }}`</span>
+            <span class="type">{{ tipo_columna }}</span>;
+          </div>
+
+        {% elif accion == "drop_column" %}
+          <div class="mt-1">
+            <strong>🗑️ Eliminar columna</strong> en
+            <code>{{ schema }}.{{ tabla }}</code>:
+          </div>
+          <ul class="mb-1 mt-1">
+            <li>Columna a eliminar: <code>{{ columna_objetivo }}</code></li>
+          </ul>
+
+          <div class="pseudo-sql">
+            <span class="keyword">ALTER TABLE</span>
+            <span class="name">`{{ schema }}`.`{{ tabla }}`</span><br>
+            &nbsp;&nbsp;<span class="keyword">DROP COLUMN</span>
+            <span class="name">`{{ columna_objetivo }}`</span>;
+          </div>
+
+        {% else %}
+          <p class="text-danger mt-1 mb-0">
+            Acción no reconocida. Vuelve atrás y revisa el formulario.
+          </p>
+        {% endif %}
+      </div>
+
+      <form method="post"
+            action="{{ url_for('btn_tablas_admin_auto_bp.admin_auto_esquema_apply') }}">
+
+        <input type="hidden" name="schema" value="{{ schema }}">
+        <input type="hidden" name="tabla" value="{{ tabla }}">
+        <input type="hidden" name="accion" value="{{ accion }}">
+
+        {% if accion == "add_column" %}
+          <input type="hidden" name="nombre_columna" value="{{ nombre_columna }}">
+          <input type="hidden" name="tipo_columna" value="{{ tipo_columna }}">
+          <input type="hidden" name="permitir_null"
+                 value="{{ 1 if permitir_null else 0 }}">
+          <input type="hidden" name="valor_defecto" value="{{ valor_defecto }}">
+          <input type="hidden" name="posicion" value="{{ posicion }}">
+        {% elif accion == "change_type" %}
+          <input type="hidden" name="columna_objetivo" value="{{ columna_objetivo }}">
+          <input type="hidden" name="tipo_columna" value="{{ tipo_columna }}">
+        {% elif accion == "drop_column" %}
+          <input type="hidden" name="columna_objetivo" value="{{ columna_objetivo }}">
+        {% endif %}
+
+        <div class="confirm-block">
+          <label class="confirm-check">
+            <input
+              type="checkbox"
+              name="confirmar"
+              id="confirmar_check"
+              value="1"
+            >
+            <span>
+              Confirmo que quiero aplicar este cambio de esquema sobre
+              <code>{{ schema }}.{{ tabla }}</code> y asumo el impacto sobre los datos.
+            </span>
+          </label>
+
+          <div class="actions-row">
+            <a href="{{ url_for('btn_tablas_admin_auto_bp.admin_auto_esquema_form',
+                                schema=schema, tabla=tabla) }}"
+               class="btn btn-soft-secondary btn-sm">
+              Cancelar
+            </a>
+
+            <button type="submit" class="btn btn-soft-danger btn-sm">
+              ✅ Aplicar cambio
+            </button>
+          </div>
+        </div>
+      </form>
+
+      <div class="footer-note">
+        Motor de admin automático · cambios de esquema MySQL ejecutados como <code>ALTER TABLE</code>.
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script
+  src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js">
+</script>
+
+</body>
+</html>

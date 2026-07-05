@@ -1,0 +1,103 @@
+/* 1. Card de estilo Excel */
+.excel-card {
+  background: linear-gradient(135deg, #f8fafc 0%, #f3f4f6 40%, #ffffff 100%);
+  border-radius: 14px;
+}
+
+.excel-card-header {
+  background: radial-gradient(circle at top left, #e0f2fe 0, #eff6ff 40%, transparent 70%);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+/* 2. Tabla estilo Excel */
+.excel-table-wrapper {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.excel-table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.excel-table thead.excel-thead {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: linear-gradient(180deg, #e5e7eb 0%, #d1d5db 100%);
+  box-shadow: 0 1px 0 rgba(148, 163, 184, 0.4);
+}
+
+.excel-table thead th {
+  padding: 0.6rem 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.6);
+}
+
+.excel-table tbody tr:nth-child(even) {
+  background-color: rgba(249, 250, 251, 0.8);
+}
+
+.excel-table tbody tr:hover {
+  background: linear-gradient(90deg, #eff6ff 0%, #eef2ff 60%, #f9fafb 100%);
+}
+
+/* 3. Tags de prioridad (P1, P2...) */
+.prioridad-badge {
+  min-width: 2.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* Ajusta estos colores a tu criterio de prioridad */
+.prioridad-1 {
+  background: linear-gradient(135deg, #f97373, #ef4444);
+  color: #fff;
+}
+.prioridad-2 {
+  background: linear-gradient(135deg, #fb923c, #f97316);
+  color: #fff;
+}
+.prioridad-3 {
+  background: linear-gradient(135deg, #facc15, #eab308);
+  color: #fff;
+}
+.prioridad-4,
+.prioridad-5 {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #fff;
+}
+
+/* 4. Tags de estado */
+.estado-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border: 1px solid transparent;
+}
+
+/* Ejemplos: ajusta según estados reales */
+.estado-bueno {
+  background-color: #ecfdf3;
+  color: #166534;
+  border-color: #bbf7d0;
+}
+.estado-regular {
+  background-color: #fffbeb;
+  color: #92400e;
+  border-color: #fed7aa;
+}
+.estado-malo {
+  background-color: #fef2f2;
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+.estado-desconocido {
+  background-color: #f9fafb;
+  color: #6b7280;
+  border-color: #e5e7eb;
+}

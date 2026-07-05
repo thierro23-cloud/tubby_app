@@ -1,0 +1,230 @@
+<!-- =============================================================================
+🚀 PANEL AUTOMÁTICO · UI SaaS
+=============================================================================
+
+🎯 PROPÓSITO:
+Este template genera un dashboard dinámico basado en módulos y botones
+registrados en backend.
+
+👉 Cada módulo:
+   - Se renderiza como una tarjeta (card)
+   - Contiene botones dinámicos (acciones)
+
+👉 Datos esperados desde Flask:
+   modulos_lista = [
+     {
+       "nombre": "control_vias",
+       "color": "blue",
+       "botones": [
+         {"endpoint": "...", "texto": "..."}
+       ]
+     }
+   ]
+
+💡 Este sistema permite:
+✔ Escalabilidad (añadir módulos sin tocar HTML)
+✔ UI automática tipo SaaS
+✔ Separación backend / frontend
+
+============================================================================= -->
+
+
+<!-- =============================================================================
+🎨 SECCIÓN 1 · ESTILOS GLOBALES
+============================================================================= -->
+
+<style>
+
+  /* ---------------------------------------------------------------------------
+  🧱 1.1 BASE GENERAL
+  ---------------------------------------------------------------------------
+  - Define el look global del dashboard
+  - Fondo oscuro tipo SaaS
+  --------------------------------------------------------------------------- */
+  body{
+    background:#0f172a;
+    font-family:Inter, sans-serif;
+    color:white;
+  }
+
+
+  /* ---------------------------------------------------------------------------
+  📦 1.2 CONTENEDOR PRINCIPAL
+  ---------------------------------------------------------------------------
+  - Centra el contenido
+  - Limita ancho para buena lectura
+  --------------------------------------------------------------------------- */
+  .dashboard{
+    max-width:1200px;
+    margin:auto;
+    padding:2rem;
+  }
+
+
+  /* ---------------------------------------------------------------------------
+  🧩 1.3 GRID DE MÓDULOS
+  ---------------------------------------------------------------------------
+  - Sistema responsive automático
+  - Se adapta a pantalla
+  --------------------------------------------------------------------------- */
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(280px,1fr));
+    gap:1.5rem;
+  }
+
+
+  /* ---------------------------------------------------------------------------
+  🪪 1.4 TARJETAS (MÓDULOS)
+  ---------------------------------------------------------------------------
+  - Cada módulo es una card
+  - Animación hover tipo SaaS
+  --------------------------------------------------------------------------- */
+  .card{
+    background:#1e293b;
+    border-radius:1rem;
+    padding:1.5rem;
+    box-shadow:0 10px 25px rgba(0,0,0,.3);
+    transition:.3s;
+  }
+
+  .card:hover{
+    transform:translateY(-5px);
+  }
+
+  .card h2{
+    margin-bottom:1rem;
+  }
+
+
+  /* ---------------------------------------------------------------------------
+  🔘 1.5 BOTONES
+  ---------------------------------------------------------------------------
+  - Botones de acción dentro del módulo
+  - Color dinámico según módulo
+  --------------------------------------------------------------------------- */
+  .btn{
+    display:block;
+    width:100%;
+    padding:.6rem;
+    margin-bottom:.5rem;
+    border:none;
+    border-radius:.5rem;
+    cursor:pointer;
+    font-weight:500;
+    color:white;
+  }
+
+  /* 🎨 Colores por tipo de módulo */
+  .blue{ background:#3b82f6; }
+  .green{ background:#22c55e; }
+  .purple{ background:#a855f7; }
+
+  .btn:hover{
+    opacity:.9;
+  }
+
+</style>
+
+
+
+<!-- =============================================================================
+🧱 SECCIÓN 2 · ESTRUCTURA DEL DASHBOARD
+============================================================================= -->
+
+<div class="dashboard">
+
+  <!-- -------------------------------------------------------------------------
+  🏷️ 2.1 TÍTULO PRINCIPAL
+  ---------------------------------------------------------------------------
+  - Identifica el panel
+  - Puede hacerse dinámico en futuro
+  --------------------------------------------------------------------------- -->
+  <h1 style="margin-bottom:2rem;">
+    ⚙️ Panel Automático
+  </h1>
+
+
+  <!-- -------------------------------------------------------------------------
+  🧩 2.2 GRID DE MÓDULOS
+  ---------------------------------------------------------------------------
+  - Itera sobre modulos_lista (backend)
+  - Cada módulo genera una tarjeta
+  --------------------------------------------------------------------------- -->
+  <div class="grid">
+
+
+    <!-- ===================================================================== -->
+    <!-- 🔁 2.2.1 BUCLE DE MÓDULOS                                            -->
+    <!-- ===================================================================== -->
+    {% for modulo in modulos_lista %}
+
+      <!-- -------------------------------------------------------------------
+      🪪 TARJETA DE MÓDULO
+      ---------------------------------------------------------------------
+      - Cada módulo tiene:
+        nombre
+        color
+        botones
+      ------------------------------------------------------------------- -->
+      <div class="card">
+
+        <!-- ---------------------------------------------------------------
+        🏷️ 2.2.1.1 NOMBRE DEL MÓDULO
+        ---------------------------------------------------------------
+        - Se limpia visualmente:
+          control_vias → Control Vias
+        --------------------------------------------------------------- -->
+        <h2>
+          {{ modulo.nombre.replace("_"," ").title() }}
+        </h2>
+
+
+        <!-- ============================================================= -->
+        <!-- 🔁 2.2.1.2 BUCLE DE BOTONES                                  -->
+        <!-- ============================================================= -->
+        {% for btn in modulo.botones %}
+
+          <!-- -----------------------------------------------------------
+          🔘 BOTÓN DE ACCIÓN
+          -----------------------------------------------------------
+          - Usa endpoint de Flask
+          - Texto formateado
+          - Color heredado del módulo
+          ----------------------------------------------------------- -->
+          <a href="{{ url_for(btn.endpoint) }}">
+
+            <button class="btn {{ modulo.color }}">
+              {{ btn.texto.replace("_"," ").title() }}
+            </button>
+
+          </a>
+
+        {% endfor %}
+
+      </div>
+
+    {% endfor %}
+
+  </div>
+
+</div>
+
+
+
+<!-- =============================================================================
+🧠 RESUMEN ARQUITECTURA
+=============================================================================
+
+🔹 Backend (Python)
+- Define modulos_lista
+- Agrupa botones por módulo
+
+🔹 Frontend (este template)
+- Itera módulos
+- Genera UI automáticamente
+
+🔹 Flujo:
+  Backend → modulos_lista → Jinja → HTML → UI
+
+============================================================================= -->

@@ -1,0 +1,98 @@
+{# templates/parquin/asignar_plazas_proveedor.html #}
+{% extends "base.html" %}
+
+{% block title %}Asignar plazas a proveedor{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+
+  {# 🏷️ Título y descripción #}
+  <h1 class="h4 mb-3">🅿️ Asignar plazas a proveedor</h1>
+  <p class="text-muted mb-3">
+    Elige un <strong>proveedor</strong> de parquin y marca las <strong>plazas</strong> que quedarán a su nombre.
+  </p>
+
+  <form method="post" class="mb-4">
+
+    {# 🔽 SECCIÓN: DESPLEGABLE DE PROVEEDORES #}
+    <div class="mb-3">
+      <label class="form-label">
+        👥 Proveedor (solo parquin = "si")
+      </label>
+      <select name="idtbl_proveedores" class="form-select" required>
+        <option value="">-- Selecciona proveedor --</option>
+        {# 📦 'proveedores' viene de la consulta SELECT idtbl_proveedores, nombre_razon_social ... #}
+        {% for prov in proveedores %}
+        <option value="{{ prov.idtbl_proveedores }}">
+          {{ prov.nombre_razon_social }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    {# 🅿️ SECCIÓN: LISTA DE PLAZAS CON CHECKBOX Y PROVEEDOR ACTUAL #}
+    <div class="mb-3">
+      <label class="form-label">
+        🅿️ Plazas del parking
+      </label>
+      <div class="table-responsive">
+        <table class="table table-sm table-striped align-middle">
+          <thead class="table-light">
+            <tr>
+              <th></th>              {# ✅ Checkbox seleccionar plaza #}
+              <th>🏷️ Código</th>     {# Código de plaza #}
+              <th>🧱 Fila</th>        {# Fila de la plaza #}
+              <th>👥 Proveedor actual</th> {# Nombre proveedor actual o "Libre" #}
+            </tr>
+          </thead>
+          <tbody>
+            {# 📦 'plazas' viene del SELECT con LEFT JOIN tbl_usuarios/tbl_proveedores #}
+            {% for plaza in plazas %}
+            <tr>
+              <td>
+                <input type="checkbox"
+                       name="plazas_seleccionadas"
+                       value="{{ plaza.idtbl_plazas }}">
+              </td>
+              <td>{{ plaza.idtbl_plazas }}</td>
+              <td>{{ plaza.codigo_plazas }}</td>
+              <td>{{ plaza.fila }}</td>
+              <td>
+                {% if plaza.proveedor_actual %}
+                  {# 🔴 Plaza ocupada por un proveedor concreto #}
+                  <span class="text-danger">
+                    {{ plaza.proveedor_actual }}
+                    {# Info extra opcional #}
+                    {% if plaza.numero_cuenta or plaza.Persona_contacto %}
+                      <small class="text-muted">
+                        ({{ plaza.numero_cuenta or 'sin cuenta' }}{% if plaza.Persona_contacto %} · {{ plaza.Persona_contacto }}{% endif %})
+                      </small>
+                    {% endif %}
+                  </span>
+                {% else %}
+                  {# 🟢 Plaza libre (sin proveedor) #}
+                  <span class="text-success">Libre</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    {# 🔘 BOTONES DE ACCIÓN #}
+    <div class="d-flex justify-content-end gap-2">
+      <a href="{{ url_for('panel_parquin_bp.parquin') }}"
+         class="btn btn-secondary btn-sm">
+        ⬅️ Volver al panel parquin
+      </a>
+      <button type="submit" class="btn btn-primary btn-sm">
+        💾 Guardar asignaciones
+      </button>
+    </div>
+
+  </form>
+
+</div>
+{% endblock %}

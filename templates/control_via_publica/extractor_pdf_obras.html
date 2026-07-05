@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<!-- =========================================================
+🧠 SISTEMA DE EXTRACCIÓN DE PDF DE OBRAS
+--------------------------------------------------------------
+Esta pantalla permite subir documentos administrativos en PDF
+para:
+
+1) Extraer automáticamente el CSV (Código Seguro de Verificación)
+2) Evitar duplicados de documentos
+3) Guardar el texto completo del PDF en formato JSON
+4) Preparar los datos que posteriormente alimentarán tbl_obras
+========================================================= -->
+
+<div class="contenedor">
+
+<h1>Extracción automática de PDFs de obras</h1>
+
+<p>
+Esta herramienta analiza documentos administrativos para extraer
+información relevante. El sistema busca el CSV en varias fuentes:
+</p>
+
+<ul>
+<li>Metadatos del PDF</li>
+<li>Texto interno del documento</li>
+<li>Zona inferior del documento (donde suele aparecer el CSV)</li>
+<li>OCR en caso de documentos escaneados</li>
+</ul>
+
+<hr>
+
+
+<!-- =========================================================
+SECCIÓN 1
+SUBIDA DE DOCUMENTOS
+--------------------------------------------------------------
+Aquí se cargan los PDFs que se quieren analizar.
+El sistema detectará el CSV para evitar duplicados.
+========================================================= -->
+
+<h2>1. Subir nuevo PDF</h2>
+
+<p>
+Seleccione un documento administrativo en formato PDF.
+El sistema procesará automáticamente el archivo y extraerá
+los datos disponibles.
+</p>
+
+<form action="/obras/pdf/subir" method="POST" enctype="multipart/form-data">
+
+<div class="campo">
+
+<label>Seleccionar archivo PDF</label>
+
+<input type="file" name="pdf" required>
+
+</div>
+
+<button type="submit">
+Procesar documento
+</button>
+
+</form>
+
+
+<hr>
+
+
+<!-- =========================================================
+SECCIÓN 2
+PROCESAMIENTO AUTOMÁTICO
+--------------------------------------------------------------
+Explica el proceso interno que sigue el sistema.
+Esto es útil para usuarios administrativos.
+========================================================= -->
+
+<h2>2. Proceso de análisis del documento</h2>
+
+<p>
+Cuando se sube un PDF, el sistema realiza automáticamente
+los siguientes pasos:
+</p>
+
+<ol>
+
+<li>
+Lectura completa del documento para extraer el texto disponible.
+</li>
+
+<li>
+Búsqueda del CSV (Código Seguro de Verificación) para garantizar
+que el documento no ha sido procesado anteriormente.
+</li>
+
+<li>
+Generación de un objeto JSON con el texto extraído y los datos
+detectados en el documento.
+</li>
+
+<li>
+Almacenamiento del resultado en una tabla intermedia
+(<strong>tbl_obras_pdf</strong>) que posteriormente será utilizada
+para alimentar la tabla final de control de obras.
+</li>
+
+</ol>
+
+
+<hr>
+
+
+<!-- =========================================================
+SECCIÓN 3
+DOCUMENTOS PROCESADOS
+--------------------------------------------------------------
+Lista de PDFs ya analizados por el sistema.
+Permite comprobar si el documento ya fue cargado.
+========================================================= -->
+
+<h2>3. Documentos procesados</h2>
+
+<p>
+A continuación se muestran los documentos que ya han sido
+procesados por el sistema. Esto permite verificar si un
+documento ya ha sido registrado previamente.
+</p>
+
+<table class="tabla">
+
+<thead>
+
+<tr>
+<th>ID</th>
+<th>Nombre del PDF</th>
+<th>CSV detectado</th>
+<th>Fecha de registro</th>
+</tr>
+
+</thead>
+
+<tbody>
+
+{% for r in registros %}
+
+<tr>
+<td>{{ r.id }}</td>
+<td>{{ r.nombre_pdf }}</td>
+<td>{{ r.csv }}</td>
+<td>{{ r.fecha_creacion }}</td>
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+
+<hr>
+
+
+<!-- =========================================================
+SECCIÓN 4
+OBJETIVO DEL SISTEMA
+--------------------------------------------------------------
+Explicación funcional para usuarios o auditores.
+========================================================= -->
+
+<h2>4. Objetivo del sistema</h2>
+
+<p>
+El objetivo principal de esta herramienta es automatizar la
+gestión de documentos administrativos relacionados con obras
+y ocupaciones de vía pública.
+</p>
+
+<p>
+La extracción automática permite reducir errores humanos,
+evitar duplicados y facilitar la integración de los datos
+en el sistema de control de obras municipal.
+</p>
+
+<p>
+Una vez procesado el documento, los datos almacenados podrán
+utilizarse para alimentar la tabla principal <strong>tbl_obras</strong>,
+desde donde se gestionará el seguimiento completo de la obra.
+</p>
+
+
+</div>
+
+{% endblock %}

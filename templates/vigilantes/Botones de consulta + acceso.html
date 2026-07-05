@@ -1,0 +1,12 @@
+<!-- Botones de consulta + acceso al plano -->
+<div style="margin-top:25px;display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;">
+    <button type="button" id="btn-consulta-matricula">Consulta por Matrícula</button>
+    <button type="button" id="btn-consulta-usuario">Consulta por Usuario</button>
+    <button type="button" id="btn-ir-plano">Ir a plano del parquin</button>
+</div>
+
+<script>
+document.getElementById("btn-ir-plano").addEventListener("click", () => {
+    window.location.href = "{{ url_for('vigilantes_bp.registrar_acceso') }}";
+});
+</script>

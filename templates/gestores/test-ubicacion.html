@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Ubicación - FUNCIONAL</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        select {
+            width: 100%;
+            padding: 10px;
+            font-size: 14px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+        }
+        select:disabled {
+            background: #f0f0f0;
+            cursor: not-allowed;
+        }
+        .console {
+            background: #1e1e1e;
+            color: #0f0;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🇪🇸 Test Ubicación España</h1>
+    
+    <div class="form-group">
+        <label>📍 Provincia</label>
+        <select id="provincia">
+            <option value="">-- Seleccione --</option>
+            <option value="6">Ávila</option>
+            <option value="28">Madrid</option>
+            <option value="47">Valladolid</option>
+        </select>
+    </div>
+    
+    <div class="form-group">
+        <label>🏙️ Municipio</label>
+        <select id="municipio" disabled>
+            <option value="">-- Seleccione provincia primero --</option>
+        </select>
+    </div>
+    
+    <div class="form-group">
+        <label>🛣️ Tipo vía</label>
+        <select id="tipo_via">
+            <option value="">-- Seleccione --</option>
+            <option value="1">Calle</option>
+            <option value="2">Avenida</option>
+        </select>
+    </div>
+    
+    <div class="form-group">
+        <label>🚏 Calle</label>
+        <select id="calle" disabled>
+            <option value="">-- Seleccione municipio y tipo --</option>
+        </select>
+    </div>
+    
+    <div class="console" id="log"></div>
+
+    <script>
+        // CONSOLA DE DEBUG
+        const logDiv = document.getElementById('log');
+        function log(msg) {
+            console.log(msg);
+            logDiv.innerHTML += msg + '<br>';
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+        
+        log('🚀 Sistema iniciando...');
+        
+        // DATOS DEMO
+        const MUNICIPIOS = {
+            '6': [
+                {id: 1, nombre: 'Ávila'},
+                {id: 2, nombre: 'Arévalo'},
+                {id: 3, nombre: 'El Barco de Ávila'}
+            ],
+            '28': [
+                {id: 5, nombre: 'Madrid'},
+                {id: 6, nombre: 'Alcalá de Henares'},
+                {id: 7, nombre: 'Getafe'}
+            ],
+            '47': [
+                {id: 9, nombre: 'Valladolid'},
+                {id: 10, nombre: 'Medina del Campo'},
+                {id: 11, nombre: 'Laguna de Duero'}
+            ]
+        };
+        
+        const CALLES = {
+            '1_1': [{id: 1, nombre: 'Real'}, {id: 2, nombre: 'Mayor'}],
+            '5_2': [{id: 4, nombre: 'Alcalá'}, {id: 5, nombre: 'Gran Vía'}],
+            '9_1': [{id: 7, nombre: 'Santiago'}, {id: 8, nombre: 'Constitución'}]
+        };
+        
+        // ELEMENTOS
+        const selProv = document.getElementById('provincia');
+        const selMun = document.getElementById('municipio');
+        const selTipo = document.getElementById('tipo_via');
+        const selCalle = document.getElementById('calle');
+        
+        log('✅ Elementos encontrados');
+        log('   Provincia: ' + (selProv ? 'OK' : 'ERROR'));
+        log('   Municipio: ' + (selMun ? 'OK' : 'ERROR'));
+        
+        // CARGAR MUNICIPIOS
+        function cargarMunicipios(provId) {
+            log('━━━━━━━━━━━━━━━━━━━━━━━━');
+            log('📍 PROVINCIA CAMBIADA: ' + provId);
+            
+            selMun.innerHTML = '<option value="">Cargando...</option>';
+            selMun.disabled = true;
+            selCalle.innerHTML = '<option value="">-- Seleccione municipio --</option>';
+            selCalle.disabled = true;
+            
+            if (!provId) {
+                selMun.innerHTML = '<option value="">-- Seleccione provincia --</option>';
+                log('⚠️  Provincia vacía');
+                return;
+            }
+            
+            setTimeout(() => {
+                const muns = MUNICIPIOS[provId] || [];
+                log(`📦 Municipios encontrados: ${muns.length}`);
+                
+                if (muns.length === 0) {
+                    selMun.innerHTML = '<option value="">-- Sin municipios --</option>';
+                    log('⚠️  Sin municipios para provincia ' + provId);
+                    return;
+                }
+                
+                selMun.innerHTML = '<option value="">-- Seleccione municipio --</option>';
+                muns.forEach(m => {
+                    const opt = document.createElement('option');
+                    opt.value = m.id;
+                    opt.textContent = m.nombre;
+                    selMun.appendChild(opt);
+                    log(`   ✅ Añadido: ${m.nombre}`);
+                });
+                
+                selMun.disabled = false;
+                log('✅ Municipios cargados y SELECT HABILITADO');
+            }, 300);
+        }
+        
+        // CARGAR CALLES
+        function cargarCalles(munId, tipoId) {
+            log('━━━━━━━━━━━━━━━━━━━━━━━━');
+            log(`🛣️  CARGANDO CALLES: mun=${munId}, tipo=${tipoId}`);
+            
+            selCalle.innerHTML = '<option value="">Cargando...</option>';
+            selCalle.disabled = true;
+            
+            if (!munId || !tipoId) {
+                selCalle.innerHTML = '<option value="">-- Seleccione municipio y tipo --</option>';
+                log('⚠️  Faltan datos');
+                return;
+            }
+            
+            setTimeout(() => {
+                const key = `${munId}_${tipoId}`;
+                const calles = CALLES[key] || [];
+                log(`📦 Calles encontradas: ${calles.length} (key: ${key})`);
+                
+                if (calles.length === 0) {
+                    selCalle.innerHTML = '<option value="">-- Sin calles --</option>';
+                    log('⚠️  Sin calles para ' + key);
+                    return;
+                }
+                
+                selCalle.innerHTML = '<option value="">-- Seleccione calle --</option>';
+                calles.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c.id;
+                    opt.textContent = c.nombre;
+                    selCalle.appendChild(opt);
+                    log(`   ✅ Añadida: ${c.nombre}`);
+                });
+                
+                selCalle.disabled = false;
+                log('✅ Calles cargadas y SELECT HABILITADO');
+            }, 300);
+        }
+        
+        // EVENTOS
+        selProv.addEventListener('change', function() {
+            log('🔔 EVENTO: Provincia changed');
+            cargarMunicipios(this.value);
+        });
+        
+        selMun.addEventListener('change', function() {
+            log('🔔 EVENTO: Municipio changed');
+            cargarCalles(this.value, selTipo.value);
+        });
+        
+        selTipo.addEventListener('change', function() {
+            log('🔔 EVENTO: Tipo vía changed');
+            cargarCalles(selMun.value, this.value);
+        });
+        
+        log('━━━━━━━━━━━━━━━━━━━━━━━━');
+        log('✅ SISTEMA LISTO');
+        log('👉 Selecciona una provincia para empezar');
+        log('━━━━━━━━━━━━━━━━━━━━━━━━');
+    </script>
+</body>
+</html>

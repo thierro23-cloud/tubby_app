@@ -1,0 +1,569 @@
+{# =============================================================================
+   1️⃣ 🌐 PLANTILLA: templates/control_obras/control_obras_form.html
+   =============================================================================
+   🏗️ FORMULARIO PROFESIONAL · ALTA DE OBRA (tbl_obras)
+
+   1.1️⃣ OBJETIVO
+   -----------------------------------------------------------------------------
+   Esta plantilla permite dar de alta una nueva obra en:
+     - control_via_publica.tbl_obras
+
+   1.2️⃣ COMPATIBILIDAD GARANTIZADA CON EL BACKEND
+   -----------------------------------------------------------------------------
+   Queda alineada con:
+     - control_obras_bp.control_obras_nueva()
+     - control_obras_bp.ajax_calles_por_tipo()
+
+   1.3️⃣ DECISIONES FUNCIONALES
+   -----------------------------------------------------------------------------
+   ✅ Municipio fijo = Ávila
+   ✅ Gestor automático desde backend
+   ✅ Tipos de vía y calles con carga dinámica AJAX
+   ✅ Preparada para geolocalización
+   ✅ Observaciones obligatorias
+   ✅ Estructura compacta y usable
+
+   1.4️⃣ CORRECCIONES APLICADAS
+   -----------------------------------------------------------------------------
+   ✅ Eliminado import erróneo de flash_messages desde macros.html
+   ✅ Corregidos nombres de campos GPS
+   ✅ Añadido componente de geolocalización
+   ✅ Mejorado AJAX para conservar selección al recargar
+   ✅ Fechas con input type="date"
+   ============================================================================= #}
+
+{% extends "base.html" %}
+
+{# =============================================================================
+   2️⃣ TÍTULO DE PÁGINA
+   ============================================================================= #}
+{% block title %}Nueva obra{% endblock %}
+
+{# =============================================================================
+   3️⃣ CONTENIDO PRINCIPAL
+   ============================================================================= #}
+{% block content %}
+<div class="container-fluid py-4">
+
+  {# ===========================================================================
+     4️⃣ ESTILOS LOCALES DEL FORMULARIO
+     =========================================================================== #}
+  <style>
+    .obras-shell {
+      max-width: 1320px;
+      margin: 0 auto;
+    }
+
+    .obras-header-card,
+    .obras-form-card {
+      border: 0;
+      border-radius: 18px;
+      box-shadow: 0 14px 32px rgba(15, 23, 42, 0.08);
+      overflow: hidden;
+    }
+
+    .obras-section-title {
+      display: flex;
+      align-items: center;
+      gap: .65rem;
+      margin-bottom: .85rem;
+    }
+
+    .obras-section-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 999px;
+      font-size: .8rem;
+      font-weight: 700;
+      color: #fff;
+      background: #0d6efd;
+      flex: 0 0 28px;
+    }
+
+    .obras-section-badge.secondary { background: #6c757d; }
+    .obras-section-badge.danger { background: #dc3545; }
+
+    .obras-section-text {
+      margin: 0;
+      font-weight: 700;
+      color: #0f172a;
+      font-size: .98rem;
+    }
+
+    .obras-subtext {
+      font-size: .83rem;
+      color: #64748b;
+      margin-top: .15rem;
+    }
+
+    .obras-divider {
+      border: 0;
+      border-top: 1px solid #e5e7eb;
+      margin: 1.5rem 0;
+    }
+
+    .obras-readonly {
+      background: #f8f9fa !important;
+    }
+  </style>
+
+  <div class="obras-shell">
+
+    {# =========================================================================
+       5️⃣ CABECERA PRINCIPAL
+       ========================================================================= #}
+    <div class="card obras-header-card mb-4">
+      <div class="card-body d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+        <div>
+          <h1 class="h4 mb-1">
+            <i class="fas fa-plus-circle text-primary me-2"></i>
+            Nueva obra
+          </h1>
+          <div class="text-muted small">
+            Alta rápida en <strong>tbl_obras</strong> · Municipio fijo <strong>{{ municipio_nombre }}</strong>.
+          </div>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2">
+          <a href="{{ url_for('control_obras_bp.control_obras') }}"
+             class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i>
+            Volver al listado
+          </a>
+        </div>
+      </div>
+    </div>
+
+    {# =========================================================================
+       6️⃣ MENSAJES FLASH
+       ========================================================================= #}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="mb-4">
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm" role="alert">
+              {{ message }}
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    {# =========================================================================
+       7️⃣ AVISO DE PREFILL DESDE PDF
+       ========================================================================= #}
+    {% if prefill_pdf %}
+      <div class="alert alert-info d-flex gap-2 align-items-start shadow-sm">
+        <div class="pt-1">
+          <i class="fas fa-file-import fa-lg"></i>
+        </div>
+        <div class="flex-grow-1">
+          <div class="fw-semibold">Importación desde PDF completada</div>
+          <div class="small">
+            Revisa los campos detectados y corrige lo necesario antes de guardar.
+          </div>
+
+          {% if datos.proveedor_nombre %}
+            <div class="small mt-2">
+              <i class="fas fa-industry me-1"></i>
+              Proveedor detectado:
+              <span class="fw-semibold">{{ datos.proveedor_nombre }}</span>
+              {% if datos.proveedor_nif %}
+                <span class="text-muted">({{ datos.proveedor_nif }})</span>
+              {% endif %}
+            </div>
+          {% endif %}
+
+          {% if datos.direccion_texto %}
+            <div class="small mt-1">
+              <i class="fas fa-map-marker-alt me-1"></i>
+              Dirección detectada:
+              <span class="fw-semibold">{{ datos.direccion_texto }}</span>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    {% endif %}
+
+    {# =========================================================================
+       8️⃣ FORMULARIO PRINCIPAL
+       ========================================================================= #}
+    <form method="post" class="card obras-form-card">
+
+      <div class="card-header bg-white border-0 pt-4 pb-0">
+        <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-2">
+          <div class="fw-semibold">
+            <i class="fas fa-clipboard-list text-primary me-2"></i>
+            Datos principales de la obra
+          </div>
+          <div class="small text-muted">
+            <i class="fas fa-info-circle me-1"></i>
+            El campo observaciones es obligatorio.
+          </div>
+        </div>
+      </div>
+
+      <div class="card-body pt-4">
+
+        {# =====================================================================
+           8.1️⃣ SECCIÓN A · UBICACIÓN Y REFERENCIAS
+           ===================================================================== #}
+        <section>
+          <div class="obras-section-title">
+            <span class="obras-section-badge">A</span>
+            <div>
+              <p class="obras-section-text">Ubicación y referencias</p>
+              <div class="obras-subtext">
+                Datos generales del expediente.
+              </div>
+            </div>
+          </div>
+
+          <div class="row g-3">
+
+            <div class="col-lg-4">
+              <label class="form-label mb-1">
+                <i class="fas fa-landmark me-1 text-primary"></i>
+                Municipio
+              </label>
+
+              <div class="input-group">
+                <input class="form-control obras-readonly"
+                       value="{{ municipio_nombre }} (ID {{ municipio_id }})"
+                       readonly>
+                <span class="input-group-text bg-light">
+                  <span class="badge bg-primary">FIJO</span>
+                </span>
+              </div>
+
+              <input type="hidden" name="idtbl_municipios" value="{{ municipio_id }}">
+
+              <div class="form-text">
+                🔒 Bloqueado por configuración del sistema (siempre Ávila).
+              </div>
+            </div>
+
+            <div class="col-lg-4">
+              <label class="form-label mb-1">
+                <i class="fas fa-map me-1 text-primary"></i>
+                GIS municipal
+              </label>
+              <input class="form-control"
+                     name="idtbl_gis_municipal"
+                     value="{{ datos.idtbl_gis_municipal or '' }}"
+                     placeholder="Ej: 12345">
+            </div>
+
+            <div class="col-lg-4">
+              <label class="form-label mb-1">
+                <i class="fas fa-industry me-1 text-primary"></i>
+                Proveedor (ID)
+              </label>
+              <input class="form-control"
+                     name="idtbl_proveedor"
+                     value="{{ datos.idtbl_proveedor or '' }}"
+                     placeholder="Ej: 27">
+            </div>
+
+          </div>
+        </section>
+
+        <hr class="obras-divider">
+
+        {# =====================================================================
+           8.2️⃣ SECCIÓN B · DIRECCIÓN PRINCIPAL
+           ===================================================================== #}
+        <section>
+          <div class="obras-section-title">
+            <span class="obras-section-badge">B</span>
+            <div>
+              <p class="obras-section-text">Dirección principal</p>
+              <div class="obras-subtext">
+                Vía principal asociada a la obra.
+              </div>
+            </div>
+          </div>
+
+          <div class="row g-3">
+
+            <div class="col-lg-3">
+              <label class="form-label mb-1">
+                <i class="fas fa-road me-1 text-primary"></i>
+                Tipo de vía principal
+              </label>
+
+              <select class="form-select"
+                      id="idtbl_tipos_de_vias"
+                      name="idtbl_tipos_de_vias">
+                <option value="">— Selecciona tipo de vía —</option>
+                {% for tv in tipos_via %}
+                  <option value="{{ tv.idtbl_tipos_de_vias }}"
+                          {% if datos.idtbl_tipos_de_vias == tv.idtbl_tipos_de_vias %}selected{% endif %}>
+                    {{ tv.tipos_de_vias }}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="col-lg-6">
+              <label class="form-label mb-1">
+                <i class="fas fa-map-signs me-1 text-primary"></i>
+                Calle principal
+              </label>
+
+              <select class="form-select"
+                      id="idtbl_calles"
+                      name="idtbl_calles"
+                      data-selected="{{ datos.idtbl_calles or '' }}">
+                <option value="">— Selecciona calle —</option>
+                {% for calle in calles_principales %}
+                  <option value="{{ calle.idtbl_calles }}"
+                          {% if datos.idtbl_calles == calle.idtbl_calles %}selected{% endif %}>
+                    {{ calle.calles }}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="col-lg-3">
+              <label class="form-label mb-1">
+                <i class="far fa-calendar-alt me-1 text-primary"></i>
+                Fecha inicio
+              </label>
+              <input type="date"
+                     class="form-control"
+                     name="fecha_inicio"
+                     value="{{ datos.fecha_inicio or '' }}">
+            </div>
+
+          </div>
+        </section>
+
+        <hr class="obras-divider">
+
+        {# =====================================================================
+           8.3️⃣ SECCIÓN C · DIRECCIÓN SECUNDARIA
+           ===================================================================== #}
+        <section>
+          <div class="obras-section-title">
+            <span class="obras-section-badge secondary">C</span>
+            <div>
+              <p class="obras-section-text">Dirección secundaria (opcional)</p>
+              <div class="obras-subtext">
+                Segunda referencia de ubicación.
+              </div>
+            </div>
+          </div>
+
+          <div class="row g-3">
+
+            <div class="col-lg-3">
+              <label class="form-label mb-1">
+                <i class="fas fa-road me-1 text-secondary"></i>
+                Tipo de vía secundaria
+              </label>
+
+              <select class="form-select"
+                      id="idtbl_tipos_de_vias1"
+                      name="idtbl_tipos_de_vias1">
+                <option value="">— Selecciona tipo de vía —</option>
+                {% for tv in tipos_via %}
+                  <option value="{{ tv.idtbl_tipos_de_vias }}"
+                          {% if datos.idtbl_tipos_de_vias1 == tv.idtbl_tipos_de_vias %}selected{% endif %}>
+                    {{ tv.tipos_de_vias }}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="col-lg-6">
+              <label class="form-label mb-1">
+                <i class="fas fa-map-signs me-1 text-secondary"></i>
+                Calle secundaria
+              </label>
+
+              <select class="form-select"
+                      id="idtbl_calles1"
+                      name="idtbl_calles1"
+                      data-selected="{{ datos.idtbl_calles1 or '' }}">
+                <option value="">— Selecciona calle —</option>
+                {% for calle in calles_secundarias %}
+                  <option value="{{ calle.idtbl_calles }}"
+                          {% if datos.idtbl_calles1 == calle.idtbl_calles %}selected{% endif %}>
+                    {{ calle.calles }}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="col-lg-3">
+              <label class="form-label mb-1">
+                <i class="fas fa-flag-checkered me-1 text-success"></i>
+                Fecha finalización
+              </label>
+              <input type="date"
+                     class="form-control"
+                     name="fecha_finalizacion"
+                     value="{{ datos.fecha_finalizacion or '' }}">
+              <div class="form-text">
+                Vacía = obra abierta.
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+        <hr class="obras-divider">
+
+        {# =====================================================================
+           8.4️⃣ SECCIÓN D · GEOLOCALIZACIÓN
+           ===================================================================== #}
+        <section>
+          <div class="obras-section-title">
+            <span class="obras-section-badge">D</span>
+            <div>
+              <p class="obras-section-text">Geolocalización y posicionamiento</p>
+              <div class="obras-subtext">
+                Captura de ubicación para asociarla a la obra.
+              </div>
+            </div>
+          </div>
+
+          {% include "componentes/geolocalizacion.html" %}
+        </section>
+
+        <hr class="obras-divider">
+
+        {# =====================================================================
+           8.5️⃣ SECCIÓN E · OBSERVACIONES Y GESTOR
+           ===================================================================== #}
+        <section>
+          <div class="row g-3 align-items-end">
+            <div class="col-lg-9">
+              <div class="obras-section-title">
+                <span class="obras-section-badge danger">E</span>
+                <div>
+                  <p class="obras-section-text">Observaciones (obligatorio)</p>
+                  <div class="obras-subtext">
+                    Describe la obra y cualquier detalle relevante.
+                  </div>
+                </div>
+              </div>
+
+              <textarea class="form-control"
+                        name="observaciones"
+                        rows="5"
+                        placeholder="Ej: Ocupación de calzada por vallas. Duración estimada, afecciones, observaciones operativas...">{{ datos.observaciones or '' }}</textarea>
+            </div>
+
+            <div class="col-lg-3">
+              <label class="form-label mb-1">
+                <i class="fas fa-user-shield me-1 text-primary"></i>
+                Gestor (ID)
+              </label>
+              <input class="form-control obras-readonly"
+                     name="idtbl_gestores"
+                     value="{{ datos.idtbl_gestores or '' }}"
+                     placeholder="auto"
+                     readonly>
+            </div>
+          </div>
+        </section>
+
+      </div>
+
+      {# =========================================================================
+         9️⃣ FOOTER DEL FORMULARIO
+         ========================================================================= #}
+      <div class="card-footer bg-white border-0">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+
+          <a href="{{ url_for('control_obras_bp.control_obras') }}"
+             class="btn btn-outline-secondary">
+            <i class="fas fa-times me-1"></i>
+            Cancelar
+          </a>
+
+          <button class="btn btn-primary px-4" type="submit">
+            <i class="fas fa-save me-2"></i>
+            Guardar obra
+          </button>
+
+        </div>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+{# =============================================================================
+   🔟 JAVASCRIPT · CARGA DINÁMICA DE CALLES POR TIPO DE VÍA
+   ============================================================================= #}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+  const tipoViaPrincipal = document.getElementById("idtbl_tipos_de_vias");
+  const callePrincipal = document.getElementById("idtbl_calles");
+
+  const tipoViaSecundaria = document.getElementById("idtbl_tipos_de_vias1");
+  const calleSecundaria = document.getElementById("idtbl_calles1");
+
+  function cargarCalles(idTipoVia, selectCalles, selectedValue = "", placeholder = "— Selecciona calle —") {
+    selectCalles.innerHTML = `<option value="">${placeholder}</option>`;
+
+    if (!idTipoVia) {
+      return;
+    }
+
+    fetch(`{{ url_for('control_obras_bp.ajax_calles_por_tipo') }}?idtbl_tipos_de_vias=${idTipoVia}`)
+      .then(response => response.json())
+      .then(data => {
+        data.forEach(calle => {
+          const option = document.createElement("option");
+          option.value = calle.idtbl_calles;
+          option.textContent = calle.calles;
+
+          if (String(selectedValue) === String(calle.idtbl_calles)) {
+            option.selected = true;
+          }
+
+          selectCalles.appendChild(option);
+        });
+      })
+      .catch(error => {
+        console.error("Error cargando calles:", error);
+      });
+  }
+
+  if (tipoViaPrincipal) {
+    tipoViaPrincipal.addEventListener("change", function () {
+      cargarCalles(this.value, callePrincipal);
+    });
+  }
+
+  if (tipoViaSecundaria) {
+    tipoViaSecundaria.addEventListener("change", function () {
+      cargarCalles(this.value, calleSecundaria);
+    });
+  }
+
+  if (tipoViaPrincipal && callePrincipal && tipoViaPrincipal.value && callePrincipal.dataset.selected) {
+    cargarCalles(tipoViaPrincipal.value, callePrincipal, callePrincipal.dataset.selected);
+  }
+
+  if (tipoViaSecundaria && calleSecundaria && tipoViaSecundaria.value && calleSecundaria.dataset.selected) {
+    cargarCalles(tipoViaSecundaria.value, calleSecundaria, calleSecundaria.dataset.selected);
+  }
+});
+</script>
+
+{# =============================================================================
+   1️⃣1️⃣ SCRIPT DEL COMPONENTE DE GEOLOCALIZACIÓN
+   ============================================================================= #}
+<script src="{{ url_for('static', filename='js/geolocalizacion.js') }}"></script>
+
+{% endblock %}

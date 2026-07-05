@@ -1,0 +1,317 @@
+<!-- =============================================================================
+🛠️ ADMIN · CREAR MÓDULO DINÁMICO
+=============================================================================
+
+🎯 PROPÓSITO:
+Permitir crear módulos dinámicos desde la interfaz con:
+
+✔ Datos del módulo (grupo, título, descripción, color)
+✔ Botones dinámicos asociados al módulo
+✔ Generación flexible sin tocar código backend
+
+🧠 FUNCIONAMIENTO GENERAL:
+1. Usuario introduce datos del módulo
+2. Añade uno o varios botones dinámicamente
+3. Se envía todo al backend vía POST
+4. Backend registra módulo + botones
+
+💡 VENTAJA:
+Sistema totalmente escalable tipo SaaS → sin modificar HTML
+
+============================================================================= -->
+
+
+<!-- =============================================================================
+🎨 SECCIÓN 1 · ESTILOS
+=============================================================================
+
+👉 Define apariencia visual:
+- Fondo oscuro SaaS
+- Inputs limpios
+- Botones diferenciados (acción / eliminar / añadir)
+
+============================================================================= -->
+
+<style>
+
+  /* ---------------------------------------------------------------------------
+  🧱 1.1 BASE GLOBAL
+  ---------------------------------------------------------------------------
+  - Fondo oscuro moderno
+  - Tipografía limpia
+  --------------------------------------------------------------------------- */
+  body {
+    background:#0f172a;
+    color:white;
+    font-family:Inter, sans-serif;
+    padding:2rem;
+  }
+
+  /* ---------------------------------------------------------------------------
+  📦 1.2 CONTENEDOR DEL FORMULARIO
+  ---------------------------------------------------------------------------
+  - Centrado
+  - Anchura controlada
+  --------------------------------------------------------------------------- */
+  .form {
+    max-width:600px;
+    margin:auto;
+  }
+
+  /* ---------------------------------------------------------------------------
+  🧾 1.3 INPUTS Y SELECTS
+  ---------------------------------------------------------------------------
+  - Diseño uniforme
+  --------------------------------------------------------------------------- */
+  input, select {
+    width:100%;
+    margin-bottom:.6rem;
+    padding:.5rem;
+    border-radius:.4rem;
+    border:none;
+  }
+
+  /* ---------------------------------------------------------------------------
+  🔘 1.4 BOTÓN PRINCIPAL
+  --------------------------------------------------------------------------- */
+  button {
+    background:#3b82f6;
+    color:white;
+    padding:.6rem;
+    border:none;
+    border-radius:.4rem;
+    cursor:pointer;
+    width:100%;
+  }
+
+  button:hover {
+    opacity:.9;
+  }
+
+  /* ---------------------------------------------------------------------------
+  ➕ 1.5 BOTÓN AÑADIR
+  --------------------------------------------------------------------------- */
+  .btn-add {
+    background:#22c55e;
+    margin-bottom:1rem;
+  }
+
+  /* ---------------------------------------------------------------------------
+  ❌ 1.6 BOTÓN ELIMINAR
+  --------------------------------------------------------------------------- */
+  .btn-remove {
+    background:#ef4444;
+    margin-bottom:1rem;
+  }
+
+  /* ---------------------------------------------------------------------------
+  📦 1.7 BLOQUE DE BOTÓN (GRUPO)
+  ---------------------------------------------------------------------------
+  - Cada botón se agrupa visualmente
+  --------------------------------------------------------------------------- */
+  .boton-group {
+    background:#1e293b;
+    padding:1rem;
+    border-radius:.5rem;
+    margin-bottom:1rem;
+  }
+
+</style>
+
+
+
+<!-- =============================================================================
+🧱 SECCIÓN 2 · FORMULARIO PRINCIPAL
+=============================================================================
+
+👉 Contiene:
+1. Datos del módulo
+2. Botones dinámicos
+3. Acciones finales
+
+============================================================================= -->
+
+<div class="form">
+
+  <!-- -------------------------------------------------------------------------
+  🏷️ 2.1 TÍTULO
+  ------------------------------------------------------------------------- -->
+  <h2>➕ Crear módulo</h2>
+
+
+  <form method="POST">
+
+    <!-- ===================================================================== -->
+    <!-- 1️⃣ SUBSECCIÓN · DATOS DEL MÓDULO                                     -->
+    <!-- ===================================================================== -->
+
+    <!-- ---------------------------------------------------------------------
+    🧠 GRUPO
+    -----------------------------------------------------------------------
+    - Identificador interno del módulo
+    - Se usa para lógica backend
+    --------------------------------------------------------------------- -->
+    <label>Grupo (ej: vias_publicas)</label>
+    <input name="grupo" required placeholder="Ej: control_vias">
+
+
+    <!-- ---------------------------------------------------------------------
+    🏷️ TÍTULO
+    -----------------------------------------------------------------------
+    - Nombre visible del módulo en UI
+    --------------------------------------------------------------------- -->
+    <label>Título</label>
+    <input name="titulo" required placeholder="Ej: Control de contenedores">
+
+
+    <!-- ---------------------------------------------------------------------
+    📝 DESCRIPCIÓN
+    -----------------------------------------------------------------------
+    - Información adicional (opcional)
+    --------------------------------------------------------------------- -->
+    <label>Descripción</label>
+    <input name="descripcion" placeholder="Descripción del módulo">
+
+
+    <!-- ---------------------------------------------------------------------
+    🎨 COLOR
+    -----------------------------------------------------------------------
+    - Define estilo visual del módulo
+    - Se usa en frontend (clase CSS)
+    --------------------------------------------------------------------- -->
+    <label>Color</label>
+    <select name="color">
+      <option value="blue">Azul</option>
+      <option value="green">Verde</option>
+      <option value="purple">Morado</option>
+    </select>
+
+
+
+    <!-- ===================================================================== -->
+    <!-- 2️⃣ SUBSECCIÓN · BOTONES DINÁMICOS                                    -->
+    <!-- ===================================================================== -->
+
+    <h3>Botones</h3>
+
+    <!-- ---------------------------------------------------------------------
+    📦 CONTENEDOR DE BOTONES
+    -----------------------------------------------------------------------
+    - Aquí se insertan dinámicamente los botones
+    --------------------------------------------------------------------- -->
+    <div id="botones">
+
+      <!-- 🔹 BLOQUE INICIAL -->
+      <div class="boton-group">
+
+        <!-- TEXTO BOTÓN -->
+        <input name="boton_texto"
+               placeholder="Texto botón (ej: Ver contenedores)"
+               required>
+
+        <!-- ENDPOINT -->
+        <input name="boton_endpoint"
+               placeholder="endpoint (ej: blueprint.funcion)"
+               required>
+
+        <!-- BOTÓN ELIMINAR -->
+        <button type="button"
+                class="btn-remove"
+                onclick="removeBoton(this)">
+          ❌ Eliminar
+        </button>
+
+      </div>
+
+    </div>
+
+
+
+    <!-- ===================================================================== -->
+    <!-- 3️⃣ SUBSECCIÓN · ACCIONES                                             -->
+    <!-- ===================================================================== -->
+
+    <!-- ➕ AÑADIR BOTÓN -->
+    <button type="button"
+            class="btn-add"
+            onclick="addBoton()">
+      ➕ Añadir botón
+    </button>
+
+    <!-- 💾 GUARDAR -->
+    <button type="submit">
+      💾 Guardar módulo
+    </button>
+
+  </form>
+
+</div>
+
+
+
+<!-- =============================================================================
+⚙️ SECCIÓN 3 · SCRIPT DINÁMICO
+=============================================================================
+
+👉 Permite:
+✔ Añadir bloques de botones dinámicamente
+✔ Eliminar bloques existentes
+
+============================================================================= -->
+
+<script>
+
+  /* ---------------------------------------------------------------------------
+  ➕ 3.1 FUNCIÓN · AÑADIR BOTÓN
+  ---------------------------------------------------------------------------
+  - Crea nuevo bloque HTML
+  - Lo inserta en el contenedor #botones
+  --------------------------------------------------------------------------- */
+  function addBoton(){
+
+    const div = document.createElement("div");
+    div.classList.add("boton-group");
+
+    div.innerHTML = `
+      <input name="boton_texto" placeholder="Texto botón" required>
+      <input name="boton_endpoint" placeholder="endpoint (blueprint.funcion)" required>
+
+      <button type="button" class="btn-remove" onclick="removeBoton(this)">
+        ❌ Eliminar
+      </button>
+    `;
+
+    document.getElementById("botones").appendChild(div);
+  }
+
+
+  /* ---------------------------------------------------------------------------
+  ❌ 3.2 FUNCIÓN · ELIMINAR BOTÓN
+  ---------------------------------------------------------------------------
+  - Elimina el bloque donde se hace click
+  --------------------------------------------------------------------------- */
+  function removeBoton(btn){
+    btn.parentElement.remove();
+  }
+
+</script>
+
+
+
+<!-- =============================================================================
+🧠 RESUMEN FUNCIONAL
+=============================================================================
+
+🔹 Backend:
+- Recibe:
+  grupo, titulo, descripcion, color
+  lista de botones (texto + endpoint)
+
+🔹 Frontend:
+- Genera UI dinámica
+- Permite múltiples botones sin recargar
+
+🔹 Flujo:
+Usuario → Formulario → JS dinámico → POST → Backend → Registro módulo
+
+============================================================================= -->

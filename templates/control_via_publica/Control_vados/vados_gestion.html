@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <!--
+  ======================================================================
+  [1] CABECERA GLOBAL Y ESTILOS
+  ----------------------------------------------------------------------
+  QUÉ HACE ESTA PLANTILLA (VISIÓN GENERAL):
+    - Construye la pantalla de "Gestión de vados" dividida en 3 paneles:
+        · Panel superior (40%): formulario de datos normalizados (editable).
+        · Panel central (35%): históricos de números y de titulares/proveedores.
+        · Panel inferior (25%): datos OT (no normalizados, solo lectura).
+    - En la cabecera:
+        · Muestra el total de vados normalizados.
+        · Permite filtrar por:
+            º Número de vado (numero_vado_q).
+            º NIF SP OT (nif_q).
+            º Tipo de vía (lista_tipos_vias, desde bd_tbl_comunes.tbl_tipos_de_vias).
+            º Calle (lista_calles, solo municipio 395, filtrada por tipo_via_q).
+            º Proveedor (lista_proveedores, desde bd_tbl_comunes.tbl_proveedores).
+        · Incluye botones de navegación: Atrás, Adelante, Volver (recarga).
+    - En el formulario:
+        · Muestra el vado normalizado seleccionado (el primero de vados_normalizados).
+        · Permite editar campos: nº vado, puerta, superficie, anchura,
+          tipo de operación, estado, fecha alta y titular actual.
+        · Botones:
+            º Nuevo: limpia el formulario (excepto ID).
+            º Cambio titular: vacía el campo titular, guardando el valor
+              anterior en dataset para que el backend lo use en el histórico.
+            º Cambio nº vado: vacía el número, guardando el anterior.
+            º Guardar: pendiente de conectar con tu endpoint (ahora muestra un alert).
+            º Cancelar: recarga la página (descarta cambios).
+    - En históricos:
+        · Tabla de históricos de números del vado seleccionado.
+        · Tabla de históricos de titulares/proveedores del vado seleccionado.
+    - En datos OT:
+        · Lista de registros OT para ese vado (no normalizados, solo lectura).
+    - En JavaScript:
+        · Gestiona la lógica de:
+            º Nuevo vado (limpieza del formulario).
+            º Cambio de titular (marca anterior y limpia el campo).
+            º Cambio de número de vado (marca anterior y limpia el campo).
+            º Guardar (placeholder).
+            º Cancelar (recarga).
+  ======================================================================
+  -->
+
+  <meta charset="UTF-8">
+  <title>Gestión de vados</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    /*
+    ======================================================================
+    [1.1] RESET Y ESTILO BASE
+    ----------------------------------------------------------------------
+    - Elimina márgenes/paddings por defecto.
+    - Define fuente, fondo y comportamiento del body (sin scroll global).
+    - Define el contenedor principal .app-shell.
+    ======================================================================
+    */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      height: 100vh;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      background: #f4f5f7;
+      color: #212529;
+    }
+
+    .app-shell {
+      height: 100%;
+      padding: 8px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    /*
+    ======================================================================
+    [1.2] CABECERA, FILTROS Y NAVEGACIÓN
+    ----------------------------------------------------------------------
+    - Cabecera fija arriba con:
+        · Título.
+        · Contador de vados normalizados.
+        · Fila de filtros.
+        · Fila de navegación (atrás, adelante, volver).
+    - Los filtros se muestran en una cuadrícula responsiva.
+    ======================================================================
+    */
+    .header {
+      background: #6c757d;
+      color: #fff;
+      padding: 8px 12px;
+      border-radius: 6px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      flex: 0 0 auto;
+    }
+
+    .header__top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .header__title {
+      font-size: 1rem;
+      font-weight: 700;
+    }
+
+    .header__counter {
+      font-size: 0.8rem;
+      background: rgba(255,255,255,0.15);
+      padding: 4px 8px;
+      border-radius: 999px;
+    }
+
+    .header__counter strong {
+      font-weight: 700;
+      font-size: 0.95rem;
+    }
+
+    .header__filters-row {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr)) auto;
+      gap: 6px;
+      align-items: flex-end;
+    }
+
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      font-size: 0.75rem;
+    }
+
+    .filter-label {
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      opacity: 0.85;
+    }
+
+    .filter-input,
+    .filter-select {
+      border: none;
+      border-radius: 4px;
+      padding: 6px 8px;
+      font-size: 0.8rem;
+      background: #f8f9fa;
+      color: #212529;
+      outline: none;
+      min-height: 30px;
+    }
+
+    .filter-input:focus,
+    .filter-select:focus {
+      box-shadow: 0 0 0 2px rgba(255,255,255,0.4);
+    }
+
+    .btn-search {
+      border: none;
+      border-radius: 16px;
+      background: #28a745;
+      color: #fff;
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 6px 14px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      white-space: nowrap;
+    }
+
+    .btn-search:hover {
+      background: #1e7e34;
+    }
+
+    .header__nav-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.8rem;
+    }
+
+    .nav-buttons {
+      display: flex;
+      gap: 4px;
+    }
+
+    .btn-nav,
+    .btn-back {
+      border-radius: 999px;
+      font-size: 0.75rem;
+      padding: 4px 10px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      border: 1px solid rgba(255,255,255,0.6);
+      background: transparent;
+      color: #fff;
+    }
+
+    .btn-back {
+      border: none;
+      background: rgba(0,0,0,0.18);
+    }
+
+    .btn-nav:hover,
+    .btn-back:hover {
+      background: rgba(0,0,0,0.28);
+    }
+
+    /*
+    ======================================================================
+    [1.3] LAYOUT PRINCIPAL (3 PANELES 40/35/25)
+    ----------------------------------------------------------------------
+    - Distribuye verticalmente:
+        · Panel de formulario (40%).
+        · Panel de históricos (35%).
+        · Panel de datos OT (25%).
+    - Cada panel tiene su scroll interno (overflow: auto).
+    ======================================================================
+    */
+    .main {
+      flex: 1 1 auto;
+      display: grid;
+      grid-template-rows: 40% 35% 25%;
+      gap: 6px;
+      min-height: 0;
+    }
+
+    .panel {
+      background: #ffffff;
+      border-radius: 6px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .panel--form    { border: 1px solid #b8d4e3; background: #e8f4f8; }
+    .panel--history { border: 1px solid #ffd5a0; background: #fff9f0; }
+    .panel--ot      { border: 1px solid #e0c0ff; background: #f5e6ff; }
+
+    .panel__header {
+      flex: 0 0 auto;
+      padding: 6px 10px;
+      border-bottom: 1px solid rgba(0,0,0,0.06);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    .panel__header-title {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .panel__header-count {
+      font-size: 0.75rem;
+      color: #495057;
+      background: rgba(255,255,255,0.6);
+      padding: 2px 8px;
+      border-radius: 999px;
+    }
+
+    .panel__body {
+      flex: 1 1 auto;
+      padding: 6px 8px;
+      overflow: auto;
+      font-size: 0.8rem;
+    }
+
+    /*
+    ======================================================================
+    [1.4] FORMULARIO (ESTILO CAMPOS EDITABLES)
+    ----------------------------------------------------------------------
+    - Grid de 4 columnas para los campos del vado.
+    - Inputs con fondo verde claro para indicar normalización.
+    ======================================================================
+    */
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 6px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .form-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      color: #495057;
+    }
+
+    .form-input,
+    .form-select {
+      padding: 6px 8px;
+      border-radius: 4px;
+      border: 1px solid #ced4da;
+      font-size: 0.8rem;
+      background: #d4edda;
+      outline: none;
+    }
+
+    .form-input:focus,
+    .form-select:focus {
+      border-color: #6c757d;
+      box-shadow: 0 0 0 2px rgba(108,117,125,0.18);
+      background: #fff;
+    }
+
+    .form-input--readonly {
+      background: #f8f9fa;
+      cursor: not-allowed;
+      border-color: #dee2e6;
+    }
+
+    .form-actions {
+      margin-top: 4px;
+      display: flex;
+      gap: 4px;
+    }
+
+    .btn-save {
+      border: none;
+      border-radius: 999px;
+      background: #28a745;
+      color: #fff;
+      font-size: 0.75rem;
+      padding: 4px 10px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .btn-save:hover {
+      background: #1e7e34;
+    }
+
+    .btn-cancel {
+      border-radius: 999px;
+      border: 1px solid #ced4da;
+      background: #fff;
+      color: #495057;
+      font-size: 0.75rem;
+      padding: 4px 10px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .btn-cancel:hover {
+      background: #e9ecef;
+    }
+
+    /*
+    ======================================================================
+    [1.5] TABLAS COMPACTAS (HISTÓRICOS Y OT)
+    ----------------------------------------------------------------------
+    - Tablas compactas para mostrar muchos registros.
+    - Efectos hover.
+    - Estilo especial para tablas de solo lectura (OT).
+    ======================================================================
+    */
+    .table-wrapper {
+      width: 100%;
+      overflow: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.75rem;
+    }
+
+    thead {
+      background: #e9ecef;
+    }
+
+    th, td {
+      padding: 2px 3px;
+      border: 1px solid #dee2e6;
+      text-align: left;
+      white-space: nowrap;
+      font-size: 0.7rem;
+    }
+
+    th {
+      text-transform: uppercase;
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: #495057;
+    }
+
+    tbody tr:hover {
+      background: rgba(0,0,0,0.03);
+    }
+
+    .table--readonly tbody tr:hover {
+      background: #f8f9fa;
+    }
+
+    .table--readonly td {
+      background: #f8f9fa;
+      color: #6c757d;
+    }
+
+    .tag-ot {
+      background: #6c757d;
+      color: #fff;
+      padding: 1px 4px;
+      border-radius: 4px;
+      font-size: 0.6rem;
+      text-transform: uppercase;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 8px;
+      color: #6c757d;
+      font-size: 0.8rem;
+    }
+  </style>
+</head>
+
+<body>
+<div class="app-shell">
+
+  <!--
+  ======================================================================
+  [2] CABECERA CON FILTROS Y NAVEGACIÓN
+  ----------------------------------------------------------------------
+  QUÉ HACE:
+    - Muestra título y contador de vados normalizados (vados_normalizados|length).
+    - Ofrece filtros que se envían por GET a la vista:
+        · numero_vado (numero_vado_q).
+        · nif (nif_q).
+        · tipo_via (tipo_via_q, ID de bd_tbl_comunes.tbl_tipos_de_vias).
+        · calle (calle_q, ID de bd_tbl_comunes.tbl_calles, municipio 395).
+        · proveedor (proveedor_q, ID de bd_tbl_comunes.tbl_proveedores).
+    - Usa listas:
+        · lista_tipos_vias (id, nombre).
+        · lista_calles (id, nombre).
+        · lista_proveedores (id, nombre).
+    - Incluye controles de navegación del navegador: atrás, adelante, volver.
+  ======================================================================
+  -->
+  <header class="header">
+    <div class="header__top">
+      <div class="header__title">🛣️ Gestión de vados</div>
+      <div class="header__counter">
+        Total vados: <strong>{{ vados_normalizados|length }}</strong>
+      </div>
+    </div>
+
+    <!-- [2.1] Filtros -->
+    <form class="header__filters-row"
+          action="{{ url_for('btn_vados_gestion_bp.btn_vados_gestion') }}"
+          method="get">
+
+      <div class="filter-group">
+        <label class="filter-label" for="numero_vado">Nº vado</label>
+        <input
+          type="text"
+          id="numero_vado"
+          name="numero_vado"
+          class="filter-input"
+          value="{{ numero_vado_q }}"
+          placeholder="Ej: 1234">
+      </div>
+
+      <div class="filter-group">
+        <label class="filter-label" for="nif">NIF SP OT</label>
+        <input
+          type="text"
+          id="nif"
+          name="nif"
+          class="filter-input"
+          value="{{ nif_q }}"
+          placeholder="Ej: 12345678A">
+      </div>
+
+      <div class="filter-group">
+        <label class="filter-label" for="tipo_via">Tipo de vía</label>
+        <select id="tipo_via" name="tipo_via" class="filter-select">
+          <option value="">Todos</option>
+          {% for tv in lista_tipos_vias|default([]) %}
+            <option value="{{ tv.id }}"
+              {% if tipo_via_q == tv.id|string %}selected{% endif %}>
+              {{ tv.nombre }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label class="filter-label" for="calle">Calle</label>
+        <select id="calle" name="calle" class="filter-select">
+          <option value="">Todas</option>
+          {% for c in lista_calles|default([]) %}
+            <option value="{{ c.id }}"
+              {% if calle_q == c.id|string %}selected{% endif %}>
+              {{ c.nombre }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label class="filter-label" for="proveedor">Proveedor</label>
+        <select id="proveedor" name="proveedor" class="filter-select">
+          <option value="">Todos</option>
+          {% for p in lista_proveedores|default([]) %}
+            <option value="{{ p.id }}"
+              {% if proveedor_q == p.id|string %}selected{% endif %}>
+              {{ p.nombre }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <button type="submit" class="btn-search">
+        🔍 Buscar
+      </button>
+    </form>
+
+    <!-- [2.2] Navegación -->
+    <div class="header__nav-row">
+      <span>Filtros activos sobre datos normalizados y OT.</span>
+      <div class="nav-buttons">
+        <button type="button" class="btn-nav" onclick="history.back()">
+          ⬅️ Atrás
+        </button>
+        <button type="button" class="btn-nav" onclick="history.forward()">
+          ➡️ Adelante
+        </button>
+        <button type="button" class="btn-back"
+                onclick="window.location.href='{{ url_for('btn_vados_gestion_bp.btn_vados_gestion') }}'">
+          ↩️ Volver
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!--
+  ======================================================================
+  [3] CONTENIDO PRINCIPAL
+  ----------------------------------------------------------------------
+  - Panel [3.1]: formulario de datos normalizados (editable).
+  - Panel [3.2]: históricos (números + titulares/proveedores).
+  - Panel [3.3]: datos OT (no normalizados, solo lectura).
+  ======================================================================
+  -->
+  <main class="main">
+
+    <!--
+    ====================================================================
+    [3.1] FORMULARIO DATOS NORMALIZADOS (INICIO / FIN)
+    --------------------------------------------------------------------
+    QUÉ HACE:
+      - Toma el primer vado de vados_normalizados (si existe) y lo presenta
+        en un formulario editable.
+      - Campos:
+          · ID (idtbl_vados, solo lectura).
+          · Nº vado (numero_vado).
+          · Puerta.
+          · Superficie.
+          · Anchura.
+          · Tipo de operación (lista_tipos_operacion).
+          · Estado (baja: 0=Activo, 1=Baja).
+          · Fecha alta.
+          · Titular actual (Nombre_SP_OT).
+      - botones:
+          · Nuevo: prepara el formulario para un alta o duplicado.
+          · Cambio titular: vacía el campo titular y guarda el valor anterior
+            en un atributo data- para que el backend lo use en el histórico.
+          · Cambio nº vado: mismo patrón para el número de vado.
+          · Guardar: pendiente de implementar a nivel backend.
+          · Cancelar: recarga la página, descartando cambios.
+    ====================================================================
+    -->
+    <section class="panel panel--form">
+      <div class="panel__header">
+        <div class="panel__header-title">✏️ Datos normalizados (editable)</div>
+        <div class="panel__header-count">
+          {{ vados_normalizados|length }}
+        </div>
+      </div>
+
+      <div class="panel__body">
+        {% if vados_normalizados|length > 0 %}
+          {% set v = vados_normalizados[0] %}
+
+          <!-- [3.1.1] Botones de acción sobre el vado -->
+          <div class="form-actions" style="margin-bottom: 4px;">
+            <button type="button" class="btn-save" id="btn-nuevo">
+              ➕ Nuevo
+            </button>
+            <button type="button" class="btn-cancel" id="btn-cambio-titular">
+              👤 Cambio titular
+            </button>
+            <button type="button" class="btn-cancel" id="btn-cambio-numero">
+              🔄 Cambio nº vado
+            </button>
+          </div>
+
+          <!-- [3.1.2] Formulario de edición / alta -->
+          <form id="form-vado" class="form-grid">
+            <div class="form-group">
+              <label class="form-label" for="idtbl_vados">ID</label>
+              <input type="text" id="idtbl_vados" name="idtbl_vados"
+                     class="form-input form-input--readonly"
+                     value="{{ v.idtbl_vados }}" readonly>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="numero_vado_f">Nº vado</label>
+              <input type="text" id="numero_vado_f" name="numero_vado"
+                     class="form-input"
+                     value="{{ v.numero_vado }}">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="Puerta">Puerta</label>
+              <input type="text" id="Puerta" name="Puerta"
+                     class="form-input"
+                     value="{{ v.Puerta }}">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="superficie">Superficie</label>
+              <input type="text" id="superficie" name="superficie"
+                     class="form-input"
+                     value="{{ v.superficie }}">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="anchura">Anchura</label>
+              <input type="text" id="anchura" name="anchura"
+                     class="form-input"
+                     value="{{ v.anchura }}">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="tipo_operacion">Operación</label>
+              <select id="tipo_operacion" name="tipo_operacion" class="form-select">
+                <option value="">Selecciona</option>
+                {% for op in lista_tipos_operacion|default(['Alta','Cambio','Baja']) %}
+                  <option value="{{ op }}"
+                          {% if v.tipo_operacion == op %}selected{% endif %}>
+                    {{ op }}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="baja">Estado</label>
+              <select id="baja" name="baja" class="form-select">
+                <option value="0" {% if v.baja == 0 %}selected{% endif %}>Activo</option>
+                <option value="1" {% if v.baja == 1 %}selected{% endif %}>Baja</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="fecha_alta">Fecha alta</label>
+              <input type="date" id="fecha_alta" name="fecha_alta"
+                     class="form-input"
+                     value="{{ v.fecha_alta }}">
+            </div>
+
+            <!-- [3.1.3] Titular editable (campo sobre el que actúa "Cambio titular") -->
+            <div class="form-group">
+              <label class="form-label" for="titular_actual">Titular actual</label>
+              <input type="text" id="titular_actual" name="titular_actual"
+                     class="form-input"
+                     value="{{ v.Nombre_SP_OT }}">
+            </div>
+          </form>
+
+          <!-- [3.1.4] Botones Guardar / Cancelar -->
+          <div class="form-actions">
+            <button type="button" class="btn-save" id="btn-guardar">💾 Guardar</button>
+            <button type="button" class="btn-cancel" id="btn-cancelar">Cancelar</button>
+          </div>
+        {% else %}
+          <div class="empty-state">
+            No hay vados normalizados para mostrar.
+          </div>
+        {% endif %}
+      </div>
+    </section>
+    <!-- [3.1] FORMULARIO DATOS NORMALIZADOS (FIN) -->
+
+    <!--
+    ====================================================================
+    [3.2] HISTÓRICOS (NÚMEROS + TITULARES) (INICIO / FIN)
+    --------------------------------------------------------------------
+    QUÉ HACE:
+      - Muestra en un panel central:
+          · Tabla de histórico de números de vado (historico_numeros).
+          · Tabla de histórico de titulares/proveedores (historico_titulares).
+      - Cada tabla:
+          · Muestra IDs, cambios, fechas, gestor y observaciones.
+          · Muestra un mensaje cuando no hay registros.
+    ====================================================================
+    -->
+    <section class="panel panel--history">
+      <div class="panel__header">
+        <div class="panel__header-title">📜 Históricos</div>
+        <div class="panel__header-count">
+          Nº: {{ historico_numeros|length }} · Titulares: {{ historico_titulares|length }}
+        </div>
+      </div>
+      <div class="panel__body">
+
+        <!-- [3.2.1] HISTÓRICO DE NÚMEROS DE VADO (INICIO) -->
+        <div style="margin-bottom: 6px; font-weight: 600; font-size: 0.8rem;">
+          🔄 Histórico de números de vado
+        </div>
+        <div class="table-wrapper" style="margin-bottom: 8px;">
+          <table class="table">
+            <thead>
+            <tr>
+              <th>ID</th>
+              <th>Vado</th>
+              <th>Nº anterior</th>
+              <th>Nº nuevo</th>
+              <th>Fecha cambio</th>
+              <th>Gestor</th>
+              <th>Observaciones</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for h in historico_numeros %}
+              <tr>
+                <td>{{ h.idtbl_vados_historico_numeros }}</td>
+                <td>{{ h.idtbl_vados }}</td>
+                <td>{{ h.numero_anterior }}</td>
+                <td>{{ h.numero_nuevo }}</td>
+                <td>{{ h.fecha_cambio }}</td>
+                <td>{{ h.idtbl_gestores }}</td>
+                <td>{{ h.observaciones }}</td>
+              </tr>
+            {% else %}
+              <tr>
+                <td colspan="7">
+                  <div class="empty-state">Sin histórico de números para este vado.</div>
+                </td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <!-- [3.2.1] HISTÓRICO DE NÚMEROS DE VADO (FIN) -->
+
+        <!-- [3.2.2] HISTÓRICO DE TITULARES/PROVEEDORES (INICIO) -->
+        <div style="margin-bottom: 6px; font-weight: 600; font-size: 0.8rem;">
+          👤 Histórico de titulares/proveedores
+        </div>
+        <div class="table-wrapper">
+          <table class="table">
+            <thead>
+            <tr>
+              <th>ID</th>
+              <th>Vado</th>
+              <th>ID prov. anterior</th>
+              <th>ID prov. nuevo</th>
+              <th>Fecha cambio</th>
+              <th>Gestor</th>
+              <th>Observaciones</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for h in historico_titulares %}
+              <tr>
+                <td>{{ h.idtbl_vados_historico_titulares }}</td>
+                <td>{{ h.idtbl_vados }}</td>
+                <td>{{ h.idtbl_proveedor_anterior }}</td>
+                <td>{{ h.idtbl_proveedor_nuevo }}</td>
+                <td>{{ h.fecha_cambio }}</td>
+                <td>{{ h.idtbl_gestores }}</td>
+                <td>{{ h.observaciones }}</td>
+              </tr>
+            {% else %}
+              <tr>
+                <td colspan="7">
+                  <div class="empty-state">Sin histórico de titulares para este vado.</div>
+                </td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <!-- [3.2.2] HISTÓRICO DE TITULARES/PROVEEDORES (FIN) -->
+
+      </div>
+    </section>
+    <!-- [3.2] HISTÓRICOS (FIN) -->
+
+    <!--
+    ====================================================================
+    [3.3] DATOS OT NO ARMONIZADOS (INICIO / FIN)
+    --------------------------------------------------------------------
+    QUÉ HACE:
+      - Muestra, en modo solo lectura, los datos OT procedentes de tbl_vados:
+          · idtbl_vados.
+          · numero_vado.
+          · NIF_SP_OT.
+          · Nombre_SP_OT.
+          · Desc_OT.
+      - Sirve para comparar y validar la normalización frente al dato bruto.
+    ====================================================================
+    -->
+    <section class="panel panel--ot">
+      <div class="panel__header">
+        <div class="panel__header-title">🔒 Datos OT (no normalizados)</div>
+        <div class="panel__header-count">{{ vados_ot|length }} registro(s)</div>
+      </div>
+      <div class="panel__body">
+        <div class="table-wrapper">
+          <table class="table table--readonly">
+            <thead>
+            <tr>
+              <th><span class="tag-ot">ID</span></th>
+              <th><span class="tag-ot">Nº vado</span></th>
+              <th><span class="tag-ot">NIF SP OT</span></th>
+              <th><span class="tag-ot">Nombre SP OT</span></th>
+              <th><span class="tag-ot">Desc. OT</span></th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for v in vados_ot %}
+              <tr>
+                <td>{{ v.idtbl_vados }}</td>
+                <td>{{ v.numero_vado }}</td>
+                <td>{{ v.NIF_SP_OT }}</td>
+                <td>{{ v.Nombre_SP_OT }}</td>
+                <td>{{ v.Desc_OT }}</td>
+              </tr>
+            {% else %}
+              <tr>
+                <td colspan="5">
+                  <div class="empty-state">No hay vados OT para mostrar.</div>
+                </td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+    <!-- [3.3] DATOS OT NO ARMONIZADOS (FIN) -->
+
+  </main>
+</div>
+
+<!--
+======================================================================
+[4] JAVASCRIPT: NUEVO / CAMBIO TITULAR / CAMBIO Nº / GUARDAR / CANCELAR
+----------------------------------------------------------------------
+QUÉ HACE:
+  - [4.1] Nuevo:
+      · Recorre todos los elementos del formulario.
+      · Limpia el valor de cada campo salvo el ID (idtbl_vados).
+      · Restaura selects a su primera opción.
+  - [4.2] Cambio titular:
+      · Valida que haya un titular_actual.
+      · Guarda el valor actual en titular_actual.dataset.anterior.
+      · Limpia el campo para introducir el nuevo titular.
+  - [4.3] Cambio nº vado:
+      · Igual que cambio de titular, pero sobre numero_vado_f.
+  - [4.4] Guardar:
+      · Muestra un alert de placeholder para que conectes tu lógica de guardado
+        (fetch/XHR o submit tradicional).
+  - [4.5] Cancelar:
+      · Recarga la página para descartar cualquier modificación visual.
+======================================================================
+-->
+<script>
+  const form = document.getElementById('form-vado');
+  const btnGuardar = document.getElementById('btn-guardar');
+  const btnCancelar = document.getElementById('btn-cancelar');
+  const btnNuevo = document.getElementById('btn-nuevo');
+  const btnCambioTitular = document.getElementById('btn-cambio-titular');
+  const btnCambioNumero = document.getElementById('btn-cambio-numero');
+
+  // [4.1] Nuevo vado: limpiar formulario (excepto ID)
+  if (btnNuevo && form) {
+    btnNuevo.addEventListener('click', () => {
+      [...form.elements].forEach(el => {
+        if (!el.name) return;
+        if (el.name === 'idtbl_vados') return;
+        if (el.tagName === 'SELECT') {
+          el.selectedIndex = 0;
+        } else {
+          el.value = '';
+        }
+      });
+    });
+  }
+
+  // [4.2] Cambio de titular: guardar anterior en dataset y limpiar campo
+  if (btnCambioTitular && form) {
+    btnCambioTitular.addEventListener('click', () => {
+      const titularInput = form.querySelector('#titular_actual');
+      if (!titularInput) return;
+      if (!titularInput.value) {
+        alert('No hay titular actual para pasar a histórico.');
+        return;
+      }
+      titularInput.dataset.anterior = titularInput.value;
+      titularInput.value = '';
+    });
+  }
+
+  // [4.3] Cambio de número de vado: guardar anterior en dataset y limpiar campo
+  if (btnCambioNumero && form) {
+    btnCambioNumero.addEventListener('click', () => {
+      const numInput = form.querySelector('#numero_vado_f');
+      if (!numInput) return;
+      if (!numInput.value) {
+        alert('No hay número de vado actual para pasar a histórico.');
+        return;
+      }
+      numInput.dataset.anterior = numInput.value;
+      numInput.value = '';
+    });
+  }
+
+  // [4.4] Guardar (conectar a tu endpoint)
+  if (btnGuardar && form) {
+    btnGuardar.addEventListener('click', () => {
+      alert('✔ Guardar: conecta este botón con tu endpoint de edición/alta.');
+    });
+  }
+
+  // [4.5] Cancelar: recarga la página
+  if (btnCancelar) {
+    btnCancelar.addEventListener('click', () => {
+      location.reload();
+    });
+  }
+</script>
+</body>
+</html>

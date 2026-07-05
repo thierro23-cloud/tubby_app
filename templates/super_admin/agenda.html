@@ -1,0 +1,848 @@
+{# =============================================================================
+   📄 PLANTILLA: agenda.html
+   🎯 PROPÓSITO: Agenda unificada de vía pública (Super Admin)
+   📍 UBICACIÓN: templates/agenda/
+   🔧 VERSIÓN: v2.0-REORGANIZADA-DOCUMENTADA
+   👤 AUTOR: Tino Hierro
+   📅 FECHA: 2026-05-23
+   
+   CARACTERÍSTICAS:
+   - Vista consolidada de todos los eventos en la ciudad
+   - Navegación temporal inteligente (día/semana/mes)
+   - Filtros avanzados:
+     * Por tipo de vía y calle (carga dinámica AJAX)
+     * Por tipos de evento (checkboxes múltiples)
+   - Sistema de colores por tipo de evento
+   - Enlaces a expedientes origen (obras, terrazas, etc.)
+   - Diseño oscuro profesional sin scroll de página
+   
+   BACKEND REQUERIDO:
+   - Backend: agenda_core/backend_agenda.py
+   - Endpoint: /agenda (blueprint: control_via_publica.agenda_bp)
+   - Vista BD: vw_agenda_via_publica_por_calle
+   
+   DATOS ESPERADOS DESDE BACKEND:
+   - eventos: Lista de eventos con campos de la vista
+   - tipos_evento: Catálogo de tipos de evento con código, nombre, color
+   - tipos_via: Lista de tipos de vía para el filtro
+   - calles: Lista de calles (puede estar vacía al inicio)
+   - filtros: Dict con estado actual de filtros
+   - fecha_desde, fecha_hasta: Rango de fechas actual
+   - fecha_ref: Fecha de referencia para navegación
+   - prev_ref, next_ref: Fechas de navegación anterior/siguiente
+   ============================================================================= #}
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📅 Agenda vía pública · Super Admin</title>
+    
+    <!-- Bootstrap Icons (para iconos de navegación) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+
+    <style>
+        /* =====================================================================
+           🎨 RESET Y BASE
+           ===================================================================== */
+        * { 
+            box-sizing: border-box; 
+            margin: 0; 
+            padding: 0; 
+        }
+        
+        html, body {
+            height: 100%;
+            overflow: hidden; /* Sin scroll de página */
+        }
+        
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #0f172a;
+            color: #e5e7eb;
+        }
+        
+        /* =====================================================================
+           📦 CONTENEDOR PRINCIPAL (100vh estricto)
+           ===================================================================== */
+        .agenda-root {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        /* =====================================================================
+           📊 ENCABEZADO CON NAVEGACIÓN
+           ===================================================================== */
+        .agenda-header {
+            flex: 0 0 auto;
+            padding: 12px 16px;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.35);
+            background: linear-gradient(90deg, rgba(15, 23, 42, 0.96), rgba(15, 23, 42, 0.92));
+        }
+        
+        .agenda-header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .agenda-header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        /* Botón volver circular */
+        .btn-volver-header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: rgba(59, 130, 246, 0.2);
+            color: #60a5fa;
+            text-decoration: none;
+            font-size: 1.3rem;
+            transition: all 0.2s;
+            border: 2px solid rgba(59, 130, 246, 0.4);
+        }
+        
+        .btn-volver-header:hover {
+            background: rgba(59, 130, 246, 0.35);
+            transform: scale(1.1);
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+        }
+        
+        .agenda-title {
+            font-size: 1.15rem;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+        
+        .agenda-subtitle {
+            font-size: 0.8rem;
+            color: #9ca3af;
+            margin-top: 3px;
+        }
+        
+        /* =====================================================================
+           🎛️ CONTROLES DE NAVEGACIÓN TEMPORAL
+           ===================================================================== */
+        .agenda-nav-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(15, 23, 42, 0.6);
+            padding: 8px 14px;
+            border-radius: 8px;
+            border: 1px solid rgba(75, 85, 99, 0.5);
+        }
+        
+        .nav-btn {
+            background: #1e293b;
+            border: 1px solid #475569;
+            color: #e5e7eb;
+            padding: 6px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .nav-btn:hover {
+            background: #334155;
+            border-color: #64748b;
+            transform: translateY(-1px);
+        }
+        
+        .nav-date-display {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #3b82f6;
+            min-width: 260px;
+            text-align: center;
+        }
+        
+        .stats-summary {
+            font-size: 0.8rem;
+            color: #9ca3af;
+            margin-top: 6px;
+        }
+        
+        /* =====================================================================
+           📊 LAYOUT PRINCIPAL (FILTROS + EVENTOS)
+           ===================================================================== */
+        .agenda-main {
+            flex: 1 1 auto;
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            min-height: 0;
+            overflow: hidden;
+        }
+        
+        /* =====================================================================
+           🔧 PANEL DE FILTROS
+           ===================================================================== */
+        .agenda-filters {
+            padding: 14px;
+            border-right: 1px solid rgba(55, 65, 81, 0.9);
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(15, 23, 42, 0.94));
+            overflow-y: auto;
+        }
+        
+        .agenda-filters::-webkit-scrollbar { width: 6px; }
+        .agenda-filters::-webkit-scrollbar-track { background: #020617; }
+        .agenda-filters::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 3px;
+        }
+        
+        .filter-section {
+            margin-bottom: 16px;
+        }
+        
+        .filter-section-title {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #9ca3af;
+            margin-bottom: 6px;
+        }
+        
+        .filter-block {
+            border-radius: 8px;
+            border: 1px solid rgba(55, 65, 81, 0.9);
+            padding: 10px;
+            background: linear-gradient(145deg, rgba(15, 23, 42, 0.98), rgba(15, 23, 42, 0.96));
+        }
+        
+        .filter-label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        
+        .filter-select {
+            width: 100%;
+            padding: 7px;
+            border-radius: 6px;
+            border: 1px solid rgba(75, 85, 99, 0.9);
+            background: #020617;
+            color: #e5e7eb;
+            font-size: 0.8rem;
+            margin-bottom: 8px;
+        }
+        
+        .filter-select:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .filter-select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
+        
+        /* =====================================================================
+           🔘 BOTONES DE VISTA (DÍA/SEMANA/MES)
+           ===================================================================== */
+        .view-buttons {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+        }
+        
+        .view-btn {
+            padding: 7px;
+            border-radius: 6px;
+            border: 1px solid rgba(75, 85, 99, 0.9);
+            background: #020617;
+            color: #e5e7eb;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .view-btn.active {
+            border-color: #3b82f6;
+            background: rgba(59, 130, 246, 0.2);
+            color: #60a5fa;
+            font-weight: 600;
+        }
+        
+        .view-btn:hover:not(.active) {
+            background: #1e293b;
+            border-color: #64748b;
+        }
+        
+        /* =====================================================================
+           ☑️ LISTA DE CHECKBOXES (TIPOS DE EVENTO)
+           ===================================================================== */
+        .checkbox-list {
+            max-height: 220px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+        
+        .checkbox-list::-webkit-scrollbar { width: 5px; }
+        .checkbox-list::-webkit-scrollbar-track { background: #020617; }
+        .checkbox-list::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 3px;
+        }
+        
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            margin-bottom: 7px;
+            font-size: 0.75rem;
+        }
+        
+        .checkbox-item input[type="checkbox"] {
+            cursor: pointer;
+            width: 14px;
+            height: 14px;
+        }
+        
+        .color-dot {
+            width: 11px;
+            height: 11px;
+            border-radius: 50%;
+            border: 1px solid rgba(15, 23, 42, 0.9);
+            flex-shrink: 0;
+        }
+        
+        /* =====================================================================
+           📋 PANEL DE EVENTOS
+           ===================================================================== */
+        .agenda-events {
+            padding: 14px;
+            overflow-y: auto;
+        }
+        
+        .agenda-events::-webkit-scrollbar { width: 7px; }
+        .agenda-events::-webkit-scrollbar-track { background: #020617; }
+        .agenda-events::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 3px;
+        }
+        
+        .event-card {
+            border-radius: 10px;
+            border: 1px solid rgba(55, 65, 81, 0.9);
+            margin-bottom: 10px;
+            padding: 11px;
+            background: radial-gradient(circle at top left, rgba(59, 130, 246, 0.12), transparent 60%),
+                        linear-gradient(145deg, rgba(15, 23, 42, 0.98), rgba(15, 23, 42, 0.96));
+            transition: all 0.2s;
+        }
+        
+        .event-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(59, 130, 246, 0.5);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        
+        .event-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 7px;
+        }
+        
+        .event-type-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 9px;
+            border-radius: 999px;
+            background: rgba(15, 23, 42, 0.96);
+            border: 1px solid rgba(148, 163, 184, 0.4);
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        .event-dates {
+            font-size: 0.7rem;
+            color: #9ca3af;
+        }
+        
+        .event-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: #f1f5f9;
+        }
+        
+        .event-detail {
+            font-size: 0.75rem;
+            color: #9ca3af;
+            margin-top: 3px;
+        }
+        
+        .event-detail strong {
+            color: #e5e7eb;
+        }
+        
+        .event-origin {
+            font-size: 0.68rem;
+            color: #6b7280;
+            margin-top: 7px;
+            padding-top: 7px;
+            border-top: 1px solid rgba(55, 65, 81, 0.5);
+        }
+        
+        .event-origin a {
+            color: #60a5fa;
+            text-decoration: none;
+        }
+        
+        .event-origin a:hover {
+            text-decoration: underline;
+        }
+        
+        .no-events {
+            text-align: center;
+            padding: 50px 20px;
+            color: #9ca3af;
+            font-size: 0.9rem;
+        }
+        
+        /* =====================================================================
+           🔘 BOTÓN APLICAR FILTROS
+           ===================================================================== */
+        .btn-apply {
+            margin-top: 8px;
+            width: 100%;
+            padding: 7px;
+            border-radius: 6px;
+            border: 1px solid rgba(75, 85, 99, 0.9);
+            background: #1e293b;
+            color: #e5e7eb;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-apply:hover {
+            background: #334155;
+            border-color: #64748b;
+            transform: translateY(-1px);
+        }
+    </style>
+</head>
+
+<body>
+<div class="agenda-root">
+
+    {# =========================================================================
+       📊 ENCABEZADO CON NAVEGACIÓN TEMPORAL
+       ========================================================================= #}
+<header class="agenda-header">
+    <div class="agenda-header-top">
+        <div>
+            <div class="agenda-title">📅 Agenda vía pública</div>
+            <div class="agenda-subtitle">
+                Super Admin · Vista consolidada de eventos en la ciudad
+            </div>
+        </div>
+        
+        <!-- CONTROLES DE NAVEGACIÓN TEMPORAL + ACCESO A RECURRENCIAS -->
+        <div class="agenda-nav-controls">
+            <button class="nav-btn" onclick="navigateTime('prev')">
+                ◀ Anterior
+            </button>
+            
+            <div class="nav-date-display">
+                {{ fecha_desde|fecha }} — {{ fecha_hasta|fecha }}
+            </div>
+            
+            <button class="nav-btn" onclick="navigateTime('next')">
+                Siguiente ▶
+            </button>
+            
+            <button class="nav-btn" onclick="navigateTime('today')">
+                📍 Hoy
+            </button>
+            
+            <!-- ACCESO A RECURRENCIAS -->
+            <a href="{{ url_for('agenda_recurrencias_bp.ar_listar_recurrencias') }}" 
+               class="nav-btn"
+               style="text-decoration: none; background: #3b82f6; border-color: #2563eb;">
+                <i class="bi bi-arrow-repeat"></i>
+                Recurrencias
+            </a>
+        </div>
+    </div>
+    
+    <div class="stats-summary">
+        Vista: <strong>{{ filtros.vista|upper }}</strong> · 
+        {{ eventos|length }} eventos encontrados
+    </div>
+</header>
+    {# =========================================================================
+       📊 LAYOUT PRINCIPAL (FILTROS + EVENTOS)
+       ========================================================================= #}
+    <main class="agenda-main">
+
+        {# =====================================================================
+           🔧 PANEL DE FILTROS
+           ===================================================================== #}
+        <aside class="agenda-filters">
+            
+            {# -----------------------------------------------------------------
+               FILTRO: Vista temporal (día/semana/mes)
+               ----------------------------------------------------------------- #}
+            <div class="filter-section">
+                <div class="filter-section-title">⏱️ Rango de tiempo</div>
+                <div class="filter-block">
+                    <div class="view-buttons">
+                        <button 
+                            class="view-btn {% if filtros.vista == 'dia' %}active{% endif %}"
+                            onclick="changeView('dia')"
+                        >
+                            Día
+                        </button>
+                        <button 
+                            class="view-btn {% if filtros.vista == 'semana' %}active{% endif %}"
+                            onclick="changeView('semana')"
+                        >
+                            Semana
+                        </button>
+                        <button 
+                            class="view-btn {% if filtros.vista == 'mes' %}active{% endif %}"
+                            onclick="changeView('mes')"
+                        >
+                            Mes
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {# -----------------------------------------------------------------
+               FILTRO: Tipo de vía y calle (carga dinámica AJAX)
+               ----------------------------------------------------------------- #}
+            <div class="filter-section">
+                <div class="filter-section-title">📍 Filtrar por calle</div>
+                <div class="filter-block">
+                    <label class="filter-label" for="tipo_via">Tipo de vía</label>
+                    <select id="tipo_via" class="filter-select" onchange="cargarCallesPorTipo()">
+                        <option value="">Todas</option>
+                        {% for tv in tipos_via %}
+                        <option 
+                            value="{{ tv.idtbl_tipos_de_vias }}"
+                            {% if filtros.id_tipo_via == tv.idtbl_tipos_de_vias %}selected{% endif %}
+                        >
+                            {{ tv.tipos_de_vias }}
+                        </option>
+                        {% endfor %}
+                    </select>
+
+                    <label class="filter-label" for="calle">Calle</label>
+                    <select id="calle" class="filter-select">
+                        <option value="">Todas</option>
+                        {% for c in calles %}
+                        <option 
+                            value="{{ c.idtbl_calles }}"
+                            {% if filtros.id_calle == c.idtbl_calles %}selected{% endif %}
+                        >
+                            {{ c.calles }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    
+                    <button class="btn-apply" onclick="applyFilters()">
+                        Aplicar filtros de calle
+                    </button>
+                </div>
+            </div>
+
+            {# -----------------------------------------------------------------
+               FILTRO: Tipos de evento (checkboxes con colores)
+               ----------------------------------------------------------------- #}
+            <div class="filter-section">
+                <div class="filter-section-title">🏷️ Tipos de evento</div>
+                <div class="filter-block">
+                    <div class="checkbox-list">
+                        {% for t in tipos_evento %}
+                        <label class="checkbox-item">
+                            <input 
+                                type="checkbox" 
+                                class="tipo-evento-check"
+                                value="{{ t.codigo }}"
+                                {% if t.codigo in filtros.codigos_tipo %}checked{% endif %}
+                            >
+                            <span 
+                                class="color-dot"
+                                style="background-color: {{ t.color_hex or '#64748b' }};"
+                            ></span>
+                            <span>{{ t.nombre_publico or t.codigo }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                    
+                    <button class="btn-apply" onclick="applyFilters()">
+                        Aplicar tipos de evento
+                    </button>
+                </div>
+            </div>
+
+        </aside>
+
+        {# =====================================================================
+           📋 PANEL DE EVENTOS (TARJETAS)
+           ===================================================================== #}
+        <section class="agenda-events">
+            {% if eventos %}
+                {% for e in eventos %}
+                <article class="event-card">
+                    <div class="event-header">
+                        <div class="event-type-badge">
+                            <span 
+                                class="color-dot"
+                                style="background-color: {{ e.color_hex or '#64748b' }};"
+                            ></span>
+                            <span>{{ e.nombre_tipo_evento or e.codigo_tipo_evento }}</span>
+                        </div>
+                        <div class="event-dates">
+                            {{ e.fecha_inicio }}
+                            {% if e.fecha_fin %} → {{ e.fecha_fin }}{% endif %}
+                        </div>
+                    </div>
+
+                    <div class="event-title">{{ e.nombre_calle }}</div>
+                    
+                    {% if e.titulo %}
+                        <div class="event-detail">
+                            <strong>{{ e.titulo }}</strong>
+                        </div>
+                    {% endif %}
+
+                    {% if e.descripcion %}
+                        <div class="event-detail">{{ e.descripcion }}</div>
+                    {% endif %}
+
+                    {% if e.numero_via_desde or e.numero_via_hasta %}
+                        <div class="event-detail">
+                            Tramo: <strong>{{ e.numero_via_desde or '?' }} – {{ e.numero_via_hasta or '?' }}</strong>
+                        </div>
+                    {% endif %}
+
+                    {% if e.sentido %}
+                        <div class="event-detail">
+                            Sentido: <strong>{{ e.sentido }}</strong>
+                        </div>
+                    {% endif %}
+
+                    {% if e.observaciones_tramo %}
+                        <div class="event-detail">{{ e.observaciones_tramo }}</div>
+                    {% endif %}
+
+                    {# Enlace al expediente origen (si existe) #}
+                    {% if e.origen_tabla and e.origen_id %}
+                        <div class="event-origin">
+                            Origen: {{ e.origen_tabla }} · ID {{ e.origen_id }}
+                            {# TODO: Aquí se puede añadir enlace dinámico al expediente #}
+                        </div>
+                    {% endif %}
+                </article>
+                {% endfor %}
+            {% else %}
+                <div class="no-events">
+                    <i class="bi bi-calendar-x" style="font-size: 3rem; opacity: 0.3; display: block; margin-bottom: 15px;"></i>
+                    No hay eventos para los filtros seleccionados
+                </div>
+            {% endif %}
+        </section>
+
+    </main>
+
+</div>
+
+{# =============================================================================
+   📍 JAVASCRIPT: NAVEGACIÓN Y FILTROS
+   ============================================================================= #}
+<script>
+/**
+ * ============================================================================
+ * 📅 MÓDULO DE AGENDA VÍA PÚBLICA v2.0
+ * ============================================================================
+ * Sistema de navegación temporal y filtrado de eventos.
+ * Compatible con backend_agenda.py
+ * 
+ * AUTOR: Tino Hierro
+ * FECHA: 2026-05-23
+ * ============================================================================
+ */
+
+// =========================================================================
+// 🎯 CONFIGURACIÓN DESDE BACKEND
+// =========================================================================
+const CONFIG = {
+    vista: "{{ filtros.vista }}",
+    fecha_ref: "{{ fecha_ref }}",
+    prev_ref: "{{ prev_ref }}",
+    next_ref: "{{ next_ref }}",
+    id_tipo_via: {{ filtros.id_tipo_via or 'null' }},
+    id_calle: {{ filtros.id_calle or 'null' }},
+    codigos_tipo: {{ filtros.codigos_tipo|tojson }}
+};
+
+/**
+ * =========================================================================
+ * 🕒 NAVEGACIÓN TEMPORAL
+ * =========================================================================
+ * Navega entre períodos según la vista actual (día/semana/mes).
+ * 
+ * @param {string} direction - 'prev', 'next' o 'today'
+ */
+function navigateTime(direction) {
+    const params = new URLSearchParams(window.location.search);
+    
+    let nuevaFechaRef;
+    
+    if (direction === 'prev') {
+        nuevaFechaRef = CONFIG.prev_ref;
+    } else if (direction === 'next') {
+        nuevaFechaRef = CONFIG.next_ref;
+    } else if (direction === 'today') {
+        const hoy = new Date();
+        nuevaFechaRef = hoy.toISOString().split('T')[0];
+    }
+    
+    if (nuevaFechaRef) {
+        params.set('fecha_ref', nuevaFechaRef);
+    }
+    
+    window.location.search = params.toString();
+}
+
+/**
+ * =========================================================================
+ * 🔄 CAMBIO DE VISTA
+ * =========================================================================
+ * Cambia entre vista de día, semana o mes.
+ * 
+ * @param {string} nuevaVista - 'dia', 'semana' o 'mes'
+ */
+function changeView(nuevaVista) {
+    const params = new URLSearchParams(window.location.search);
+    params.set('vista', nuevaVista);
+    window.location.search = params.toString();
+}
+
+/**
+ * =========================================================================
+ * 🛣️ CARGA DINÁMICA DE CALLES POR TIPO DE VÍA
+ * =========================================================================
+ * Carga las calles de un tipo de vía mediante AJAX.
+ * 
+ * ENDPOINT: GET /helpers_vias/calles?id_municipio=X&id_tipo_via=Y
+ * RESPUESTA: { "ok": true, "calles": [...] }
+ */
+function cargarCallesPorTipo() {
+    const idTipoVia = document.getElementById('tipo_via').value;
+    const selectCalle = document.getElementById('calle');
+    
+    // Limpiar opciones
+    selectCalle.innerHTML = '<option value="">Cargando...</option>';
+    
+    if (!idTipoVia) {
+        selectCalle.innerHTML = '<option value="">Todas</option>';
+        return;
+    }
+    
+    // ID municipio hardcoded (TODO: obtener dinámicamente)
+    const idMunicipio = 395; // Ávila
+    const url = `/helpers_vias/calles?id_municipio=${idMunicipio}&id_tipo_via=${idTipoVia}`;
+    
+    fetch(url, {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(resp => resp.json())
+    .then(data => {
+        selectCalle.innerHTML = '<option value="">Todas</option>';
+        
+        if (!data.ok) {
+            console.error('Error cargando calles:', data.error);
+            return;
+        }
+        
+        const calles = data.calles || [];
+        calles.forEach(c => {
+            const option = document.createElement('option');
+            option.value = c.idtbl_calles;
+            option.textContent = c.calles;
+            selectCalle.appendChild(option);
+        });
+        
+        console.log(`✅ ${calles.length} calles cargadas`);
+    })
+    .catch(err => {
+        console.error('❌ Error en fetch de calles:', err);
+        selectCalle.innerHTML = '<option value="">Error al cargar</option>';
+    });
+}
+
+/**
+ * =========================================================================
+ * ✅ APLICAR TODOS LOS FILTROS
+ * =========================================================================
+ * Recoge todos los filtros activos y recarga la página con ellos.
+ */
+function applyFilters() {
+    const params = new URLSearchParams(window.location.search);
+    
+    // Mantener vista y fecha de referencia
+    params.set('vista', CONFIG.vista);
+    params.set('fecha_ref', CONFIG.fecha_ref);
+    
+    // Tipo de vía
+    const tipoVia = document.getElementById('tipo_via').value;
+    if (tipoVia) {
+        params.set('id_tipo_via', tipoVia);
+    } else {
+        params.delete('id_tipo_via');
+    }
+    
+    // Calle
+    const calle = document.getElementById('calle').value;
+    if (calle) {
+        params.set('id_calle', calle);
+    } else {
+        params.delete('id_calle');
+    }
+    
+    // Tipos de evento (checkboxes múltiples)
+    params.delete('codigos_tipo');
+    const checkboxes = document.querySelectorAll('.tipo-evento-check:checked');
+    checkboxes.forEach(cb => {
+        params.append('codigos_tipo', cb.value);
+    });
+    
+    window.location.search = params.toString();
+}
+
+// =========================================================================
+// ✅ INICIALIZACIÓN
+// =========================================================================
+console.log('✅ Módulo de agenda v2.0 inicializado correctamente');
+console.log('📊 Configuración:', CONFIG);
+</script>
+
+</body>
+</html>

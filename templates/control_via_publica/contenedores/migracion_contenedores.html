@@ -1,0 +1,240 @@
+<!-- =============================================================================
+📁 ARCHIVO: agenda_core/templates/migracion_contenedores.html
+============================================================================= -->
+
+{% extends "base.html" %}
+
+{% block title %}Migración de Contenedores a Agenda{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            
+            <!-- Cabecera -->
+            <div class="card border-warning mb-4">
+                <div class="card-header bg-warning text-dark">
+                    <h4 class="mb-0">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                        Migración de Contenedores a Agenda
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <p class="mb-0">
+                        <strong>⚠️ ATENCIÓN:</strong> Esta operación migrará todos los contenedores 
+                        de <code>tbl_control_contenedores</code> a <code>tbl_eventos_via_publica</code>.
+                    </p>
+                    <p class="mb-0 text-muted small">
+                        Solo ejecutar UNA VEZ. Los registros duplicados serán omitidos automáticamente.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Estado actual -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-info-circle"></i> Estado Actual
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div id="estado-actual">
+                        <div class="text-center py-4">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Cargando...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Acciones -->
+            <div class="card mb-4">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-gear-fill"></i> Acciones
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <button id="btn-verificar" class="btn btn-outline-primary btn-lg">
+                            <i class="bi bi-search"></i> Verificar Estado de la Agenda
+                        </button>
+                        <button id="btn-migrar" class="btn btn-warning btn-lg">
+                            <i class="bi bi-arrow-right-circle"></i> Ejecutar Migración
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Resultados -->
+            <div id="resultados" class="card mb-4" style="display: none;">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-check-circle"></i> Resultados de la Migración
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div id="contenido-resultados"></div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // Verificar estado al cargar
+    verificarAgenda();
+    
+    // Botón verificar
+    document.getElementById('btn-verificar').addEventListener('click', function() {
+        verificarAgenda();
+    });
+    
+    // Botón migrar
+    document.getElementById('btn-migrar').addEventListener('click', function() {
+        if (!confirm('¿Estás seguro de ejecutar la migración?\n\nEsta operación creará eventos de agenda para todos los contenedores.')) {
+            return;
+        }
+        ejecutarMigracion();
+    });
+    
+    // Función: Verificar estado de la agenda
+    function verificarAgenda() {
+        const btnVerificar = document.getElementById('btn-verificar');
+        const estadoDiv = document.getElementById('estado-actual');
+        
+        btnVerificar.disabled = true;
+        btnVerificar.innerHTML = '<i class="bi bi-hourglass-split"></i> Verificando...';
+        
+        fetch('/api/migracion/verificar-agenda')
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    estadoDiv.innerHTML = `
+                        <div class="alert alert-danger" role="alert">
+                            <strong>Error:</strong> ${data.error}
+                        </div>
+                    `;
+                } else {
+                    estadoDiv.innerHTML = `
+                        <div class="row text-center">
+                            <div class="col-md-4">
+                                <h3 class="text-primary">${data.total_eventos}</h3>
+                                <p class="text-muted">Eventos en agenda</p>
+                            </div>
+                            <div class="col-md-4">
+                                <h6 class="text-secondary">${data.primera_fecha || 'N/A'}</h6>
+                                <p class="text-muted">Primera fecha</p>
+                            </div>
+                            <div class="col-md-4">
+                                <h6 class="text-secondary">${data.ultima_fecha || 'N/A'}</h6>
+                                <p class="text-muted">Última fecha</p>
+                            </div>
+                        </div>
+                    `;
+                }
+            })
+            .catch(error => {
+                estadoDiv.innerHTML = `
+                    <div class="alert alert-danger" role="alert">
+                        <strong>Error de conexión:</strong> ${error.message}
+                    </div>
+                `;
+            })
+            .finally(() => {
+                btnVerificar.disabled = false;
+                btnVerificar.innerHTML = '<i class="bi bi-search"></i> Verificar Estado de la Agenda';
+            });
+    }
+    
+    // Función: Ejecutar migración
+    function ejecutarMigracion() {
+        const btnMigrar = document.getElementById('btn-migrar');
+        const resultadosCard = document.getElementById('resultados');
+        const contenidoResultados = document.getElementById('contenido-resultados');
+        
+        btnMigrar.disabled = true;
+        btnMigrar.innerHTML = '<i class="bi bi-hourglass-split"></i> Migrando... Esto puede tardar unos segundos';
+        
+        resultadosCard.style.display = 'block';
+        contenidoResultados.innerHTML = `
+            <div class="text-center py-4">
+                <div class="spinner-border text-success" role="status">
+                    <span class="visually-hidden">Procesando...</span>
+                </div>
+                <p class="mt-3">Procesando contenedores...</p>
+            </div>
+        `;
+        
+        fetch('/api/migracion/contenedores-a-agenda', {
+            method: 'POST'
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    contenidoResultados.innerHTML = `
+                        <div class="alert alert-danger" role="alert">
+                            <strong>Error:</strong> ${data.error}
+                        </div>
+                    `;
+                } else {
+                    let erroresHtml = '';
+                    if (data.errores > 0 && data.detalle_errores) {
+                        erroresHtml = `
+                            <div class="alert alert-warning mt-3" role="alert">
+                                <strong>Errores encontrados (${data.errores}):</strong>
+                                <ul class="mb-0 mt-2">
+                                    ${data.detalle_errores.map(err => `<li>${err}</li>`).join('')}
+                                </ul>
+                            </div>
+                        `;
+                    }
+                    
+                    contenidoResultados.innerHTML = `
+                        <div class="alert alert-success" role="alert">
+                            <h5 class="alert-heading">
+                                <i class="bi bi-check-circle-fill"></i> Migración completada
+                            </h5>
+                            <hr>
+                            <div class="row text-center">
+                                <div class="col-md-4">
+                                    <h4>${data.total_contenedores}</h4>
+                                    <p class="mb-0">Total contenedores</p>
+                                </div>
+                                <div class="col-md-4">
+                                    <h4 class="text-success">${data.migrados}</h4>
+                                    <p class="mb-0">Migrados con éxito</p>
+                                </div>
+                                <div class="col-md-4">
+                                    <h4 class="text-danger">${data.errores}</h4>
+                                    <p class="mb-0">Errores</p>
+                                </div>
+                            </div>
+                        </div>
+                        ${erroresHtml}
+                    `;
+                    
+                    // Actualizar estado
+                    setTimeout(() => verificarAgenda(), 1000);
+                }
+            })
+            .catch(error => {
+                contenidoResultados.innerHTML = `
+                    <div class="alert alert-danger" role="alert">
+                        <strong>Error de conexión:</strong> ${error.message}
+                    </div>
+                `;
+            })
+            .finally(() => {
+                btnMigrar.disabled = false;
+                btnMigrar.innerHTML = '<i class="bi bi-arrow-right-circle"></i> Ejecutar Migración';
+            });
+    }
+    
+});
+</script>
+{% endblock %}

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <!-- 🏷️ Título dinámico para cada página del panel -->
+    <title>{% block title %}Panel{% endblock %}</title>
+
+    <!-- 🔹 Enlazamos nuestra hoja de estilos principal -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- ===================================================== -->
+    <!-- 🔹 HEADER – la cabecera de nuestro castillo mágico -->
+    <!-- ===================================================== -->
+    <header>
+        <!-- 🏰 Título principal -->
+        <h1>🛡 MI APLICACION – GESTIÓN </h1>
+
+        <!-- 🌐 Navegación rápida -->
+        <nav>
+            <!-- 🔑 Enlace para cerrar sesión -->
+            <!-- IMPORTANTE: usamos auth_bp.logout porque nuestro blueprint se llama auth_bp -->
+            <a href="{{ url_for('auth_bp.logout') }}">Cerrar sesión</a>
+        </nav>
+    </header>
+
+    <!-- ===================================================== -->
+    <!-- 🔹 CONTENIDO PRINCIPAL – depende del rol del niño -->
+    <!-- ===================================================== -->
+    <main>
+        <!-- 👶 Aquí cada rol verá su contenido mágico -->
+        {% block role_content %}{% endblock %}
+
+        <!-- ===================================================== -->
+        <!-- 🔹 Mensajes flash tipo cómic -->
+        <!-- Ejemplo: "Usuario no encontrado" o "Contraseña cambiada" -->
+        <!-- Con categorias como success (verde) o danger (rojo) -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="flash {{ category }}">{{ message }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+    </main>
+
+    <!-- ===================================================== -->
+    <!-- 🔹 FOOTER – el pie de página del castillo -->
+    <!-- ===================================================== -->
+    <footer>
+        <p>© 2026 – TUBBY APP ST</p>
+    </footer>
+</body>
+</html>

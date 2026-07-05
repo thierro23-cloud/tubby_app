@@ -1,0 +1,128 @@
+# blueprints/parquin/panel_parquin_bp.py
+# =============================================================================
+# 🚚 PANEL PARQUIN · COMPATIBLE CON ARQUITECTURA ACTUAL (DISCOVERY)
+# =============================================================================
+# OBJETIVO:
+#   - Mantener la lógica actual de KPIs (total, libres, ocupadas)
+#   - Asegurar compatibilidad con:
+#       · Convención de nombres de blueprints de panel:  panel_xxx_bp
+#       · Descubrimiento automático vía current_app.url_map (SuperAdmin / discovery)
+#
+# CÓMO SE VE DESDE DISCOVERY:
+#   - Blueprint name:  "panel_parquin_bp"
+#       �?panel_id = "parquin"
+#   - Endpoint registrado:
+#       · función: panel_parquin
+#       · endpoint completo: "panel_parquin_bp.panel_parquin"
+#       �?discovery lo incluirá dentro del panel "panel_parquin_bp"
+#
+# RELACIÓN CON SUPERADMIN:
+#   - SuperAdminService.construir_sistema() recorre current_app.url_map
+#   - Filtra blueprints cuyo nombre cumple: panel_XXX_bp
+#   - Este archivo ya cumple: "panel_parquin_bp" �?OK
+#   - La ruta "/" de este panel aparecerá como un endpoint más en ese panel
+#
+# NOTA IMPORTANTE:
+#   - Este panel es "clásico": pinta SU propio dashboard de parking
+#   - No interfiere con la arquitectura panel/módulo/botones de control_via_publica
+#   - Puede convivir sin tocar discovery ni el nuevo sistema
+# =============================================================================
+
+from flask import Blueprint, render_template
+from db import ejecutar_query, get_connection  # get_connection no se usa aquí, pero se mantiene por si se amplía
+
+# =============================================================================
+# 1️⃣ DEFINICIÓN DEL BLUEPRINT DE PANEL
+# =============================================================================
+# Convención seguida:
+#   - Nombre interno: panel_parquin_bp  �?
+#   - url_prefix: /panel_parquin       �?
+#
+# Esto provoca que:
+#   - La URL del panel sea:        /panel_parquin/
+#   - El endpoint de la vista sea: "panel_parquin_bp.panel_parquin"
+#   - SuperAdmin/discovery lo detecten como panel "panel_parquin_bp"
+# =============================================================================
+panel_parquin_bp = Blueprint(
+    "panel_parquin_bp",
+    __name__,
+    url_prefix="/panel_parquin",
+)
+
+# =============================================================================
+# 2️⃣ VISTA PRINCIPAL DEL PANEL PARQUIN
+# =============================================================================
+# RESPONSABILIDAD:
+#   - Calcular KPIs de ocupación de plazas:
+#       · total_plazas
+#       · plazas_ocupadas
+#       · plazas_libres
+#   - Renderizar una plantilla específica del módulo parquin
+#
+# BBDD USADA:
+#   - Base de datos: parquin_camiones
+#   - Tablas:
+#       · tbl_plazas (id, idtbl_usuarios, ...)
+#
+# COMPATIBILIDAD ARQUITECTURA:
+#   - No rompe discovery:
+#       · Es un panel autónomo
+#       · No entra en la jerarquía panel/módulo/botones del nuevo sistema
+#   - Desde SuperAdmin:
+#       · Se verá como un panel con un único endpoint "/panel_parquin/"
+# =============================================================================
+@panel_parquin_bp.route("/")
+def panel_parquin():
+    """
+    PANEL PRINCIPAL DEL PARQUIN DE CAMIONES
+
+    Detalle:
+      1. Consulta número total de plazas.
+      2. Consulta cuántas plazas están ocupadas (idtbl_usuarios NOT NULL).
+      3. Calcula plazas libres = total - ocupadas.
+      4. Envía los datos a la plantilla 'parquin/panel_parquin.html'.
+    """
+
+    # 1️⃣ TOTAL DE PLAZAS
+    total_query = ejecutar_query(
+        "SELECT COUNT(*) AS total FROM tbl_plazas",
+        nombre_bd="parquin_camiones",
+    )
+    total_plazas = total_query[0]["total"] if total_query else 0
+
+    # 2️⃣ PLAZAS OCUPADAS
+    ocupadas_query = ejecutar_query(
+        "SELECT COUNT(*) AS ocupadas FROM tbl_plazas WHERE idtbl_usuarios IS NOT NULL",
+        nombre_bd="parquin_camiones",
+    )
+    plazas_ocupadas = ocupadas_query[0]["ocupadas"] if ocupadas_query else 0
+
+    # 3️⃣ PLAZAS LIBRES (control por si hay datos inconsistentes)
+    plazas_libres = max(total_plazas - plazas_ocupadas, 0)
+
+    # 4️⃣ RENDER DEL PANEL
+    return render_template(
+        "parquin/panel_parquin.html",
+        total_plazas=total_plazas,
+        plazas_libres=plazas_libres,
+        plazas_ocupadas=plazas_ocupadas,
+    )
+
+# =============================================================================
+# 3️⃣ NOTAS DE INTEGRACIÓN
+# =============================================================================
+# - REGISTRO EN create_app():
+#       from blueprints.parquin.panel_parquin_bp import panel_parquin_bp
+#       app.register_blueprint(panel_parquin_bp)
+#
+# - VISIBILIDAD EN SUPERADMIN/DISCOVERY:
+#       · Se detectará automáticamente como panel "panel_parquin_bp"
+#       · No requiere registry, ni cambios en core/discovery.py
+#
+# - POSIBLE EVOLUCIÓN FUTURA:
+#       · Si quisieras convertirlo al modelo panel/módulo/botones:
+#           · Este blueprint seguiría siendo el panel
+#           · Crearías módulos tipo modulo_parquin_plazas, modulo_parquin_reservas...
+#           · Los botones btn_plazas_listar, btn_plazas_ocupar, etc.
+#       · Pero con la arquitectura actual, este panel es totalmente válido.
+# =============================================================================

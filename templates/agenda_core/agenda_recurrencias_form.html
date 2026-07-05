@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>Recurrencias agenda</title>
+</head>
+<body>
+<h1>Recurrencias agenda</h1>
+
+<a href="{{ url_for('agenda_recurrencias_bp.ar_nueva_recurrencia') }}">Nueva recurrencia</a>
+
+<table border="1" cellpadding="4">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Título</th>
+            <th>Tipo evento</th>
+            <th>Calle</th>
+            <th>RRULE</th>
+            <th>Activo</th>
+            <th>Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for r in recurrencias %}
+        <tr>
+            <td>{{ r.idtbl_agenda_recurrencias }}</td>
+            <td>{{ r.titulo_base }}</td>
+            <td>{{ r.tipo_evento }}</td>
+            <td>{{ r.nombre_calle }}</td>
+            <td>{{ r.rrule }}</td>
+            <td>{{ 'Sí' if r.activo else 'No' }}</td>
+            <td>
+                <a href="{{ url_for('agenda_recurrencias_bp.ar_editar_recurrencia',
+                                    id_recurrencia=r.idtbl_agenda_recurrencias) }}">
+                    Editar
+                </a>
+                <form action="{{ url_for('agenda_recurrencias_bp.ar_toggle_activo',
+                                         id_recurrencia=r.idtbl_agenda_recurrencias) }}"
+                      method="post"
+                      style="display:inline">
+                    <button type="submit">
+                        {{ 'Desactivar' if r.activo else 'Activar' }}
+                    </button>
+                </form>
+            </td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</body>
+</html>

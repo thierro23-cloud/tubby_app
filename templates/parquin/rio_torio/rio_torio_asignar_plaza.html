@@ -1,0 +1,634 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Parking Asignar plazas</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- Bootstrap 5 + Icons -->
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  >
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
+    rel="stylesheet"
+  >
+
+  <style>
+    :root {
+      --bg-1: #eef3f9;
+      --bg-2: #dfe8f3;
+      --card: rgba(255, 255, 255, 0.92);
+      --card-strong: #ffffff;
+      --border: #cfd9e6;
+      --text: #1f2a37;
+      --muted: #54657a;
+      --title: #10233d;
+      --accent: #2563eb;
+      --accent-2: #4f46e5;
+      --success: #15803d;
+      --warning: #b45309;
+      --danger: #b91c1c;
+      --row-free: #f4fbf6;
+      --row-occupied: #f8fafc;
+      --row-hover: #edf5ff;
+      --chip: #e8eef7;
+    }
+
+    /* Fondo general y tipografía. Se bloquea el scroll global para que
+       todo el contenido encaje en una única pantalla. */
+    body {
+      margin: 0;
+      background: linear-gradient(180deg, var(--bg-1) 0%, var(--bg-2) 100%);
+      color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      overflow: hidden;
+    }
+
+    /* Contenedor raíz que ocupa toda la altura visible del navegador. */
+    .rt-shell {
+      padding: 1rem;
+      height: 100vh;
+      box-sizing: border-box;
+    }
+
+    /* Marco principal de la pantalla: cabecera + cuerpo + pie. */
+    .rt-frame {
+      max-width: 1250px;
+      margin: 0 auto;
+      border-radius: 1rem;
+      background: var(--card);
+      border: 1px solid rgba(207, 217, 230, 0.9);
+      box-shadow: 0 12px 30px rgba(16, 35, 61, 0.08);
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    /* Cabecera superior: título, subtítulo y panel de ayuda. */
+    .rt-topbar {
+      padding: 1rem 1.1rem;
+      background: linear-gradient(90deg, #f9fbfe 0%, #eef4fb 100%);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 1rem;
+      flex-wrap: wrap;
+      flex: 0 0 auto;
+    }
+
+    .rt-title {
+      margin: 0;
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--title);
+    }
+
+    .rt-subtitle {
+      margin-top: 0.2rem;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .rt-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      margin-top: 0.55rem;
+      padding: 0.28rem 0.65rem;
+      border-radius: 999px;
+      background: #eaf1ff;
+      color: #1d4ed8;
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
+
+    /* Panel de consejos de la cabecera. */
+    .rt-panel {
+      padding: 0.85rem 0.95rem;
+      border: 1px solid var(--border);
+      border-radius: 0.9rem;
+      background: #fbfdff;
+      color: var(--text);
+      max-width: 420px;
+    }
+
+    .rt-panel ul {
+      margin: 0.4rem 0 0;
+      padding-left: 1.2rem;
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+
+    /* Cuerpo principal: contiene la columna izquierda (formulario) y la
+       columna derecha (tabla de plazas). */
+    .content {
+      padding: 1rem;
+      display: grid;
+      gap: 1rem;
+      flex: 1 1 auto;
+      overflow: hidden; /* el scroll se restringe a la tabla */
+      box-sizing: border-box;
+    }
+
+    /* Tarjeta genérica para panel izquierdo/derecho. */
+    .card-soft {
+      border: 1px solid var(--border);
+      border-radius: 0.9rem;
+      background: var(--card-strong);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .card-soft-header {
+      padding: 0.6rem 0.9rem;
+      background: #f7faff;
+      border-bottom: 1px solid var(--border);
+      font-weight: 700;
+      color: var(--title);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      flex: 0 0 auto;
+    }
+
+    .card-soft-body {
+      padding: 0.7rem 0.9rem;
+      flex: 1 1 auto;
+      overflow: hidden;
+    }
+
+    .label-small {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--title);
+      margin-bottom: 0.25rem;
+    }
+
+    .help-small {
+      font-size: 0.76rem;
+      color: var(--muted);
+      margin-top: 0.3rem;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.18rem 0.5rem;
+      border-radius: 999px;
+      background: var(--chip);
+      color: var(--title);
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
+
+    /* PARTE DERECHA: contenedor con scroll interno para la tabla de plazas.
+       Se aumenta la altura respecto a tu versión anterior (440px en vez de
+       350px) para ver más filas. */
+    .table-wrap {
+      border: 1px solid var(--border);
+      border-radius: 0.8rem;
+      overflow-y: auto;
+      overflow-x: hidden;
+      background: #fff;
+      height: 500px; /* parte derecha ligeramente más alta */
+    }
+
+    .table {
+      margin-bottom: 0;
+      color: var(--text);
+      width: 100%;
+      table-layout: fixed; /* evita que la   tabla se pase del contenedor */
+    }
+
+    .table thead th {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      background: #f8fafc;
+      color: var(--title);
+      border-bottom: 1px solid var(--border);
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .table tbody tr {
+      transition: background 0.15s ease;
+    }
+
+    .table tbody tr:hover {
+      background: var(--row-hover);
+    }
+
+    .row-free {
+      background: var(--row-free);
+    }
+
+    .row-occupied {
+      background: var(--row-occupied);
+    }
+
+    .act-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.3rem 0.55rem;
+      border-radius: 999px;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      color: var(--title);
+      cursor: pointer;
+      user-select: none;
+      font-size: 0.82rem;
+    }
+
+    .act-label input {
+      margin: 0;
+    }
+
+    .badge-soft {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.22rem 0.5rem;
+      border-radius: 999px;
+      background: #eef2f7;
+      color: var(--title);
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
+
+    .badge-free {
+      background: #e9f9ef;
+      color: var(--success);
+      border: 1px solid #c8ead4;
+    }
+
+    .btn-rt-primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      border: none;
+      color: #fff;
+      box-shadow: 0 8px 16px rgba(37, 99, 235, 0.22);
+    }
+
+    .btn-rt-primary:hover {
+      filter: brightness(1.04);
+      color: #fff;
+    }
+
+    .btn-rt-outline {
+      border: 1px solid var(--border);
+      background: #fff;
+      color: var(--title);
+    }
+
+    .btn-rt-outline:hover {
+      background: #f7fbff;
+      color: var(--title);
+    }
+
+    /* Pie inferior fijo dentro del marco, sin provocar scroll global. */
+    .footer-bar {
+      padding: 0.75rem 1rem;
+      border-top: 1px solid var(--border);
+      background: #f9fbfe;
+      color: var(--muted);
+      font-size: 0.82rem;
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+      flex: 0 0 auto;
+    }
+
+    /* Layout a dos columnas: izquierda (formulario) + derecha (tabla). */
+    @media (min-width: 992px) {
+      .layout {
+        display: grid;
+        grid-template-columns: 320px 1fr; /* parte izquierda fija, derecha flexible */
+        gap: 1rem;
+        height: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="rt-shell">
+  <div class="rt-frame">
+
+    <!-- CABECERA SUPERIOR -->
+    <div class="rt-topbar">
+      <div>
+        <h1 class="rt-title">Parking Río Torío · Asignación de plazas</h1>
+        <div class="rt-subtitle">
+          Gestiona asignaciones, liberaciones y genera el informe oficial en Word con copia PDF archivada.
+        </div>
+        <div class="rt-pill">
+          <i class="bi bi-hdd-stack"></i>
+          <span>{{ plazas|length }} plazas registradas</span>
+        </div>
+      </div>
+
+      <div class="rt-panel">
+        <strong class="d-block mb-1">Indicaciones rápidas</strong>
+        <ul>
+          <li>Selecciona un usuario antes de asignar plazas.</li>
+          <li>Usa “Liberar” para cerrar plazas ocupadas.</li>
+          <li>“Guardar y generar informe” guarda y abre el Word.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- MENSAJES FLASH -->
+    {% with mensajes = get_flashed_messages(with_categories=true) %}
+      {% if mensajes %}
+        <div class="px-3 pt-3">
+          {% for categoria, texto in mensajes %}
+            <div class="alert alert-{{ 'success' if categoria == 'success' else 'warning' }} mb-2 py-2">
+              <i class="bi {{ 'bi-check-circle-fill' if categoria == 'success' else 'bi-exclamation-triangle-fill' }} me-1"></i>
+              {{ texto }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    {% if error %}
+      <div class="px-3 pt-2">
+        <div class="alert alert-danger mb-0 py-2">
+          <i class="bi bi-x-circle-fill me-1"></i>{{ error }}
+        </div>
+      </div>
+    {% endif %}
+
+    <!-- FORMULARIO PRINCIPAL (TODO EL CONTENIDO INTERACTIVO) -->
+    <form method="POST" id="form_rt" style="flex: 1 1 auto; display: flex; flex-direction: column;">
+      <input type="hidden" name="generar_informe" id="generar_informe" value="0">
+
+      <div class="content">
+        <div class="layout">
+
+          <!-- PARTE IZQUIERDA: FORMULARIO DE USUARIO + FECHAS + BOTONES -->
+          <aside class="card-soft">
+            <div class="card-soft-header">
+              <span><i class="bi bi-person-circle me-1"></i> Usuario / proveedor</span>
+              <span>Titular</span>
+            </div>
+            <div class="card-soft-body">
+              <!-- Selección de abonado -->
+              <label class="label-small" for="idtbl_usuarios">Selecciona el abonado</label>
+              <select name="idtbl_usuarios" id="idtbl_usuarios" class="form-select">
+                <option value="">-- Seleccionar proveedor --</option>
+                {% for u in usuarios_parquin %}
+                  <option value="{{ u.idtbl_usuarios }}">
+                    {{ u.nombre_proveedor }}{% if u.numero_cuenta %} ({{ u.numero_cuenta }}){% endif %}
+                  </option>
+                {% endfor %}
+              </select>
+              <div class="help-small">
+                Se usará para las plazas marcadas como “Asignar”.
+              </div>
+
+              <hr>
+
+              <!-- Fecha de asignación -->
+              <label class="label-small" for="fecha_asignacion">Fecha de asignación</label>
+              <input type="date" id="fecha_asignacion" name="fecha_asignacion" class="form-control">
+              <div class="help-small">
+                Inicio de la ocupación para las plazas asignadas.
+              </div>
+
+              <!-- Fecha de liberación -->
+              <div class="mt-3">
+                <label class="label-small" for="fecha_liberacion">Fecha de liberación</label>
+                <input type="date" id="fecha_liberacion" name="fecha_liberacion" class="form-control">
+                <div class="help-small">
+                  Fin de la ocupación para las plazas liberadas.
+                </div>
+              </div>
+
+              <!-- Botones de acción izquierda:
+                   - Guardar y generar informe (Word + PDF).
+                   - Solo guardar cambios sin informe. -->
+              <div class="mt-3">
+                <button type="button" class="btn btn-rt-primary w-100 mb-2" id="btn_guardar_informe">
+                  <i class="bi bi-file-earmark-word me-1"></i> Guardar y generar informe
+                </button>
+                <button type="submit" class="btn btn-rt-outline w-100">
+                  <i class="bi bi-save me-1"></i> Solo guardar
+                </button>
+              </div>
+            </div>
+          </aside>
+
+          <!-- PARTE DERECHA: TABLA DE PLAZAS CON SCROLL INTERNO -->
+          <section class="card-soft">
+            <div class="card-soft-header">
+              <span><i class="bi bi-list-check me-1"></i> Gestión de plazas</span>
+              <span>Pulsa en las cabeceras para ordenar</span>
+            </div>
+            <div class="card-soft-body">
+              {% macro sort_link(label, field) %}
+                {% set es_actual = (sort == field) %}
+                {% set nueva_dir = 'desc' if es_actual and dir_param == 'asc' else 'asc' %}
+                <a href="{{ url_for('btn_rio_torio_asignar_plaza_bp.btn_rio_torio_asignar_plaza',
+                                    sort=field, dir=nueva_dir) }}"
+                   class="text-decoration-none text-reset d-inline-flex align-items-center gap-1">
+                  <span>{{ label }}</span>
+                  {% if es_actual %}
+                    <i class="bi bi-caret-{{ 'up' if dir_param == 'asc' else 'down' }}-fill text-primary"></i>
+                  {% else %}
+                    <i class="bi bi-arrow-down-up text-secondary"></i>
+                  {% endif %}
+                </a>
+              {% endmacro %}
+
+              <div class="table-wrap">
+                <table class="table table-hover align-middle">
+                  <thead>
+                    <tr>
+                      <th style="width: 220px;">Acciones</th>
+                      <th>{{ sort_link("Código", "codigo") }}</th>
+                      <th>{{ sort_link("Fila", "fila") }}</th>
+                      <th>{{ sort_link("Estado actual", "proveedor") }}</th>
+                      <th>Informe</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for plaza in plazas %}
+                      <tr class="{{ 'row-occupied' if plaza.proveedor_actual else 'row-free' }}">
+                        <!-- Checkboxes de Asignar / Liberar para cada plaza -->
+                        <td>
+                          <div class="d-flex flex-column gap-2">
+                            <label class="act-label">
+                              <input type="checkbox"
+                                     class="form-check-input js-asignar"
+                                     name="plazas_seleccionadas"
+                                     value="{{ plaza.idtbl_plazas }}">
+                              <span class="text-success">Asignar</span>
+                            </label>
+                            <label class="act-label">
+                              <input type="checkbox"
+                                     class="form-check-input js-quitar"
+                                     name="plazas_quitar_usuario"
+                                     value="{{ plaza.idtbl_plazas }}">
+                              <span class="text-danger">Liberar</span>
+                            </label>
+                          </div>
+                        </td>
+
+                        <!-- Código de plaza -->
+                        <td>
+                          <span class="badge-soft">{{ plaza.codigo_plazas }}</span>
+                        </td>
+
+                        <!-- Fila de la plaza -->
+                        <td>
+                          <span class="badge-soft">Fila {{ plaza.fila }}</span>
+                        </td>
+
+                        <!-- Información del proveedor actual / plaza libre -->
+                        <td>
+                          {% if plaza.proveedor_actual %}
+                            <div class="d-flex flex-column">
+                              <span class="fw-semibold">{{ plaza.proveedor_actual }}</span>
+                              <small class="text-muted">
+                                {{ plaza.numero_cuenta or 'sin cuenta' }}
+                                {% if plaza.persona_contacto_comercial %}
+                                  · {{ plaza.persona_contacto_comercial }}
+                                {% endif %}
+                              </small>
+                            </div>
+                          {% else %}
+                            <span class="badge-soft badge-free">
+                              <i class="bi bi-check-circle-fill"></i> Libre
+                            </span>
+                          {% endif %}
+                        </td>
+
+                        <!-- Botón de informe directo por plaza (vista GET de informe).
+                             Este botón no guarda cambios, solo genera/descarga el informe
+                             de la plaza actual, si tiene usuario asignado. -->
+                        <td>
+                          {% if plaza.idtbl_usuarios %}
+                            <a href="{{ url_for('btn_rio_torio_asignar_plaza_bp.rio_torio_informe_adjudicacion',
+                                               id_plaza=plaza.idtbl_plazas) }}"
+                               class="btn btn-sm btn-outline-primary">
+                              <i class="bi bi-file-earmark-word me-1"></i> Informe
+                            </a>
+                          {% else %}
+                            <span class="text-muted small">Sin usuario</span>
+                          {% endif %}
+                        </td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+        </div>
+      </div>
+
+      <!-- PIE INFERIOR (información fija) -->
+      <div class="footer-bar">
+        <span><i class="bi bi-info-circle me-1"></i> Las asignaciones y liberaciones quedan registradas en el histórico.</span>
+        <span class="d-none d-sm-inline">Parking Río Torío · Ayuntamiento de Ávila</span>
+      </div>
+    </form>
+
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  // PARTE DERECHA: lógica de exclusión Asignar vs Liberar por cada fila.
+  document.querySelectorAll("tbody tr").forEach(row => {
+    const asignar = row.querySelector(".js-asignar");
+    const quitar  = row.querySelector(".js-quitar");
+
+    if (asignar && quitar) {
+      asignar.addEventListener("change", () => {
+        if (asignar.checked) quitar.checked = false;
+      });
+      quitar.addEventListener("change", () => {
+        if (quitar.checked) asignar.checked = false;
+      });
+    }
+  });
+
+  // PARTE IZQUIERDA: botón "Guardar y generar informe"
+  const form = document.getElementById("form_rt");
+  const btnInforme = document.getElementById("btn_guardar_informe");
+  const inputInforme = document.getElementById("generar_informe");
+
+  // Cuando se pulsa el botón de informe:
+  // - se marca generar_informe=1
+  // - se envía el formulario para que el backend guarde y genere Word+PDF
+  btnInforme.addEventListener("click", () => {
+  const hayAsignar = !!document.querySelector(".js-asignar:checked");
+  const hayQuitar  = !!document.querySelector(".js-quitar:checked");
+
+  if (!hayAsignar && !hayQuitar) {
+    alert("Debes marcar alguna plaza para asignar o liberar antes de generar informe.");
+    return; // no enviamos el formulario
+  }
+
+  // Solo si hay selección activamos el flag de informe
+  inputInforme.value = "1";
+  form.requestSubmit();
+});
+
+  // Validación básica antes de enviar el formulario (tanto izquierda como derecha).
+  form.addEventListener("submit", (ev) => {
+    const hayAsignar = !!document.querySelector(".js-asignar:checked");
+    const hayQuitar  = !!document.querySelector(".js-quitar:checked");
+    const fechaAsignacion = document.getElementById("fecha_asignacion").value;
+    const fechaLiberacion = document.getElementById("fecha_liberacion").value;
+    const generandoInforme = inputInforme.value === "1";
+
+    if (hayAsignar && !document.getElementById("idtbl_usuarios").value) {
+      ev.preventDefault();
+      alert("Debes seleccionar un usuario/proveedor para asignar.");
+      return;
+    }
+
+    if (hayAsignar && !fechaAsignacion) {
+      ev.preventDefault();
+      alert("Debes indicar la fecha de asignación.");
+      return;
+    }
+
+    if (hayQuitar && !fechaLiberacion) {
+      ev.preventDefault();
+      alert("Debes indicar la fecha de liberación.");
+      return;
+    }
+
+    if (!hayAsignar && !hayQuitar) {
+      ev.preventDefault();
+      alert("Debes marcar al menos una plaza para asignar o liberar.");
+      return;
+    }
+
+    if (generandoInforme) {
+      // El backend usará generar_informe=1 para guardar y abrir el Word
+      return;
+    }
+  });
+});
+</script>
+
+</body>
+</html>

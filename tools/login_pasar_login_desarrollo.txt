@@ -1,0 +1,33 @@
+1. Mantén DOS blueprints de auth separados
+auth_bp (PRO): login real con BD + bcrypt.
+
+auth_debug_bp (DEV): tu “login simple top” por roles.
+
+Cada uno con su propia ruta (/login y, por ejemplo, /login_dev).
+
+2. Crea una sola URL “oficial” y redirígela según entorno
+Por ejemplo, en app.py:
+
+python
+from flask import redirect, url_for
+from config import IS_DEV  # o lee de entorno
+
+@app.route("/login")
+def login_entrypoint():
+    if IS_DEV:
+        return redirect(url_for("auth_debug_bp.login"))
+    else:
+        return redirect(url_for("auth_bp.login"))
+En desarrollo (IS_DEV = True), /login te lleva al login simple por rol.
+
+En producción (IS_DEV = False), /login te lleva al login profesional.
+
+3. Usa siempre /login en enlaces y redirecciones
+En el resto del código:
+
+Redirige siempre a url_for("login_entrypoint") o directamente /login.
+
+No “cables” a mano auth_bp.login o auth_debug_bp.login fuera de auth.
+
+Así, cambiar entre login de desarrollo y login real es solo cambiar una variable de configuración (o una env var), sin tocar ni un blueprint ni una plantilla.
+

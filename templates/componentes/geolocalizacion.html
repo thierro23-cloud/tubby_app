@@ -1,0 +1,341 @@
+{# ============================================================================
+   📍 COMPONENTE DE GEOLOCALIZACIÓN PROFESIONAL · SISTEMA MUNICIPAL
+   ============================================================================
+
+   CONTEXTO DE USO
+   ----------------------------------------------------------------------------
+   Este componente permite capturar la geolocalización del dispositivo desde
+   el navegador del usuario para asociarla a un registro de obra pública.
+
+   Utiliza la API estándar del navegador:
+
+        navigator.geolocation
+
+   y el script del sistema:
+
+        static/js/geolocalizacion.js
+
+   FUNCIONALIDADES
+   ----------------------------------------------------------------------------
+   ✔ Captura automática de coordenadas GPS
+   ✔ Registro de precisión del GPS
+   ✔ Validación de precisión mínima configurable
+   ✔ Evaluación automática de calidad GPS
+   ✔ Visualización del punto en mapa
+   ✔ Generación de enlace directo a Google Maps
+   ✔ Compatibilidad total con dispositivos móviles
+   ✔ Integración directa con el formulario del sistema
+
+   CAMPOS QUE SE GUARDAN EN BD
+   ----------------------------------------------------------------------------
+   latitud
+   longitud
+   precision_gps
+   fecha_captura_gps
+   gps_precision_ok
+   gps_origen
+   gps_nivel_calidad
+
+   ========================================================================= #}
+
+<div class="geo-ultra-card mt-3"
+     data-geo-auto="true"
+     data-geo-min-accuracy="30">
+
+
+  {# =========================================================================
+     1️⃣ CABECERA DEL SISTEMA GPS
+     =========================================================================
+     Muestra el estado general de la captura de geolocalización.
+     ========================================================================= #}
+
+  <div class="geo-ultra-header d-flex justify-content-between align-items-center">
+
+    <div>
+
+      <h6 class="geo-ultra-title mb-0">
+        📍 Geolocalización del dispositivo
+      </h6>
+
+      <small class="text-muted">
+        Captura automática de ubicación para la obra
+      </small>
+
+    </div>
+
+
+    {# -----------------------------------------------------------------------
+       INDICADOR DE CALIDAD GPS
+       -----------------------------------------------------------------------
+       Se actualiza automáticamente según la precisión detectada.
+    ----------------------------------------------------------------------- #}
+
+    <span id="geo_quality_badge"
+          class="geo-ultra-badge neutral">
+
+      Capturando...
+
+    </span>
+
+  </div>
+
+
+
+  {# =========================================================================
+     2️⃣ CUERPO DEL COMPONENTE
+     =========================================================================
+     Distribución profesional del sistema:
+
+        FORMULARIO GPS | MAPA
+        FORMULARIO GPS | MAPA
+        FORMULARIO GPS | MAPA
+        BOTONES
+
+     Permite que todo el sistema quepa en una sola pantalla.
+     ========================================================================= #}
+
+  <div class="geo-ultra-body">
+
+    <div class="row g-2">
+
+
+      {# =====================================================================
+         2.1 BLOQUE FORMULARIO GPS
+         ===================================================================== #}
+
+      <div class="col-md-6">
+
+        <div class="row g-2">
+
+
+          {# LATITUD ------------------------------------------------------- #}
+
+          <div class="col-6">
+
+            <label class="form-label small fw-semibold">
+              Latitud
+            </label>
+
+            <input class="form-control form-control-sm"
+                   id="latitud"
+                   name="latitud"
+                   readonly>
+
+          </div>
+
+
+
+          {# LONGITUD ------------------------------------------------------ #}
+
+          <div class="col-6">
+
+            <label class="form-label small fw-semibold">
+              Longitud
+            </label>
+
+            <input class="form-control form-control-sm"
+                   id="longitud"
+                   name="longitud"
+                   readonly>
+
+          </div>
+
+
+
+          {# PRECISIÓN GPS ------------------------------------------------- #}
+
+          <div class="col-6">
+
+            <label class="form-label small fw-semibold">
+              Precisión (m)
+            </label>
+
+            <input class="form-control form-control-sm"
+                   id="precision_gps"
+                   name="precision_gps"
+                   readonly>
+
+          </div>
+
+
+
+          {# FECHA DE CAPTURA --------------------------------------------- #}
+
+          <div class="col-6">
+
+            <label class="form-label small fw-semibold">
+              Fecha captura
+            </label>
+
+            <input class="form-control form-control-sm"
+                   id="fecha_captura_gps"
+                   name="fecha_captura_gps"
+                   readonly>
+
+          </div>
+
+
+
+          {# ESTADO DEL GPS ------------------------------------------------ #}
+
+          <div class="col-8">
+
+            <label class="form-label small fw-semibold">
+              Estado GPS
+            </label>
+
+            <input class="form-control form-control-sm"
+                   id="estado_gps"
+                   readonly
+                   value="Solicitando ubicación al dispositivo...">
+
+          </div>
+
+
+
+          {# CALIDAD GPS --------------------------------------------------- #}
+
+          <div class="col-4">
+
+            <label class="form-label small fw-semibold">
+              Calidad GPS
+            </label>
+
+            <input class="form-control form-control-sm"
+                   id="calidad_gps"
+                   readonly>
+
+          </div>
+
+
+
+          {# ENLACE GOOGLE MAPS -------------------------------------------- #}
+
+          <div class="col-8">
+
+            <label class="form-label small fw-semibold">
+              Google Maps
+            </label>
+
+            <div class="input-group input-group-sm">
+
+              <input class="form-control"
+                     id="enlace_maps"
+                     readonly>
+
+              <a id="abrir_maps"
+                 class="btn btn-outline-primary disabled"
+                 target="_blank">
+
+                Abrir
+
+              </a>
+
+            </div>
+
+          </div>
+
+
+
+          {# VALIDACIÓN DE PRECISIÓN --------------------------------------- #}
+
+          <div class="col-4">
+
+            <label class="form-label small fw-semibold">
+              Precisión OK
+            </label>
+
+            <input class="form-control form-control-sm"
+                   id="gps_precision_ok_text"
+                   readonly>
+
+          </div>
+
+
+        </div>
+
+      </div>
+
+
+
+      {# =====================================================================
+         2.2 BLOQUE MAPA
+         ===================================================================== #}
+
+      <div class="col-md-6">
+
+        <div id="geo_ultra_map_placeholder"
+             class="geo-ultra-map-placeholder">
+
+          Esperando ubicación...
+
+        </div>
+
+        <iframe id="geo_ultra_map_iframe"
+                class="geo-ultra-map-frame d-none"
+                loading="lazy">
+        </iframe>
+
+      </div>
+
+
+
+      {# =====================================================================
+         3️⃣ CAMPOS OCULTOS PARA BASE DE DATOS
+         ===================================================================== #}
+
+      <input type="hidden"
+             id="gps_precision_ok"
+             name="gps_precision_ok">
+
+      <input type="hidden"
+             id="gps_origen"
+             name="gps_origen"
+             value="navigator.geolocation">
+
+      <input type="hidden"
+             id="gps_nivel_calidad"
+             name="gps_nivel_calidad">
+
+
+    </div>
+
+
+
+    {# =====================================================================
+       4️⃣ BOTONES DE CONTROL DEL SISTEMA GPS
+       ===================================================================== #}
+
+    <div class="mt-2 d-flex gap-2">
+
+      <button type="button"
+              class="btn btn-primary btn-sm"
+              onclick="obtenerUbicacionUltraPremium()">
+
+        📍 Capturar ubicación
+
+      </button>
+
+
+      <button type="button"
+              class="btn btn-outline-secondary btn-sm"
+              onclick="limpiarUbicacionUltraPremium()">
+
+        Limpiar
+
+      </button>
+
+
+      <button type="button"
+              class="btn btn-outline-dark btn-sm"
+              onclick="recentrarMapaUltraPremium()">
+
+        Recentrar mapa
+
+      </button>
+
+    </div>
+
+  </div>
+
+</div>

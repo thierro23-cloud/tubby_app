@@ -1,0 +1,668 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Histórico plaza {{ codigo_plaza or id_plaza }} – Río Torío</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!--
+  0. INTRODUCCIÓN DE PLANTILLA
+  ----------------------------
+  Esta plantilla muestra y permite editar el histórico de una plaza concreta:
+
+  - Sección superior: título, subtítulo y navegación.
+  - Tarjeta izquierda: formulario de alta/edición de histórico.
+  - Tarjeta derecha: tabla con todas las filas de histórico de la plaza.
+
+  Comportamiento:
+  - Al hacer clic en "Editar" en una fila, se rellena el formulario con
+    los datos de esa fila y se establece accion="editar".
+  - Al hacer clic en "Nuevo intervalo", se limpia el formulario y se
+    establece accion="nuevo".
+  - Al hacer clic en un encabezado de la tabla, se ordenan los registros
+    por esa columna (ascendente/descendente).
+  - Los filtros superiores actúan sobre plaza, NIF y proveedor.
+  -->
+  <style>
+    :root {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color-scheme: light;
+      --bg: #f3f6fb;
+      --card: #ffffff;
+      --border: #d9e2ec;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --primary: #0d6efd;
+      --primary-dark: #0b5ed7;
+      --secondary: #6c757d;
+      --soft: #f8fafc;
+      --hover: #eef5ff;
+    }
+
+    body {
+      margin: 0;
+      background: linear-gradient(180deg, #f7f9fc 0%, var(--bg) 100%);
+      color: var(--text);
+    }
+
+    .page-wrapper {
+      max-width: 1200px;
+      margin: 1rem auto;
+      padding: 1rem;
+    }
+
+    .page-shell {
+      background: var(--card);
+      border: 1px solid rgba(217,226,236,.9);
+      border-radius: 14px;
+      box-shadow: 0 10px 25px rgba(15, 23, 42, 0.06);
+      overflow: hidden;
+    }
+
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      padding: 1rem 1.1rem;
+      background: linear-gradient(90deg, #f8fbff 0%, #ffffff 100%);
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+
+    .page-header h1 {
+      margin: 0;
+      font-size: 1.15rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .page-header .subtitle {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-top: 0.2rem;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      padding: 0.45rem 0.8rem;
+      font-size: 0.88rem;
+      cursor: pointer;
+      text-decoration: none;
+      gap: 0.35rem;
+      transition: 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-dark);
+    }
+
+    .btn-secondary {
+      background: var(--secondary);
+      color: #fff;
+    }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--primary);
+      border-color: var(--primary);
+    }
+
+    .btn-outline:hover {
+      background: #f0f7ff;
+    }
+
+    .alert {
+      margin: 1rem 1rem 0;
+      border-radius: 10px;
+      padding: 0.8rem 1rem;
+      font-size: 0.9rem;
+    }
+
+    .alert-danger {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #991b1b;
+    }
+
+    .content {
+      padding: 1rem;
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.6fr);
+      gap: 1rem;
+    }
+
+    .card {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #fff;
+      overflow: hidden;
+    }
+
+    .card-header {
+      padding: 0.7rem 1rem;
+      background: var(--soft);
+      font-weight: 600;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .card-body {
+      padding: 1rem;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0.9rem;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .form-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #374151;
+    }
+
+    .form-control,
+    .form-select {
+      width: 100%;
+      padding: 0.55rem 0.7rem;
+      font-size: 0.9rem;
+      border-radius: 8px;
+      border: 1px solid #cbd5e1;
+      background: #fff;
+      box-sizing: border-box;
+      outline: none;
+    }
+
+    .form-control:focus,
+    .form-select:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(13,110,253,.12);
+    }
+
+    .actions-bottom {
+      display: flex;
+      justify-content: flex-end;
+      align-items: flex-end;
+    }
+
+    .table-wrapper {
+      max-height: 58vh;
+      overflow-y: auto;
+      overflow-x: auto;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+      min-width: 1200px;
+    }
+
+    thead th {
+      position: sticky;
+      top: 0;
+      background: #f8fafc;
+      z-index: 2;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th, td {
+      padding: 0.55rem 0.7rem;
+      border-bottom: 1px solid #e5e7eb;
+      text-align: left;
+      white-space: nowrap;
+    }
+
+    th.sortable {
+      cursor: pointer;
+      user-select: none;
+    }
+
+    th.sortable:hover {
+      background: var(--hover);
+    }
+
+    th.sortable::after {
+      content: " ⇅";
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    th.sortable[data-order="asc"]::after {
+      content: " ↑";
+    }
+
+    th.sortable[data-order="desc"]::after {
+      content: " ↓";
+    }
+
+    tbody tr:nth-child(even) {
+      background: #fbfdff;
+    }
+
+    tbody tr:hover {
+      background: var(--hover);
+    }
+
+    .text-center {
+      text-align: center;
+    }
+
+    .text-muted {
+      color: var(--muted);
+    }
+
+    @media (max-width: 1100px) {
+      .content {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 700px) {
+      .page-wrapper {
+        margin: 0;
+      }
+
+      .page-shell {
+        border-radius: 0;
+      }
+
+      table {
+        min-width: 760px;
+      }
+
+      .page-header,
+      .card-header,
+      .card-body {
+        padding-left: 0.8rem;
+        padding-right: 0.8rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="page-wrapper">
+  <div class="page-shell">
+
+    <!-- 1. CABECERA PRINCIPAL DEL DETALLE -->
+    <header class="page-header">
+      <div>
+        <h1>🧮 Histórico de plaza /histórico {{ codigo_plaza or ('ID ' ~ id_plaza) }}</h1>
+        <div class="subtitle">
+          Alta, edición y consulta del histórico de asignaciones para esta plaza
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <a href="{{ url_for('btn_rio_torio_historico_plazas_bp.btn_rio_torio_historico_plazas') }}"
+           class="btn btn-secondary">
+          ⬅️ Volver al listado
+        </a>
+        <button type="button" class="btn btn-outline" onclick="limpiarFormulario()">
+          ➕ Nuevo intervalo
+        </button>
+      </div>
+    </header>
+
+    <!-- 2. ALERTA DE ERROR GLOBAL (SI LA HAY) -->
+    {% if error %}
+      <div class="alert alert-danger">
+        {{ error }}
+      </div>
+    {% endif %}
+
+    <!-- 3. CONTENIDO PRINCIPAL: FORMULARIO + TABLA -->
+    <div class="content">
+
+      <!-- 3.1. TARJETA DE FORMULARIO DE ALTA/EDICIÓN -->
+      <div class="card">
+        <div class="card-header">
+          <span>Formulario de histórico</span>
+          <span class="text-muted" id="modo-formulario">Modo: alta</span>
+        </div>
+
+        <div class="card-body">
+          <!-- 3.1.1. Formulario -->
+          <form method="post" id="form-historico">
+            <input type="hidden" name="accion" id="accion" value="nuevo">
+            <input type="hidden" name="idtbl_historico_plazas" id="idtbl_historico_plazas">
+            <input type="hidden" name="idtbl_plazas" id="idtbl_plazas" value="{{ id_plaza }}">
+
+            <div class="grid">
+              <!-- Proveedor -->
+              <div class="field">
+                <label class="form-label" for="idtbl_proveedores">Proveedor</label>
+                <select class="form-select" name="idtbl_proveedores" id="idtbl_proveedores" required>
+                  <option value="">Selecciona proveedor...</option>
+                  {% for p in proveedores %}
+                    <option value="{{ p.id }}">{{ p.nombre }} ({{ p.nif }})</option>
+                  {% endfor %}
+                </select>
+              </div>
+
+              <!-- Fecha inicio -->
+              <div class="field">
+                <label class="form-label" for="fecha_inicio">Fecha inicio</label>
+                <input type="date" class="form-control" name="fecha_inicio" id="fecha_inicio" required>
+              </div>
+
+              <!-- Fecha fin -->
+              <div class="field">
+                <label class="form-label" for="fecha_fin">Fecha fin</label>
+                <input type="date" class="form-control" name="fecha_fin" id="fecha_fin">
+              </div>
+
+              <!-- Forma de pago -->
+              <div class="field">
+                <label class="form-label" for="forma_pago">Forma de pago</label>
+                <select class="form-select" name="forma_pago" id="forma_pago" required>
+                  <option value="">Selecciona forma de pago...</option>
+                  <option value="mensual">Mensual</option>
+                  <option value="trimestral">Trimestral</option>
+                  <option value="semestral">Semestral</option>
+                  <option value="anual">Anual</option>
+                </select>
+              </div>
+
+              <!-- Exp. solicitud inicio -->
+              <div class="field">
+                <label class="form-label" for="exp_solicitud_inicio">Exp. solicitud inicio</label>
+                <input type="text" class="form-control" name="exp_solicitud_inicio" id="exp_solicitud_inicio">
+              </div>
+
+              <!-- Exp. solicitud cambio -->
+              <div class="field">
+                <label class="form-label" for="exp_solicitud_cambio">Exp. solicitud cambio</label>
+                <input type="text" class="form-control" name="exp_solicitud_cambio" id="exp_solicitud_cambio">
+              </div>
+
+              <!-- Exp. solicitud fin -->
+              <div class="field">
+                <label class="form-label" for="exp_solicitud_fin">Exp. solicitud fin</label>
+                <input type="text" class="form-control" name="exp_solicitud_fin" id="exp_solicitud_fin">
+              </div>
+
+              <!-- Usuario interno -->
+              <div class="field">
+                <label class="form-label" for="idtbl_usuarios">Usuario interno (ID)</label>
+                <input type="number" class="form-control" name="idtbl_usuarios" id="idtbl_usuarios" min="1">
+              </div>
+
+              <!-- Observaciones -->
+              <div class="field" style="grid-column: 1 / -1;">
+                <label class="form-label" for="observaciones">Observaciones</label>
+                <textarea class="form-control" name="observaciones" id="observaciones" rows="2"></textarea>
+              </div>
+
+              <!-- Botón guardar -->
+              <div class="actions-bottom" style="grid-column: 1 / -1;">
+                <button type="submit" class="btn btn-primary">
+                  💾 Guardar histórico
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- 3.2. TARJETA DE TABLA DE HISTÓRICO -->
+      <div class="card">
+        <div class="card-header">
+          <span>Registros históricos de la plaza</span>
+          <span class="text-muted">
+            Total: {{ filas|length }} registros
+          </span>
+        </div>
+
+        <div class="card-body">
+
+          <!-- 3.2.1. Filtros superiores (plaza, NIF, proveedor) -->
+          <div class="grid" style="margin-bottom: 0.8rem; grid-template-columns: repeat(3, minmax(0, 1fr));">
+            <div class="field">
+              <label class="form-label" for="filtro_plaza">Filtrar por plaza</label>
+              <input type="text" class="form-control" id="filtro_plaza"
+                     placeholder="Código de plaza...">
+            </div>
+            <div class="field">
+              <label class="form-label" for="filtro_nif">Filtrar por NIF</label>
+              <input type="text" class="form-control" id="filtro_nif"
+                     placeholder="NIF proveedor...">
+            </div>
+            <div class="field">
+              <label class="form-label" for="filtro_proveedor">Filtrar por proveedor</label>
+              <input type="text" class="form-control" id="filtro_proveedor"
+                     placeholder="Nombre / apellidos / razón social...">
+            </div>
+          </div>
+
+          <div class="table-wrapper">
+            <table id="tabla-historico">
+              <thead>
+                <tr>
+                  <th class="sortable" data-col="0">ID</th>
+                  <th class="sortable" data-col="1">Plaza</th>
+                  <th class="sortable" data-col="2">NIF</th>
+                  <th class="sortable" data-col="3">Proveedor</th>
+                  <th class="sortable" data-col="4">Inicio</th>
+                  <th class="sortable" data-col="5">Fin</th>
+                  <th class="sortable" data-col="6">Forma pago</th>
+                  <th class="sortable" data-col="7">Usuario</th>
+                  <th class="sortable" data-col="8">Observaciones</th>
+                  <th class="text-center">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+              {% for f in filas %}
+                <tr
+                  data-id="{{ f.idtbl_historico_plazas }}"
+                  data-id-plaza="{{ f.idtbl_plazas }}"
+                  data-codigo-plaza="{{ f.codigo_plaza }}"
+                  data-id-proveedor="{{ f.idtbl_proveedores }}"
+                  data-nif="{{ f.nif if f.nif is defined else '' }}"
+                  data-proveedor="{{ f.proveedor }}"
+                  data-fecha-inicio="{{ f.fecha_inicio }}"
+                  data-fecha-fin="{{ f.fecha_fin or '' }}"
+                  data-forma-pago="{{ f.forma_pago or '' }}"
+                  data-exp-inicio="{{ f.exp_solicitud_inicio or '' }}"
+                  data-exp-cambio="{{ f.exp_solicitud_cambio or '' }}"
+                  data-exp-fin="{{ f.exp_solicitud_fin or '' }}"
+                  data-observaciones="{{ f.observaciones or '' }}"
+                  data-id-usuario="{{ f.idtbl_usuarios or '' }}"
+                >
+                  <td>{{ f.idtbl_historico_plazas }}</td>
+                  <td>{{ f.codigo_plaza }}</td>
+                  <td>{{ f.nif if f.nif is defined else '—' }}</td>
+                  <td>{{ f.proveedor }}</td>
+                  <td>{{ f.fecha_inicio }}</td>
+                  <td>{{ f.fecha_fin or '—' }}</td>
+                  <td>{{ f.forma_pago or '—' }}</td>
+                  <td>{{ f.idtbl_usuarios or '—' }}</td>
+                  <td>{{ f.observaciones or '—' }}</td>
+                  <td class="text-center">
+                    <button type="button" class="btn btn-outline"
+                            onclick="cargarFilaEnFormulario(this.closest('tr'))">
+                      ✏️ Editar
+                    </button>
+                  </td>
+                </tr>
+              {% endfor %}
+              {% if filas|length == 0 %}
+                <tr>
+                  <td colspan="10" class="text-center text-muted">
+                    No hay registros históricos para esta plaza.
+                  </td>
+                </tr>
+              {% endif %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div> <!-- .content -->
+
+  </div> <!-- .page-shell -->
+</div> <!-- .page-wrapper -->
+
+<!-- 4. LÓGICA JS: FORMULARIO + ORDENACIÓN + FILTROS -->
+<script>
+  function limpiarFormulario() {
+    const form = document.getElementById('form-historico');
+    form.reset();
+    document.getElementById('accion').value = 'nuevo';
+    document.getElementById('idtbl_historico_plazas').value = '';
+    document.getElementById('modo-formulario').textContent = 'Modo: alta';
+  }
+
+  function cargarFilaEnFormulario(tr) {
+    const idHist = tr.dataset.id;
+    const idPlaza = tr.dataset['idPlaza'];
+    const idProv = tr.dataset['idProveedor'];
+    const fechaInicio = tr.dataset['fechaInicio'];
+    const fechaFin = tr.dataset['fechaFin'];
+    const formaPago = tr.dataset['formaPago'];
+    const expInicio = tr.dataset['expInicio'];
+    const expCambio = tr.dataset['expCambio'];
+    const expFin = tr.dataset['expFin'];
+    const observaciones = tr.dataset['observaciones'];
+    const idUsuario = tr.dataset['idUsuario'];
+
+    document.getElementById('accion').value = 'editar';
+    document.getElementById('idtbl_historico_plazas').value = idHist;
+    document.getElementById('idtbl_plazas').value = idPlaza || '{{ id_plaza }}';
+    document.getElementById('idtbl_proveedores').value = idProv || '';
+    document.getElementById('fecha_inicio').value = fechaInicio || '';
+    document.getElementById('fecha_fin').value = fechaFin || '';
+    document.getElementById('forma_pago').value = formaPago || '';
+    document.getElementById('exp_solicitud_inicio').value = expInicio || '';
+    document.getElementById('exp_solicitud_cambio').value = expCambio || '';
+    document.getElementById('exp_solicitud_fin').value = expFin || '';
+    document.getElementById('observaciones').value = observaciones || '';
+    document.getElementById('idtbl_usuarios').value = idUsuario || '';
+
+    document.getElementById('modo-formulario').textContent =
+      'Modo: edición (ID ' + idHist + ')';
+  }
+
+  function ordenarTablaPorColumna(colIndex, table) {
+    const tbody = table.tBodies[0];
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    const th = table.tHead.rows[0].cells[colIndex];
+
+    const currentOrder = th.dataset.order === 'asc' ? 'asc' : 'desc';
+    const newOrder = currentOrder === 'asc' ? 'desc' : 'asc';
+
+    Array.from(table.tHead.rows[0].cells).forEach(cell => {
+      cell.removeAttribute('data-order');
+    });
+    th.dataset.order = newOrder;
+
+    const isNumericColumn = colIndex === 0 || colIndex === 7;
+
+    rows.sort((a, b) => {
+      const aText = a.cells[colIndex].textContent.trim();
+      const bText = b.cells[colIndex].textContent.trim();
+
+      let compare;
+      if (isNumericColumn) {
+        const aNum = parseFloat(aText) || 0;
+        const bNum = parseFloat(bText) || 0;
+        compare = aNum - bNum;
+      } else {
+        compare = aText.localeCompare(bText, 'es', { sensitivity: 'base' });
+      }
+
+      return newOrder === 'asc' ? compare : -compare;
+    });
+
+    rows.forEach(row => tbody.appendChild(row));
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    const table = document.getElementById('tabla-historico');
+    if (!table || !table.tHead || !table.tBodies.length) {
+      return;
+    }
+
+    const headerRow = table.tHead.rows[0];
+    const headers = Array.from(headerRow.cells);
+
+    headers.forEach(th => {
+      if (!th.classList.contains('sortable')) return;
+
+      th.addEventListener('click', function () {
+        const colIndex = parseInt(th.dataset.col, 10);
+        if (isNaN(colIndex)) return;
+        ordenarTablaPorColumna(colIndex, table);
+      });
+    });
+
+    const filtroPlaza = document.getElementById('filtro_plaza');
+    const filtroNif = document.getElementById('filtro_nif');
+    const filtroProveedor = document.getElementById('filtro_proveedor');
+
+    function aplicarFiltros() {
+      const termPlaza = (filtroPlaza.value || '').toLowerCase();
+      const termNif = (filtroNif.value || '').toLowerCase();
+      const termProv = (filtroProveedor.value || '').toLowerCase();
+
+      const rows = Array.from(table.tBodies[0].querySelectorAll('tr'));
+
+      rows.forEach(row => {
+        const plaza = (row.cells[1].textContent || '').toLowerCase();
+        const nif = (row.cells[2].textContent || '').toLowerCase();
+        const proveedor = (row.cells[3].textContent || '').toLowerCase();
+
+        const coincidePlaza = !termPlaza || plaza.includes(termPlaza);
+        const coincideNif = !termNif || nif.includes(termNif);
+        const coincideProv = !termProv || proveedor.includes(termProv);
+
+        row.style.display =
+          coincidePlaza && coincideNif && coincideProv ? '' : 'none';
+      });
+    }
+
+    [filtroPlaza, filtroNif, filtroProveedor].forEach(input => {
+      if (!input) return;
+      input.addEventListener('input', aplicarFiltros);
+    });
+  });
+</script>
+
+</body>
+</html>

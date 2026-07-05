@@ -1,0 +1,16 @@
+/* ============================================================
+   🧱 MAIN.CSS
+   ============================================================
+
+   Este archivo centraliza todos los estilos del sistema.
+
+   Se carga desde base.html y organiza la app en módulos CSS.
+
+   ============================================================ */
+
+@import url("base.css");
+@import url("layout.css");
+@import url("components.css");
+@import url("forms.css");
+@import url("tables.css");
+@import url("maps.css");

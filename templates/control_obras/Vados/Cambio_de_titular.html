@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+
+{% block title %}Cambio de Titular{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center mb-4 gap-3">
+        <div>
+            <h1 class="mb-1 fw-bold">👤 Cambio de Titular</h1>
+            <p class="text-muted mb-0">
+                Esta acción actualizará el titular actual y generará un histórico de titulares.
+            </p>
+        </div>
+
+        <div>
+            <a href="{{ url_for('control_vados_bp.detalle_vado', idtbl_vados=vado.idtbl_vados) }}" class="btn btn-outline-secondary">
+                ← Volver al detalle
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-4">
+
+        <div class="col-12 col-xl-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white border-0 pt-4 pb-0">
+                    <h5 class="fw-semibold mb-1">📄 Situación actual</h5>
+                    <p class="text-muted small mb-0">Resumen del expediente antes del cambio.</p>
+                </div>
+
+                <div class="card-body pt-4">
+                    <div class="mb-3">
+                        <div class="text-muted small">ID Vado</div>
+                        <div class="fw-semibold">{{ vado.idtbl_vados }}</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="text-muted small">Nº Vado</div>
+                        <div class="fw-semibold">{{ vado.n_vado or '—' }}</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="text-muted small">Calle</div>
+                        <div class="fw-semibold">{{ vado.tipo_via_nombre or '' }} {{ vado.calle_nombre or '—' }}</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="text-muted small">Titular actual</div>
+                        <div class="fw-semibold">{{ vado.titular_nombre or '—' }}</div>
+                    </div>
+
+                    <div class="mb-0">
+                        <div class="text-muted small">NIF actual</div>
+                        <div class="fw-semibold">{{ vado.titular_nif or '—' }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-xl-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0 pt-4 pb-0">
+                    <h5 class="fw-semibold mb-1">🧾 Nuevo titular</h5>
+                    <p class="text-muted small mb-0">Selecciona el proveedor que pasará a ser el titular actual del vado.</p>
+                </div>
+
+                <div class="card-body pt-4">
+                    <form method="POST">
+                        <div class="row g-4">
+
+                            <div class="col-md-12">
+                                <label for="idtbl_proveedores" class="form-label fw-semibold">👤 Nuevo titular</label>
+                                <select class="form-select" id="idtbl_proveedores" name="idtbl_proveedores" required>
+                                    <option value="">-- Seleccionar proveedor titular --</option>
+                                    {% for proveedor in proveedores %}
+                                        <option value="{{ proveedor.idtbl_proveedores }}">
+                                            {{ proveedor.nombre }}{% if proveedor.nif %} — {{ proveedor.nif }}{% endif %}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="idtbl_gestores" class="form-label fw-semibold">🧑‍💼 ID Gestor</label>
+                                <input
+                                    type="number"
+                                    class="form-control"
+                                    id="idtbl_gestores"
+                                    name="idtbl_gestores"
+                                    placeholder="ID del gestor"
+                                >
+                            </div>
+
+                            <div class="col-md-12">
+                                <label for="observaciones" class="form-label fw-semibold">📝 Observaciones</label>
+                                <textarea
+                                    class="form-control"
+                                    id="observaciones"
+                                    name="observaciones"
+                                    rows="4"
+                                    placeholder="Motivo del cambio, referencia administrativa, notas internas..."
+                                ></textarea>
+                            </div>
+                        </div>
+
+                        <div class="d-flex flex-wrap gap-2 mt-4">
+                            <button type="submit" class="btn btn-info text-white px-4">💾 Guardar cambio de titular</button>
+                            <a href="{{ url_for('control_vados_bp.detalle_vado', idtbl_vados=vado.idtbl_vados) }}" class="btn btn-outline-secondary px-4">
+                                Cancelar
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

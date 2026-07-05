@@ -1,0 +1,786 @@
+<!-- =============================================================================
+👑 SUPER ADMIN · 4 COLUMNAS · PANEL / MÓDULOS / BOTONES / DETALLE + AUDITORÍA
+- Archivo: templates/super_admin/super_admin.html
+
+DATOS QUE ESPERA DEL BACKEND (super_admin_bp.super_admin):
+    paneles: [
+        {"nombre": "panel_comunes_bp"},
+        {"nombre": "panel_control_via_publica_bp"},
+        ...
+    ]
+
+    modulos: [
+        {"nombre": "modulo_parquin_rio_torio_bp", "texto": "Parquin Rio Torio"},
+        ...
+    ]
+
+    botones: [
+        {"nombre": "btn_rio_torio_padron", "texto": "Padrón mensual (Word)", "url": "/..."},
+        ...
+    ]
+
+    panel_seleccionado:        "panel_parquin_bp"
+    modulo_seleccionado:       "modulo_parquin_rio_torio_bp"
+
+    stats: (opcional, según módulo)
+      - Para contenedores:
+        {
+          "tipo": "contenedores",
+          "titulo": "Contenedores",
+          "resumen": {
+              "instalados": 10,
+              "retirados": 5,
+              "totales": 15,
+          },
+          "por_anio": [
+              {"anio": 2026, "total": 7},
+              ...
+          ],
+          "iconos": {
+              "instalados": "/static/imagen/contenedor_verde.png",
+              "retirados":  "/static/imagen/contenedor_azul.png"
+          }
+        }
+
+      - Para parquin Río Torio:
+        {
+          "tipo": "parquin_rio_torio",
+          "titulo": "Parquin Rio Torio",
+          "resumen": {
+              "totales": 120,
+              "libres": 50,
+              "ocupadas": 70,
+          },
+          "iconos": {
+              "ocupada":          "/static/imagen/camion_rojo.png",
+              "libre":            "/static/imagen/camion_verde.png",
+              "ocupada_especial": "/static/imagen/camion_azul.png"
+          }
+        }
+
+    resumen_auditoria:
+      {
+        "intentos_7d":           42,
+        "exitosos_7d":           30,
+        "fallidos_7d":           12,
+        "gestores_activos_30d":  8,
+        "ultimo_login_actual":   datetime o None
+      }
+
+    ultimos_eventos: lista con últimos movimientos de audit_log:
+      [
+        {
+          "fecha": "2026-05-13 20:01:02",
+          "accion": "acceso_concedido",
+          "modulo": "btn_rio_torio_accesos_bp",
+          "endpoint": "btn_rio_torio_accesos_bp.btn_rio_torio_accesos",
+          "ip": "127.0.0.1"
+        },
+        ...
+      ]
+
+- Esta plantilla se limita a MOSTRAR, no hace lógica de negocio.
+============================================================================= -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>SUPER ADMIN · 4 COLUMNAS</title>
+
+<!-- =============================================================================
+🎨 1. BLOQUE DE DISEÑO (CSS GLOBAL)
+============================================================================= -->
+<style>
+:root{
+    --bg-main:#020617;
+    --txt:#e5e7eb;
+    --muted:#9ca3af;
+    --border:#1f2937;
+    --accent-blue:#3b82f6;
+    --accent-green:#22c55e;
+    --accent-purple:#a855f7;
+    --accent-amber:#f59e0b;
+}
+
+/* Reset básico */
+*{box-sizing:border-box;margin:0;padding:0}
+
+/* Vista global sin scroll horizontal */
+html, body{height:100%}
+body{
+    min-height:100vh;
+    color:var(--txt);
+    font-family:Inter,system-ui,Segoe UI,Arial,sans-serif;
+    background:
+      radial-gradient(circle at 0% 0%, rgba(59,130,246,.25), transparent 40%),
+      radial-gradient(circle at 100% 0%, rgba(236,72,153,.22), transparent 45%),
+      radial-gradient(circle at 0% 100%, rgba(34,197,94,.20), transparent 40%),
+      linear-gradient(135deg,#020617,#020617 60%,#030712);
+    overflow:hidden; /* la scroll va dentro de las columnas */
+}
+
+/* CONTENEDOR RAÍZ: HEADER + MAIN + FOOTER */
+.root{
+    height:100vh;
+    display:flex;
+    flex-direction:column;
+}
+
+/* ============================================================================
+🎩 2. ENCABEZADO (HEADER)
+- Ahora incluye tarjetas de auditoría:
+    · Intentos de login (7 días)
+    · Gestores activos (30 días)
+    · Último login del super_admin
+============================================================================= */
+.header{
+    height:92px;
+    padding:8px 18px;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    border-bottom:1px solid rgba(148,163,184,.35);
+    background:
+      linear-gradient(90deg, rgba(15,23,42,.96), rgba(15,23,42,.90));
+    backdrop-filter: blur(18px);
+}
+
+/* Primera fila del header: título */
+.header-top{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+}
+.header-left,
+.header-center,
+.header-right{
+    display:flex;
+    align-items:center;
+    gap:10px;
+}
+.header-left{min-width:160px}
+.header-center{flex:1;justify-content:center}
+.header-right{min-width:160px;justify-content:flex-end}
+.header-placeholder{
+    font-size:.8rem;
+    color:var(--muted);
+    letter-spacing:.16em;
+    text-transform:uppercase;
+}
+
+/* Segunda fila del header: tarjetas de auditoría */
+.header-stats{
+    display:flex;
+    gap:8px;
+    margin-top:2px;
+}
+.header-card{
+    flex:1;
+    min-width:0;
+    padding:6px 10px;
+    border-radius:12px;
+    border:1px solid rgba(148,163,184,.35);
+    background:
+      linear-gradient(135deg, rgba(15,23,42,.98), rgba(15,23,42,.93));
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+}
+.header-card-title{
+    font-size:.68rem;
+    text-transform:uppercase;
+    letter-spacing:.12em;
+    color:var(--muted);
+}
+.header-card-main{
+    font-size:1.1rem;
+    font-weight:600;
+}
+.header-card-sub{
+    font-size:.7rem;
+}
+.header-card-sub span{
+    margin-right:6px;
+}
+
+/* ============================================================================
+📦 3. CUERPO PRINCIPAL (MAIN) · 4 COLUMNAS
+============================================================================= */
+.main{
+    flex:1;
+    padding:8px 10px;
+    display:grid;
+    grid-template-columns: 18% 28% 34% 20%; /* Col1 - Col2 - Col3 - Col4 */
+    gap:10px;
+}
+
+/* Panel base */
+.panel{
+    border-radius:18px;
+    border:1px solid rgba(148,163,184,.45);
+    background:
+      linear-gradient(145deg, rgba(15,23,42,.98), rgba(15,23,42,.94));
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+}
+
+/* Brillos distintos para cada columna */
+.panel-1{box-shadow:0 0 40px rgba(59,130,246,.25);}
+.panel-2{box-shadow:0 0 40px rgba(34,197,94,.22);}
+.panel-3{box-shadow:0 0 40px rgba(168,85,247,.24);}
+.panel-4{box-shadow:0 0 40px rgba(245,158,11,.24);}
+
+/* Cabecera de cada panel */
+.panel-head{
+    padding:9px 11px;
+    border-bottom:1px solid rgba(55,65,81,.9);
+    background:
+      linear-gradient(90deg, rgba(15,23,42,.98), rgba(15,23,42,.92));
+}
+.panel-head h2{
+    margin:0;
+    font-size:.8rem;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+}
+.panel-head small{
+    display:block;
+    margin-top:2px;
+    font-size:.7rem;
+    color:var(--muted);
+}
+
+/* Cuerpo de cada panel */
+.panel-body{
+    flex:1;
+    padding:8px;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    overflow:hidden;
+}
+
+/* Scroll interno */
+.scroll{
+    flex:1;
+    overflow:auto;
+    padding-right:4px;
+}
+.scroll::-webkit-scrollbar{width:4px}
+.scroll::-webkit-scrollbar-track{background:transparent}
+.scroll::-webkit-scrollbar-thumb{
+    background:rgba(148,163,184,.6);
+    border-radius:999px;
+}
+
+/* Listas e items para paneles y módulos */
+.list{list-style:none}
+.list-item{
+    padding:7px 9px;
+    margin-bottom:6px;
+    border-radius:11px;
+    border:1px solid rgba(55,65,81,.9);
+    background:
+      radial-gradient(circle at top left, rgba(59,130,246,.13), transparent 55%),
+      linear-gradient(180deg, rgba(15,23,42,.96), rgba(15,23,42,.98));
+    font-size:.78rem;
+    cursor:pointer;
+    transition:.15s ease;
+}
+.list-item:hover{
+    border-color:var(--accent-blue);
+    box-shadow:0 10px 26px rgba(15,23,42,.85);
+    transform:translateY(-1px);
+}
+.list-item.active{
+    border-color:rgba(34,197,94,.85);
+    box-shadow:0 0 0 1px rgba(34,197,94,.70);
+}
+
+/* Tipografía de los items */
+.item-main{font-weight:600}
+.item-sub{
+    display:block;
+    margin-top:2px;
+    font-size:.7rem;
+    color:var(--muted);
+}
+
+/* Contenedor de la lista de botones (columna 3) */
+.botones-grid{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+    list-style:none;
+    padding:0;
+    margin:0;
+}
+.botones-grid > li{margin:0}
+
+/* Botón-chip */
+.endpoint.compact{
+    display:inline-flex;
+    align-items:center;
+    justify-content:flex-start;
+    padding:4px 9px;
+    border-radius:999px;
+    border:1px solid rgba(59,130,246,.7);
+    background:
+      radial-gradient(circle at top left, rgba(59,130,246,.25), transparent 55%),
+      linear-gradient(135deg, rgba(15,23,42,.98), rgba(15,23,42,.94));
+    font-size:.72rem;
+    cursor:pointer;
+    transition:
+        border-color .15s ease,
+        box-shadow .15s ease,
+        transform .12s ease,
+        background .15s ease;
+    max-width:100%;
+    gap:6px;
+}
+.endpoint-main{
+    font-weight:600;
+    white-space:nowrap;
+    text-overflow:ellipsis;
+    overflow:hidden;
+}
+.endpoint-meta{
+    font-size:.62rem;
+    color:var(--muted);
+    white-space:nowrap;
+}
+.endpoint.compact:hover{
+    border-color:rgba(96,165,250,1);
+    box-shadow:0 4px 14px rgba(15,23,42,.9);
+    transform:translateY(-1px);
+}
+.endpoint-action{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    padding:2px 7px;
+    border-radius:999px;
+    border:1px solid rgba(96,165,250,.95);
+    background:rgba(15,23,42,.96);
+    text-decoration:none;
+    color:#bfdbfe;
+    font-size:.62rem;
+    white-space:nowrap;
+    flex:0 0 auto;
+    transition:
+        background .15s ease,
+        color .15s ease,
+        border-color .15s ease,
+        transform .12s ease;
+}
+.endpoint.compact:hover .endpoint-action{
+    background:rgba(59,130,246,1);
+    color:#0b1120;
+    border-color:rgba(191,219,254,1);
+    transform:translateY(-0.5px);
+}
+
+/* ============================================================================
+👣 4. PIE DE PÁGINA (FOOTER)
+============================================================================= */
+.footer{
+    height:40px;
+    padding:6px 12px;
+    border-top:1px solid rgba(148,163,184,.35);
+    background:
+      linear-gradient(90deg, rgba(15,23,42,.96), rgba(15,23,42,.92));
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    font-size:.72rem;
+    color:var(--muted);
+}
+.footer-left,.footer-center,.footer-right{
+    display:flex;align-items:center;gap:8px;
+}
+</style>
+<!-- 🎨 FIN BLOQUE DE DISEÑO -->
+</head>
+
+<body>
+<div class="root">
+
+    <!-- =========================================================================
+    🎩 5. ENCABEZADO (HEADER) · ZONA SUPERIOR
+    ========================================================================= -->
+    <header class="header">
+        <!-- 5.1 Fila superior: título fijo -->
+        <div class="header-top">
+            <div class="header-left">
+                <span class="header-placeholder">SUPER ADMIN</span>
+            </div>
+            <div class="header-center">
+                <span class="header-placeholder">PANELES · MÓDULOS · BOTONES</span>
+            </div>
+            <div class="header-right">
+                <span class="header-placeholder">AUDITORÍA</span>
+            </div>
+        </div>
+
+        <!-- 5.2 Fila inferior: tarjetas de auditoría -->
+        <div class="header-stats">
+            <div class="header-card">
+                <div class="header-card-title">Intentos últimos 7 días</div>
+                <div class="header-card-main">
+                    {{ resumen_auditoria.intentos_7d or 0 }}
+                </div>
+                <div class="header-card-sub">
+                    <span style="color:var(--accent-green);">
+                        �?{{ resumen_auditoria.exitosos_7d or 0 }} correctos
+                    </span>
+                    <span style="color:#f97373;">
+                        �?{{ resumen_auditoria.fallidos_7d or 0 }} fallidos
+                    </span>
+                </div>
+            </div>
+
+            <div class="header-card">
+                <div class="header-card-title">Gestores activos 30 días</div>
+                <div class="header-card-main">
+                    {{ resumen_auditoria.gestores_activos_30d or 0 }}
+                </div>
+                <div class="header-card-sub">
+                    <span>Con al menos 1 login exitoso</span>
+                </div>
+            </div>
+
+            <div class="header-card">
+                <div class="header-card-title">Tu último login</div>
+                <div class="header-card-main" style="font-size:.9rem;">
+                    {% if resumen_auditoria.ultimo_login_actual %}
+                        {{ resumen_auditoria.ultimo_login_actual }}
+                    {% else %}
+                        <span class="text-muted">Sin registro</span>
+                    {% endif %}
+                </div>
+                <div class="header-card-sub">
+                    <span>Basado en tbl_auditoria_intentos</span>
+                </div>
+            </div>
+
+            <div class="header-card">
+                <div class="header-card-title">Estado auditoría</div>
+                <div class="header-card-main" style="font-size:.9rem;">
+                    <span style="
+                        display:inline-block;
+                        padding:2px 8px;
+                        border-radius:999px;
+                        background:rgba(34,197,94,.18);
+                        color:var(--accent-green);
+                        font-size:.75rem;
+                    ">
+                        Operativa
+                    </span>
+                </div>
+                <div class="header-card-sub">
+                    <span>audit_log + tbl_auditoria_intentos</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- =========================================================================
+    📦 6. CUERPO PRINCIPAL (MAIN) · 4 COLUMNAS
+    ========================================================================= -->
+    <main class="main">
+
+        <!-- 6.1 COLUMNA 1 · PANELES -->
+        <section class="panel panel-1">
+            <div class="panel-head">
+                <h2>Paneles</h2>
+                <small>Blueprints panel_*_bp</small>
+            </div>
+            <div class="panel-body">
+                <div class="scroll">
+                    <ul class="list">
+                        {% for p in paneles %}
+                        <li class="list-item {% if p.nombre == panel_seleccionado %}active{% endif %}">
+                            <a href="?panel={{ p.nombre }}"
+                               style="text-decoration:none;color:inherit;">
+                                <span class="item-main">
+                                    {{ p.nombre
+                                       |replace('panel_', '')
+                                       |replace('_bp','')
+                                       |replace('_',' ')
+                                       |title }}
+                                </span>
+                            </a>
+                        </li>
+                        {% else %}
+                        <li class="list-item">
+                            <span class="item-main">Sin paneles detectados.</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- 6.2 COLUMNA 2 · MÓDULOS DEL PANEL SELECCIONADO -->
+        <section class="panel panel-2">
+            <div class="panel-head">
+                <h2>Módulos</h2>
+                <small>
+                    {% if panel_seleccionado %}
+                        {{
+                            panel_seleccionado
+                                |replace('panel_', '')
+                                |replace('_bp', '')
+                                |replace('_', ' ')
+                                |title
+                        }}
+                    {% else %}
+                        Ningún panel seleccionado
+                    {% endif %}
+                </small>
+            </div>
+
+            <div class="panel-body">
+                <div class="scroll">
+                    <ul class="list">
+                        {% for m in modulos %}
+                        <li class="list-item {% if m.nombre == modulo_seleccionado %}active{% endif %}">
+                            <a href="?panel={{ panel_seleccionado }}&modulo={{ m.nombre }}"
+                               style="text-decoration:none;color:inherit;">
+                                <span class="item-main">
+                                    {{ m.texto or
+                                       m.nombre
+                                         |replace('modulo_', '')
+                                         |replace(
+                                            panel_seleccionado
+                                                |replace('panel_', '')
+                                                |replace('_bp', '') ~ '_',
+                                            ''
+                                         )
+                                         |replace('_bp', '')
+                                         |replace('_', ' ')
+                                         |title
+                                    }}
+                                </span>
+                            </a>
+                        </li>
+                        {% else %}
+                        <li class="list-item">
+                            <span class="item-main">Sin módulos para este panel.</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- 6.3 COLUMNA 3 · BOTONES DEL MÓDULO SELECCIONADO -->
+        <section class="panel panel-3">
+            <div class="panel-head">
+                <h2>Botones</h2>
+                <small>
+                    {% if modulo_seleccionado %}
+                        {{
+                            modulo_seleccionado
+                                |replace('modulo_', '')
+                                |replace('_bp', '')
+                                |replace('_', ' ')
+                                |title
+                        }}
+                    {% else %}
+                        Ningún módulo seleccionado
+                    {% endif %}
+                </small>
+            </div>
+
+            <div class="panel-body">
+                <div class="scroll">
+                    <ul class="botones-grid">
+                        {% if botones %}
+                            {% for b in botones %}
+                            <li>
+                                <div class="endpoint compact">
+                                    <div class="endpoint-main-row">
+                                        <span class="endpoint-main">
+                                            {{ b.texto or
+                                               b.nombre
+                                                 |replace('btn_', '')
+                                                 |replace('_',' ')
+                                                 |title
+                                            }}
+                                        </span>
+
+                                        {% if b.url %}
+                                            <a
+                                              href="{{ b.url }}"
+                                              class="endpoint-action"
+                                              target="{% if b.tipo_accion == 'url_externa' %}_blank{% else %}_self{% endif %}"
+                                            >
+                                                Ejecutar
+                                            </a>
+                                        {% endif %}
+                                    </div>
+
+                                    <span class="endpoint-meta">
+                                        {{ b.nombre }}
+                                    </span>
+                                </div>
+                            </li>
+                            {% endfor %}
+                        {% else %}
+                            <li class="list-item">
+                                <span class="item-main">
+                                    {% if modulo_seleccionado %}
+                                        Sin botones para este módulo.
+                                    {% else %}
+                                        Selecciona un módulo primero.
+                                    {% endif %}
+                                </span>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- 6.4 COLUMNA 4 · DETALLE / ESTADÍSTICAS + ACTIVIDAD -->
+        <section class="panel panel-4">
+            <div class="panel-head">
+                <h2>Detalle</h2>
+                <small>
+                    {% if stats %}
+                        {{ stats.titulo }}
+                    {% else %}
+                        Zona libre para información avanzada
+                    {% endif %}
+                </small>
+            </div>
+            <div class="panel-body">
+
+                <!-- 6.4.1 BLOQUE STATS CONTENEDORES -->
+                {% if stats and stats.tipo == "contenedores" %}
+                    <p class="item-sub">
+                        {% if stats.iconos.instalados %}
+                            <img src="{{ stats.iconos.instalados }}" alt="Contenedor instalado"
+                                 style="height:14px;vertical-align:middle;margin-right:4px;">
+                        {% endif %}
+                        Instalados (sin retirada):
+                        <strong>{{ stats.resumen.instalados }}</strong>
+                    </p>
+                    <p class="item-sub">
+                        {% if stats.iconos.retirados %}
+                            <img src="{{ stats.iconos.retirados }}" alt="Contenedor retirado"
+                                 style="height:14px;vertical-align:middle;margin-right:4px;">
+                        {% endif %}
+                        Retirados:
+                        <strong>{{ stats.resumen.retirados }}</strong>
+                    </p>
+                    <p class="item-sub">
+                        Total registros:
+                        <strong>{{ stats.resumen.totales }}</strong>
+                    </p>
+
+                    <hr style="border:none;border-top:1px solid rgba(148,163,184,.35);margin:6px 0;">
+
+                    <p class="item-sub">Totales por año de expediente:</p>
+                    <div class="scroll" style="max-height:120px;">
+                        <ul class="list">
+                            {% for fila in stats.por_anio %}
+                            <li class="list-item">
+                                <span class="item-main">
+                                    {{ fila.anio or 'Sin año' }}
+                                </span>
+                                <span class="item-sub">
+                                    {{ fila.total }} contenedores
+                                </span>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+
+                <!-- 6.4.2 BLOQUE STATS PARQUIN RÍO TORIO -->
+                {% elif stats and stats.tipo == "parquin_rio_torio" %}
+                    <p class="item-sub">
+                        {% if stats.iconos.libre %}
+                            <img src="{{ stats.iconos.libre }}" alt="Plaza libre"
+                                 style="height:14px;vertical-align:middle;margin-right:4px;">
+                        {% endif %}
+                        Plazas libres:
+                        <strong>{{ stats.resumen.libres }}</strong>
+                    </p>
+                    <p class="item-sub">
+                        {% if stats.iconos.ocupada %}
+                            <img src="{{ stats.iconos.ocupada }}" alt="Plaza ocupada"
+                                 style="height:14px;vertical-align:middle;margin-right:4px;">
+                        {% endif %}
+                        Plazas ocupadas:
+                        <strong>{{ stats.resumen.ocupadas }}</strong>
+                    </p>
+                    <p class="item-sub">
+                        Total plazas:
+                        <strong>{{ stats.resumen.totales }}</strong>
+                    </p>
+
+                    <hr style="border:none;border-top:1px solid rgba(148,163,184,.35);margin:6px 0;">
+                    <p class="item-sub">
+                        Estadística global del parquin Rio Torio (todas las filas).
+                    </p>
+                    <p class="item-sub">
+                        {% if stats.iconos.ocupada_especial %}
+                            <img src="{{ stats.iconos.ocupada_especial }}" alt="Plaza ocupada especial"
+                                 style="height:14px;vertical-align:middle;margin-right:4px;">
+                        {% endif %}
+                        Iconos preparados para futuros estados de ocupación.
+                    </p>
+
+                <!-- 6.4.3 SIN STATS ESPECÍFICAS -->
+                {% else %}
+                    <p class="item-sub">
+                        Aquí puedes mostrar información detallada del panel,
+                        módulo o botón seleccionado: logs, JSON, métricas, etc.
+                        Mientras no haya estadísticas específicas para este
+                        módulo, esta columna actúa como panel informativo
+                        genérico.
+                    </p>
+                {% endif %}
+
+                <!-- 6.4.4 ACTIVIDAD RECIENTE (audit_log) -->
+                <hr style="border:none;border-top:1px solid rgba(148,163,184,.35);margin:6px 0;">
+                <p class="item-sub">Actividad reciente (audit_log):</p>
+                <div class="scroll" style="max-height:120px;">
+                    {% if ultimos_eventos %}
+                        <ul class="list">
+                            {% for e in ultimos_eventos %}
+                            <li class="list-item">
+                                <span class="item-main">
+                                    {{ e.fecha }} · {{ e.accion }}
+                                </span>
+                                <span class="item-sub">
+                                    {{ e.modulo }} · {{ e.endpoint }} · {{ e.ip }}
+                                </span>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="item-sub">Sin registros recientes en audit_log.</p>
+                    {% endif %}
+                </div>
+
+            </div>
+        </section>
+
+    </main>
+
+    <!-- =========================================================================
+    👣 7. PIE DE PÁGINA (FOOTER)
+    ========================================================================= -->
+    <footer class="footer">
+        <div class="footer-left"><span>tubby_app · Super Admin</span></div>
+        <div class="footer-center"><span>Auditoría y paneles cargados dinámicamente</span></div>
+        <div class="footer-right"><span>Versión 1.0</span></div>
+    </footer>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+{% block title %}Retiradas sin relación{% endblock %}
+
+{% block content %}
+
+{# ============================================================================
+  🧩 VISTA: CONTENEDORES · RETIRADAS SIN RELACIÓN (MODO MANUAL POR PDF)
+  ----------------------------------------------------------------------------
+  FLUJO:
+    1) Se muestran, uno a uno, los PDFs de retirada que NO se han podido
+       relacionar automáticamente con ninguna colocación.
+    2) El usuario ve el PDF (panel izquierdo) y, en base a su contenido:
+         · Identifica proveedor y calle.
+         · Usa los filtros de la derecha para localizar el contenedor colocado.
+    3) Selecciona el contenedor correcto en la lista.
+    4) Rellena los datos de retirada (CSV, fecha, solicitud, expediente).
+    5) Pulsa Guardar → se actualiza tbl_control_contenedores con esos datos.
+  ============================================================================ #}
+
+<h2>Retiradas sin relación con colocación (asignación manual)</h2>
+
+{# ============================================================================
+  1️⃣ SECCIÓN · CONTROLES DE PDF (NAVEGACIÓN ENTRE PDFs PENDIENTES)
+  ----------------------------------------------------------------------------
+  - Muestra en qué PDF de retirada estamos (pdf_pos + 1 / pdf_total).
+  - Flechas para pasar al PDF anterior/siguiente.
+  - El blueprint debe gestionar pdf_pos en querystring o formulario.
+  ============================================================================ #}
+<form method="GET" class="mb-2 d-flex align-items-center gap-2">
+  <div class="me-3">
+    <strong>PDF retirada:</strong>
+    {% if pdf_total and pdf_total > 0 %}
+      {{ pdf_pos + 1 }} / {{ pdf_total }}
+    {% else %}
+      Sin PDFs pendientes
+    {% endif %}
+  </div>
+
+  {% if pdf_total and pdf_total > 0 %}
+    <input type="hidden" name="pdf_pos" value="{{ pdf_pos }}">
+    <button type="submit" name="pdf_nav" value="prev"
+            class="btn btn-sm btn-outline-primary"
+            {% if pdf_pos <= 0 %}disabled{% endif %}>
+      ⬅ PDF anterior
+    </button>
+    <button type="submit" name="pdf_nav" value="next"
+            class="btn btn-sm btn-outline-primary"
+            {% if pdf_pos + 1 >= pdf_total %}disabled{% endif %}>
+      PDF siguiente ➡
+    </button>
+  {% endif %}
+
+  {# Botón para resetear filtros de proveedor/calle sin cambiar de PDF #}
+  <div class="ms-auto">
+    <a href="{{ url_for('btn_contenedores_retiradas_sin_relacion_bp.btn_contenedores_retiradas_sin_relacion',
+                        pdf_pos=pdf_pos) }}"
+       class="btn btn-outline-secondary btn-sm">
+      Limpiar filtros
+    </a>
+  </div>
+</form>
+
+{# ============================================================================
+  2️⃣ SECCIÓN · LAYOUT PRINCIPAL: PDF (IZQUIERDA) + FORMULARIO (DERECHA)
+  ============================================================================ #}
+<div style="display:flex; gap:16px; align-items:flex-start;">
+
+  {# --------------------------------------------------------------------------
+    2.1) PANEL IZQUIERDO · VISOR DE PDF
+    ---------------------------------------------------------------------------
+    - Muestra el PDF actual de retirada (pdf_url).
+    - Si no hay pdf_url, muestra mensaje.
+    - Se usa <iframe> pero puedes cambiar a <embed> o visor JS si lo prefieres.
+    -------------------------------------------------------------------------- #}
+  <div style="flex:1; border:1px solid #ccc; padding:4px; border-radius:6px;">
+    <h5>Documento de retirada</h5>
+
+    {% if pdf_url %}
+      <iframe src="{{ pdf_url }}"
+              style="width:100%; height:70vh; border:none;"
+              title="PDF retirada">
+      </iframe>
+    {% else %}
+      <p class="text-muted">
+        No hay PDFs de retirada pendientes en la carpeta configurada.
+      </p>
+    {% endif %}
+  </div>
+
+  {# --------------------------------------------------------------------------
+    2.2) PANEL DERECHO · BÚSQUEDA Y ASIGNACIÓN AL CONTENEDOR
+    ---------------------------------------------------------------------------
+    OBJETIVO:
+      - A partir de lo que ves en el PDF (proveedor, calle, etc.),
+        localizar el contenedor de colocación y asignarle la retirada.
+
+    PARTES:
+      A) Filtros de proveedor / calle (solo proveedores con contenedores
+         sin retirada gracias al SQL_PROVEEDORES_CON_SIN_RETIRADA).
+      B) Selector de contenedor (lista) entre los que encajan con los filtros.
+      C) Formulario de datos de retirada (siempre editable).
+      D) Botón "Limpiar formulario" para vaciar los campos de retirada.
+    -------------------------------------------------------------------------- #}
+  <div style="flex:1.2; border:1px solid #ccc; padding:8px; border-radius:6px;">
+
+    {# A) Filtros proveedor / calle #}
+    <h5>1️⃣ Localizar contenedor colocado</h5>
+    <form method="GET" class="mb-2">
+      {# mantenemos pdf_pos para no cambiar de documento al filtrar #}
+      <input type="hidden" name="pdf_pos" value="{{ pdf_pos }}">
+
+      <label class="form-label mb-1">Proveedor:</label>
+      <select name="proveedor_id"
+              class="form-select form-select-sm mb-1"
+              onchange="this.form.submit()">
+        <option value="">-- Todos --</option>
+        {% for p in proveedores %}
+          <option value="{{ p.idtbl_proveedores }}"
+                  {% if proveedor_id == p.idtbl_proveedores %}selected{% endif %}>
+            {{ p.nombre_razon_social }}
+          </option>
+        {% endfor %}
+      </select>
+
+      <label class="form-label mb-1">Calle:</label>
+      <select name="calle_id"
+              class="form-select form-select-sm mb-1"
+              onchange="this.form.submit()"
+              {% if not proveedor_id %}disabled{% endif %}>
+        <option value="">-- Todas --</option>
+        {% for c in calles %}
+          <option value="{{ c.idtbl_calles }}"
+                  {% if calle_id == c.idtbl_calles %}selected{% endif %}>
+            {{ c.calles }}
+          </option>
+        {% endfor %}
+      </select>
+
+      <noscript><button type="submit" class="btn btn-sm btn-primary">Filtrar</button></noscript>
+    </form>
+
+    {# B) Selector de contenedor según filtros #}
+    <div class="mb-3">
+      <label class="form-label mb-1">Contenedor a asignar:</label>
+      {% if contenedores and contenedores|length > 0 %}
+        <form method="GET" class="mb-1">
+          {# volvemos a GET para elegir cuál será el contenedor "activo" #}
+          <input type="hidden" name="pdf_pos" value="{{ pdf_pos }}">
+          <input type="hidden" name="proveedor_id" value="{{ proveedor_id or '' }}">
+          <input type="hidden" name="calle_id" value="{{ calle_id or '' }}">
+
+          <select name="pos"
+                  class="form-select form-select-sm mb-1"
+                  onchange="this.form.submit()">
+            {% for c in contenedores %}
+              {% set idx = loop.index0 %}
+              <option value="{{ idx }}"
+                      {% if idx == pos %}selected{% endif %}>
+                [{{ c.idtbl_control_contenedores }}] {{ c.calle_nombre }} · sol: {{ c.numero_solicitud or '-' }}
+              </option>
+            {% endfor %}
+          </select>
+
+          <noscript><button type="submit" class="btn btn-sm btn-primary">Seleccionar</button></noscript>
+        </form>
+      {% else %}
+        <p class="text-muted">No hay contenedores sin retirada para los filtros aplicados.</p>
+      {% endif %}
+    </div>
+
+    {# C) Formulario de datos de retirada #}
+    <h5>2️⃣ Datos de retirada a guardar</h5>
+    <button type="button"
+            class="btn btn-outline-secondary btn-sm mb-2"
+            onclick="limpiarFormularioRetirada()">
+      Limpiar formulario
+    </button>
+
+    <form method="POST" id="formRetirada">
+      <input type="hidden" name="accion" value="guardar">
+      <input type="hidden" name="pdf_pos" value="{{ pdf_pos }}">
+      <input type="hidden" name="proveedor_id" value="{{ proveedor_id or '' }}">
+      <input type="hidden" name="calle_id" value="{{ calle_id or '' }}">
+      <input type="hidden" name="pos" value="{{ pos }}">
+
+      <input type="hidden" name="idtbl_control_contenedores"
+             value="{{ contenedor.idtbl_control_contenedores if contenedor else '' }}">
+
+      <div class="mb-1">
+        <label for="csv_retirada" class="form-label mb-0">CSV retirada:</label>
+        <input type="text" id="csv_retirada" name="csv_retirada"
+               class="form-control form-control-sm"
+               value="">
+      </div>
+
+      <div class="mb-1">
+        <label for="fecha_retirada" class="form-label mb-0">Fecha retirada:</label>
+        <input type="date" id="fecha_retirada" name="fecha_retirada"
+               class="form-control form-control-sm"
+               value="">
+      </div>
+
+      <div class="mb-1">
+        <label for="n_solicitud_retirada" class="form-label mb-0">Nº solicitud retirada:</label>
+        <input type="text" id="n_solicitud_retirada" name="n_solicitud_retirada"
+               class="form-control form-control-sm"
+               value="">
+      </div>
+
+      <div class="mb-2">
+        <label for="numero_expediente" class="form-label mb-0">Nº expediente:</label>
+        <input type="text" id="numero_expediente" name="numero_expediente"
+               class="form-control form-control-sm"
+               value="">
+      </div>
+
+      <button type="submit" class="btn btn-sm btn-success mt-1">
+        Guardar
+      </button>
+    </form>
+
+  </div>
+
+</div>
+
+<script>
+  // Limpia solo los campos de datos de retirada (no los filtros ni ids ocultos)
+  function limpiarFormularioRetirada() {
+    const f = document.getElementById('formRetirada');
+    if (!f) return;
+    ['csv_retirada', 'fecha_retirada', 'n_solicitud_retirada', 'numero_expediente']
+      .forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+      });
+  }
+</script>
+
+{% endblock %}

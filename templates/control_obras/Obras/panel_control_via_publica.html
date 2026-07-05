@@ -1,0 +1,100 @@
+<style>
+/* =============================================================================
+🎨 PANEL VÍA PÚBLICA AUTOMÁTICO · FIX FINAL
+============================================================================= */
+
+.vp-dashboard {
+  padding: 1.5rem;
+  background: linear-gradient(180deg,#0f172a,#1e293b);
+  min-height:100vh;
+  color:#e2e8f0;
+  font-family: Inter, system-ui, sans-serif;
+}
+
+.vp-grid {
+  display:grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px,1fr));
+  gap:1rem;
+}
+
+/* CARD */
+.vp-card {
+  padding:1rem;
+  border-radius:.8rem;
+  border:1px solid rgba(148,163,184,.2);
+  background:#0f172a;
+  transition:.2s;
+}
+
+.vp-card:hover {
+  transform:translateY(-3px);
+  border-color:#3b82f6;
+}
+
+/* TEXTOS */
+.vp-title {
+  font-weight:600;
+  margin-bottom:.5rem;
+  text-transform: capitalize;
+}
+
+/* BOTONES */
+.vp-actions {
+  display:flex;
+  gap:.4rem;
+  flex-wrap:wrap;
+}
+
+.vp-btn {
+  font-size:.7rem;
+  background:#1e40af;
+  color:white;
+  padding:.3rem .6rem;
+  border-radius:.4rem;
+  text-decoration:none;
+}
+
+.vp-btn:hover {
+  background:#1d4ed8;
+}
+</style>
+
+
+<div class="vp-dashboard">
+
+  <h2>🛣️ Panel Vía Pública</h2>
+
+  <div class="vp-grid">
+
+    {% for m in modulos %}
+    <div class="vp-card">
+
+      <!-- NOMBRE DEL MODULO -->
+      <div class="vp-title">
+        {{ m.nombre | replace("_"," ") | capitalize }}
+      </div>
+
+      <!-- BOTÓN PRINCIPAL (abrir módulo) -->
+      {% if m.ruta %}
+      <div class="vp-actions" style="margin-bottom:6px;">
+        <a href="{{ m.ruta }}" class="vp-btn">
+          Abrir
+        </a>
+      </div>
+      {% endif %}
+
+      <!-- BOTONES -->
+      <div class="vp-actions">
+        {% for b in m.botones %}
+        <a href="{{ b.ruta }}" class="vp-btn">
+          {{ b.nombre | capitalize }}
+        </a>
+        {% endfor %}
+      </div>
+
+    </div>
+    {% endfor %}
+
+  </div>
+
+</div>

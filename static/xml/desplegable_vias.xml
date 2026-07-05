@@ -1,0 +1,108 @@
+<!-- ==========================
+     DESPLEGABLES ENCADENADOS
+     provincia -> municipio -> tipo_via -> calle
+   ========================== -->
+
+<select id="provincia" name="idtbl_provincias">
+    <option value="">-- Selecciona provincia --</option>
+    {% for p in provincias %}
+        <option value="{{ p.idtbl_provincias }}">{{ p.nombre }}</option>
+    {% endfor %}
+</select>
+
+<select id="municipio" name="idtbl_municipios" disabled>
+    <option value="">-- Selecciona municipio --</option>
+</select>
+
+<select id="tipo_via" name="idtbl_tipos_de_vias">
+    <option value="">-- Selecciona tipo de vía --</option>
+    {% for t in tipos_via %}
+        <option value="{{ t.idtbl_tipos_de_vias }}">{{ t.nombre }}</option>
+    {% endfor %}
+</select>
+
+<select id="calle" name="idtbl_calles" disabled>
+    <option value="">-- Selecciona calle --</option>
+</select>
+
+<script>
+function rellenarSelect(selectElem, items, textoDefecto, idKey, nombreKey) {
+    selectElem.innerHTML = '';
+    const def = document.createElement('option');
+    def.value = '';
+    def.textContent = textoDefecto;
+    selectElem.appendChild(def);
+
+    items.forEach(obj => {
+        const opt = document.createElement('option');
+        opt.value = obj[idKey];
+        opt.textContent = obj[nombreKey];
+        selectElem.appendChild(opt);
+    });
+
+    selectElem.disabled = items.length === 0;
+}
+
+const selProvincia = document.getElementById('provincia');
+const selMunicipio = document.getElementById('municipio');
+const selTipoVia   = document.getElementById('tipo_via');
+const selCalle     = document.getElementById('calle');
+
+// PROVINCIA -> MUNICIPIOS
+selProvincia.addEventListener('change', function () {
+    const idProvincia = this.value;
+
+    rellenarSelect(selMunicipio, [], '-- Selecciona municipio --', 'idtbl_municipios', 'nombre');
+    rellenarSelect(selCalle, [], '-- Selecciona calle --', 'idtbl_calles', 'nombre');
+
+    if (!idProvincia) {
+        selMunicipio.disabled = true;
+        selCalle.disabled = true;
+        return;
+    }
+
+    fetch(`{{ url_for('helpers_vias_bp.api_municipios') }}?id_provincia=${idProvincia}`)
+        .then(r => r.json())
+        .then(data => {
+            if (!data.ok) return;
+            rellenarSelect(
+                selMunicipio,
+                data.municipios,
+                '-- Selecciona municipio --',
+                'idtbl_municipios',
+                'nombre'
+            );
+        });
+});
+
+// MUNICIPIO / TIPO_VIA -> CALLES
+function actualizarCalles() {
+    const idMunicipio = selMunicipio.value;
+    const idTipoVia   = selTipoVia.value;
+
+    rellenarSelect(selCalle, [], '-- Selecciona calle --', 'idtbl_calles', 'nombre');
+
+    if (!idMunicipio || !idTipoVia) {
+        selCalle.disabled = true;
+        return;
+    }
+
+    const url = `{{ url_for('helpers_vias_bp.api_calles') }}?id_municipio=${idMunicipio}&id_tipo_via=${idTipoVia}`;
+
+    fetch(url)
+        .then(r => r.json())
+        .then(data => {
+            if (!data.ok) return;
+            rellenarSelect(
+                selCalle,
+                data.calles,
+                '-- Selecciona calle --',
+                'idtbl_calles',
+                'nombre'
+            );
+        });
+}
+
+selMunicipio.addEventListener('change', actualizarCalles);
+selTipoVia.addEventListener('change', actualizarCalles);
+</script>

@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Validación Contenedor</title>
+
+  <!--
+  ==========================================================
+  🧠 INTRODUCCIÓN GENERAL
+  ----------------------------------------------------------
+  Esta página sirve para VALIDAR UN CONTENEDOR viendo:
+    - A la IZQUIERDA: el PDF con la solicitud.
+    - A la DERECHA: el formulario con todos los datos.
+
+  OBJETIVOS DE DISEÑO:
+  1) Todo debe caber en una pantalla dividida al 50% (PDF | formulario).
+  2) No queremos scroll "raro" en la derecha si no hace falta.
+  3) Aprovechamos el ancho: campos largos ocupan más; campos cortos
+     (NIF, teléfono, coordenadas...) comparten línea.
+  4) En “Ubicación” el orden es:
+        Tipo de vía
+        Calle
+        Latitud + Longitud en la misma fila.
+  5) En “Proveedor” NIF y Teléfono van en la misma línea.
+  6) Fechas y números administrativos van ordenados en dos columnas.
+  ==========================================================
+  -->
+
+  <style>
+  /* ========================================================
+     1. ESTILO GLOBAL Y LAYOUT GENERAL
+     --------------------------------------------------------
+     - html y body ocupan toda la ventana.
+     - .layout es el contenedor principal a dos columnas.
+     ======================================================== */
+
+  html, body {
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+  }
+
+  .layout {
+      display: flex;      /* Dos columnas: PDF | Formulario */
+      height: 100vh;      /* Toda la ventana */
+  }
+
+  /* --------------------------------------------------------
+     1.1 MITAD IZQUIERDA: VISOR PDF
+     --------------------------------------------------------
+     - Columna izquierda con fondo oscuro.
+     - Cabecera pequeña con el nombre del PDF.
+     - iframe que ocupa todo el espacio restante.
+     -------------------------------------------------------- */
+
+  .pdf-container {
+      width: 50%;                 /* mitad izquierda */
+      background: #1e1e1e;
+      display: flex;
+      flex-direction: column;     /* header arriba, iframe abajo */
+      min-height: 0;
+  }
+
+  .pdf-header {
+      color: #fff;
+      padding: 6px 10px;
+      font-size: 12px;
+      background: #111;
+      border-bottom: 1px solid #333;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex-shrink: 0;
+  }
+
+  .pdf-container iframe {
+      width: 100%;
+      border: none;
+      flex: 1 1 auto;             /* ocupa TODO el alto restante */
+  }
+
+  /* --------------------------------------------------------
+     1.2 MITAD DERECHA: FORMULARIO
+     --------------------------------------------------------
+     - Columna derecha con fondo claro.
+     - Arriba: cabecera (título + info + botones).
+     - Debajo: grid con los bloques de campos.
+     -------------------------------------------------------- */
+
+  .form-container {
+      width: 50%;                 /* mitad derecha */
+      padding: 12px 16px;
+      background: #f4f6f8;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+  }
+
+  /* ========================================================
+     2. CABECERA FORMULARIO + BOTONES
+     --------------------------------------------------------
+     - A la izquierda: título e info del pendiente.
+     - A la derecha: botones Guardar / Anterior / Siguiente.
+     ======================================================== */
+
+  .form-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 10px;
+  }
+
+  .form-header-title h2 {
+      margin: 0;
+      font-size: 18px;
+  }
+
+  .form-header-title small {
+      display: block;
+      line-height: 1.2;
+  }
+
+  .form-header-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 180px;
+  }
+
+  .form-header-actions a {
+      text-decoration: none;
+  }
+
+  /* ========================================================
+     3. GRID PRINCIPAL DEL FORMULARIO
+     --------------------------------------------------------
+     - Dos columnas asimétricas:
+         3fr → columna más ancha (bloques importantes).
+         2fr → columna más estrecha (bloques auxiliares).
+     - Algunos bloques ocupan toda la fila (.bloque--full).
+     ======================================================== */
+
+ /* GRID: dos columnas equilibradas para ordenar bloques */
+.grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;  /* 50% / 50% */
+    gap: 12px;
+    padding-right: 4px;
+}
+
+/* Bloques que deben ir de lado a lado (fechas + ubicación) */
+.bloque--full {
+    grid-column: 1 / 3;
+}
+
+/* Filas de campos en línea */
+.campo-row {
+    display: flex;
+    gap: 8px;
+}
+
+.campo-row .campo {
+    flex: 1;
+    margin-bottom: 7px;
+}
+
+/* Tamaños pensados para que NO rellenen toda la tarjeta si no hace falta */
+.campo--corto  { flex: 0 0 110px; }   /* NIF, teléfono, coordenadas, nº corto */
+.campo--medio  { flex: 0 0 170px; }   /* fechas, números administrativos */
+.campo--largo { flex: 1; } /* textos largos (nombre, observaciones) */
+
+  /* ========================================================
+     4. BLOQUES Y CAMPOS
+     --------------------------------------------------------
+     - Cada .bloque es una tarjeta con su título y campos.
+     - Dentro de los bloques usamos .campo-row para poner
+       varios campos en la misma línea.
+     ======================================================== */
+
+  .bloque {
+      background: white;
+      padding: 10px 10px 8px 10px;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+  }
+
+  .bloque h3 {
+      margin: 0 0 8px;
+      font-size: 14px;
+      color: #333;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+  }
+
+  .campo {
+      margin-bottom: 7px;
+  }
+
+  label {
+      display: block;
+      font-size: 11px;
+      font-weight: bold;
+      margin-bottom: 2px;
+      color: #555;
+  }
+
+  input, select, textarea {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 5px 6px;
+      font-size: 12px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s, background-color 0.15s;
+  }
+
+  input:focus, select:focus, textarea:focus {
+      border-color: #2684ff;
+      box-shadow: 0 0 0 2px rgba(38,132,255,0.2);
+      background-color: #fff;
+  }
+
+  textarea {
+      resize: vertical;
+  }
+
+  /* --------------------------------------------------------
+     4.1 FILAS DE CAMPOS EN LÍNEA
+     --------------------------------------------------------
+     - .campo-row: pone varios .campo en la misma fila.
+     - Usamos modifiers para controlar anchos:
+         .campo--corto  → ancho fijo pequeño (NIF, Teléfono…)
+         .campo--medio  → ancho fijo medio (fechas, números).
+         .campo--largo  → se estira y ocupa el resto.
+     -------------------------------------------------------- */
+
+  .campo-row {
+      display: flex;
+      gap: 8px;
+  }
+
+  .campo-row .campo {
+      flex: 1;
+      margin-bottom: 7px;
+  }
+
+  .campo--corto  { flex: 0 0 120px; }
+  .campo--medio  { flex: 0 0 180px; }
+  .campo--largo  { flex: 1; }
+
+  /* ========================================================
+     5. BOTONES CABECERA
+     ======================================================== */
+
+  button {
+      padding: 9px 10px;
+      border: none;
+      border-radius: 6px;
+      font-weight: bold;
+      font-size: 12px;
+      cursor: pointer;
+  }
+
+  .btn-guardar {
+      background: #28a745;
+      color: white;
+  }
+
+  .btn-guardar:hover {
+      background: #218838;
+  }
+
+  .btn-prev {
+      background: #6c757d;
+      color: white;
+  }
+
+  .btn-prev:hover {
+      background: #5a6268;
+  }
+
+  .btn-next {
+      background: #007bff;
+      color: white;
+  }
+
+  .btn-next:hover {
+      background: #0069d9;
+  }
+  </style>
+</head>
+
+<body>
+
+<!-- ======================================================
+     6. LAYOUT PRINCIPAL: PDF (izquierda) + FORM (derecha)
+     ====================================================== -->
+<div class="layout">
+
+ <!-- ======================================================
+     6.1 MITAD IZQUIERDA: VISOR PDF
+====================================================== -->
+<div class="pdf-container">
+
+    <div class="pdf-header">
+        📄 Documento: {{ pendiente.ruta_pdf.replace('\\\\','/').split('/')[-1] }}
+    </div>
+
+     <iframe
+    src="{{ url_for('contenedor_pendientes_validacion_bp.serve_pdf',
+                    filename=pendiente.ruta_pdf.replace('\\','/').split('/')[-1]) }}">
+</iframe>
+
+
+</div>
+
+
+<!-- ======================================================
+     6.2 MITAD DERECHA: FORMULARIO LIMPIO PRO
+====================================================== -->
+<div class="form-container">
+
+    <!-- 🔹 CABECERA -->
+    <div class="form-header" style="margin-bottom:6px;">
+
+        <div class="form-header-title">
+            <h2 style="margin:0; font-size:14px;">🗃 Validación contenedor</h2>
+
+            <small style="font-size:11px; color:#666;">
+                Pendiente #{{ id_pendiente }} · Índice {{ indice }}
+            </small>
+
+            <small style="font-size:10px; color:#888;">
+                📄 {{ pendiente.ruta_pdf.replace('\\\\','/').split('/')[-1] }}
+            </small>
+        </div>
+
+        <div class="form-header-actions" style="gap:4px;">
+            <button type="submit" form="form-validacion" class="btn-guardar" style="padding:6px 8px;">💾</button>
+
+            <div style="display:flex; gap:4px;">
+                <a href="{{ url_for('contenedor_pendientes_validacion_bp.listar_pendientes', i=indice-1) }}">
+                    <button type="button" class="btn-prev">⬅</button>
+                </a>
+
+                <a href="{{ url_for('contenedor_pendientes_validacion_bp.listar_pendientes', i=indice+1) }}">
+                    <button type="button" class="btn-next">➡</button>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🔹 FORM -->
+    <form method="POST" id="form-validacion"
+          action="{{ url_for('contenedor_pendientes_validacion_bp.guardar_validacion', id=id_pendiente) }}">
+
+        <div class="grid" style="gap:6px; font-size:11px;">
+
+            <!-- 🏢 PROVEEDOR -->
+            <div class="bloque">
+                <h3>🏢 Proveedor / Solicitante</h3>
+
+                <label>Proveedor</label>
+                <select name="idtbl_proveedores">
+                    <option value="">Selecciona proveedor…</option>
+                    {% for p in proveedores %}
+                        <option value="{{ p.idtbl_proveedores }}">{{ p.nombre_razon_social }}</option>
+                    {% endfor %}
+                </select>
+
+                <label>Nombre solicitante</label>
+                <input name="nombre_solicitante" value="{{ datos.nombre_solicitante }}">
+
+                <div class="campo-row">
+                    <div class="campo campo--corto">
+                        <label>NIF</label>
+                        <input name="nif" value="{{ datos.nif }}">
+                    </div>
+
+                    <div class="campo campo--corto">
+                        <label>Teléfono</label>
+                        <input name="telefono" value="{{ datos.telefono }}">
+                    </div>
+                </div>
+            </div>
+
+            <!-- 📄 ADMINISTRATIVO -->
+            <div class="bloque">
+                <h3>📄 Datos administrativos</h3>
+
+                <div class="campo-row">
+                    <div class="campo campo--medio">
+                        <label>Nº expediente</label>
+                        <input name="numero_expediente_raw" maxlength="5" placeholder="123"
+                               value="{{ datos.numero_expediente.split('/')[0] if datos.numero_expediente }}">
+                    </div>
+
+                    <div class="campo campo--medio">
+                        <label>Nº solicitud</label>
+                        <input name="numero_solicitud_raw" maxlength="5" placeholder="456"
+                               value="{{ datos.numero_solicitud.split('/')[0] if datos.numero_solicitud }}">
+                    </div>
+                </div>
+
+                <div class="campo campo--medio">
+                    <label>Nº colocación</label>
+                    <input name="numero_colocacion_raw" maxlength="5" placeholder="789"
+                           value="{{ datos.numero_colocacion.split('/')[0] if datos.numero_colocacion }}">
+                </div>
+            </div>
+
+            <!-- 📅 FECHAS -->
+            <div class="bloque bloque--full">
+                <h3>📅 Fechas</h3>
+
+                <div class="campo-row">
+                    <input type="date" name="fecha_colocacion" value="{{ datos.fecha_colocacion }}">
+                    <input type="date" name="fecha_colocacion" value="{{ datos.fecha_colocacion }}">
+                    <input type="date" name="fecha_retirada" value="{{ datos.fecha_retirada }}">
+                    <input type="date" name="fecha_firma_inicial" value="{{ datos.fecha_firma_inicial }}">
+                </div>
+
+                <div class="campo-row">
+                    <input type="date" name="fecha_subida_instalacion" value="{{ datos.fecha_subida_instalacion }}">
+                    <input type="date" name="fecha_subida_retirada" value="{{ datos.fecha_subida_retirada }}">
+                </div>
+            </div>
+
+            <!-- 📍 UBICACIÓN -->
+            <div class="bloque bloque--full">
+                <h3>📍 Ubicación</h3>
+
+                <div class="campo-row">
+                    <select name="idtbl_tipos_de_vias" id="tipo_via">
+                        <option value="">Tipo de vía</option>
+                        {% for t in tipos_vias %}
+                            <option value="{{ t.idtbl_tipos_de_vias }}">{{ t.tipos_de_vias }}</option>
+                        {% endfor %}
+                    </select>
+
+                    <select name="idtbl_calles" id="calle">
+                        <option value="">Calle</option>
+                    </select>
+                </div>
+
+                <div class="campo-row">
+                    <input name="latitud" placeholder="Latitud" value="{{ datos.latitud }}">
+                    <input name="longitud" placeholder="Longitud" value="{{ datos.longitud }}">
+                </div>
+
+                <div class="campo-row">
+                    <input name="precision_gps" placeholder="Precisión GPS" value="{{ datos.precision_gps }}">
+                    <input name="gps_nivel_calidad" placeholder="Nivel GPS" value="{{ datos.gps_nivel_calidad }}">
+                </div>
+
+                <div class="campo-row">
+                    <input name="gps_origen" placeholder="Origen GPS" value="{{ datos.gps_origen }}">
+                    <select name="gps_precision_ok">
+                        <option value="">Precisión OK</option>
+                        <option value="1">Sí</option>
+                        <option value="0">No</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- 🧾 CONTENEDOR -->
+            <div class="bloque">
+                <h3>🧾 Contenedor</h3>
+
+                <label>Dimensión</label>
+                <select name="idtbl_dimensiones">
+                    <option value="">Selecciona…</option>
+                    {% for d in dimensiones %}
+                        <option value="{{ d.idtbl_dimensiones }}">{{ d.descripcion }}</option>
+                    {% endfor %}
+                </select>
+
+                <label>Gestor</label>
+                <select name="idtbl_gestores">
+                    <option value="">Selecciona…</option>
+                    {% for g in gestores %}
+                        <option value="{{ g.idtbl_gestores }}">{{ g.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- 🔐 CSV -->
+            <div class="bloque">
+                <h3>🔐 CSV</h3>
+
+                <label>CSV instalación</label>
+                <input name="csv" value="{{ datos.csv }}">
+
+                <label>CSV retirada</label>
+                <input name="csv_retirada" value="{{ datos.csv_retirada }}">
+            </div>
+
+            <!-- 📝 OBS -->
+            <div class="bloque bloque--full">
+                <h3>📝 Observaciones</h3>
+                <textarea name="observaciones" rows="2">{{ datos.observaciones }}</textarea>
+            </div>
+
+        </div>
+    </form>
+</div>
+<!-- ======================================================
+     7. JS: CALLES DEPENDIENTES DEL TIPO DE VÍA
+     ====================================================== -->
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const tipoVia = document.getElementById("tipo_via");
+    const calleSelect = document.getElementById("calle");
+
+    tipoVia.addEventListener("change", function() {
+        const idTipo = this.value;
+
+        if (!idTipo) {
+            calleSelect.innerHTML = '<option value="">Selecciona calle…</option>';
+            return;
+        }
+
+        fetch(`/contenedores_validacion/calles_por_tipo/${idTipo}`)
+            .then(r => r.json())
+            .then(data => {
+                calleSelect.innerHTML = '<option value="">Selecciona calle…</option>';
+                data.forEach(x => {
+                    const o = document.createElement("option");
+                    o.value = x.idtbl_calles;
+                    o.textContent = x.calles;
+                    calleSelect.appendChild(o);
+                });
+            });
+    });
+});
+</script>
+
+</body>
+</html>

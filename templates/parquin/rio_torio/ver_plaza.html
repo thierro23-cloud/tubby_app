@@ -1,0 +1,321 @@
+{# ============================================================
+   🅿️ templates/parquin/ver_plaza.html
+   ------------------------------------------------------------
+   💡 PROPÓSITO:
+   - Mostrar y EDITAR el DETALLE de UNA plaza concreta.
+   - Se llega desde el listado (plazas.html) con un botón "Ver detalle".
+   - Esta vista usa la variable 'plaza' que le pasa plazas_bp.ver_plaza().
+   - Al guardar, envía el formulario a plazas_bp.editar_plaza().
+   ============================================================ #}
+<!DOCTYPE html>  {# 📜 LÍNEA 1: Documento HTML5 moderno #}
+<html lang="es">  {# 🌍 LÍNEA 2: Idioma principal: español #}
+<head>  {# 🧠 LÍNEA 3: CABECERA: título, codificación, estilos #}
+    <meta charset="UTF-8">  {# 🔤 LÍNEA 4: Soporte para tildes, ñ, etc. #}
+
+    {# --------------------------------------------------------
+       🏷️ SUBSECCIÓN 1.1: Título de la página
+       - Incluye el código de la plaza para identificarla rápido.
+       -------------------------------------------------------- #}
+    <title>Detalle plaza {{ plaza.codigo_plazas }}</title>  {# 🏷️ LÍNEA 8: Título dinámico #}
+
+    {# --------------------------------------------------------
+       🎨 SUBSECCIÓN 1.2: Estilos específicos de esta vista
+       - Todo el CSS está en <style> para que sea auto-contenido.
+       -------------------------------------------------------- #}
+    <style>
+        /* ================================ */
+        /* 🖌️ BLOQUE 2.1: ESTILOS DEL BODY */
+        /* ================================ */
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif; /* 🧵 Fuente principal */
+            margin: 0;                                  /* 📏 Sin margen exterior */
+            padding: 20px;                              /* 📏 Relleno general */
+            background: #f5f6fa;                        /* 🎨 Fondo gris clarito */
+            color: #333;                                /* 🎨 Texto en gris oscuro */
+        }
+
+        /* ========================================= */
+        /* 📦 BLOQUE 2.2: CONTENEDOR PRINCIPAL      */
+        /* ========================================= */
+        .container {
+            max-width: 760px;                           /* 📏 Ancho máximo de la ficha */
+            margin: 0 auto;                             /* 🎯 Centrado horizontal */
+            background: #ffffff;                        /* 🎨 Fondo blanco tarjeta */
+            border-radius: 16px;                        /* 🧈 Esquinas redondeadas */
+            padding: 24px 28px 28px;                    /* 📏 Relleno interior */
+            box-shadow: 0 10px 30px rgba(0,0,0,0.10);   /* 🌫️ Sombra suave */
+        }
+
+        /* ========================================= */
+        /* 🏷️ BLOQUE 2.3: CABECERA (TÍTULO + BOTONES) */
+        /* ========================================= */
+        .header {
+            display: flex;                              /* 📐 Distribución en fila */
+            justify-content: space-between;             /* ↔️ Título a la izq., botones a la dcha. */
+            align-items: flex-start;                    /* ⬆️ Alineación superior */
+            gap: 10px;                                  /* 📏 Espacio entre título y botones */
+            margin-bottom: 18px;                        /* 📏 Separación con el contenido */
+        }
+
+        .header-text {
+            flex: 1;                                    /* 📐 La parte de texto ocupa todo el ancho posible */
+        }
+
+        .header-title {
+            font-size: 22px;                            /* 🔠 Tamaño del título */
+            font-weight: 700;                           /* 💪 Negrita fuerte */
+            margin-bottom: 4px;                         /* 📏 Separación con subtítulo */
+        }
+
+        .header-subtitle {
+            font-size: 13px;                            /* 🔠 Texto pequeñito */
+            color: #777;                                /* 🎨 Gris claro */
+        }
+
+        .header-actions {
+            display: flex;                              /* 📐 Columna de botones */
+            flex-direction: column;
+            gap: 6px;                                   /* 📏 Distancia entre botones */
+        }
+
+        /* ========================================= */
+        /* 🔘 BLOQUE 2.4: BOTONES (volver, salir, guardar) */
+        /* ========================================= */
+        .btn {
+            padding: 6px 14px;                          /* 📏 Relleno interno del botón */
+            font-size: 13px;                            /* 🔠 Tamaño de texto */
+            border-radius: 999px;                       /* 🧈 Muy redondeado (píldora) */
+            border: none;                               /* 🚫 Sin borde por defecto */
+            cursor: pointer;                            /* 🖱️ Manita al pasar */
+            text-decoration: none;                      /* 🚫 Sin subrayado */
+            display: inline-block;                      /* 📐 Se comporta como inline-block */
+            transition: background 0.15s ease,
+                        transform 0.15s ease,
+                        color 0.15s ease;              /* 🎬 Animaciones suaves */
+        }
+
+        .btn-secondary {
+            background: #fff;                           /* 🎨 Fondo blanco */
+            color: #555;                                /* 🎨 Texto gris oscuro */
+            border: 1px solid #ccc;                     /* 📏 Borde gris claro */
+        }
+        .btn-secondary:hover {
+            background: #f0f0f0;                        /* 🎨 Fondo un poco más oscuro al pasar */
+        }
+
+        .btn-danger {
+            background: #e74c3c;                        /* 🎨 Rojo intenso (peligro/salir) */
+            color: #fff;                                /* 🎨 Texto blanco */
+        }
+        .btn-danger:hover {
+            background: #c0392b;                        /* 🎨 Rojo más oscuro en hover */
+            transform: translateY(-1px);                /* 🎬 Efecto leve de subir 1px */
+        }
+
+        .btn-primary {
+            background: #4e54c8;                        /* 🎨 Azul/violeta principal */
+            color: #fff;                                /* 🎨 Texto blanco */
+        }
+        .btn-primary:hover {
+            background: #3b40a8;                        /* 🎨 Azul más oscuro en hover */
+            transform: translateY(-1px);                /* 🎬 Efecto leve de subir */
+        }
+
+        /* ========================================= */
+        /* 📊 BLOQUE 2.5: GRID DE DETALLE DE CAMPOS  */
+        /* ========================================= */
+        .detail-grid {
+            display: grid;                              /* 📐 Layout en cuadrícula */
+            grid-template-columns: 1fr 2fr;             /* 📏 Columna etiqueta / columna valor */
+            gap: 10px 18px;                             /* 📏 Espacio entre filas y columnas */
+            font-size: 13px;                            /* 🔠 Tamaño de texto en detalles */
+            margin-top: 8px;                            /* 📏 Separación desde la cabecera */
+        }
+
+        .detail-label {
+            font-weight: 600;                           /* 💪 Etiquetas en seminegrita */
+            color: #555;                                /* 🎨 Gris medio */
+        }
+
+        .detail-value input,
+        .detail-value textarea {
+            width: 100%;                                /* 📏 Campos ocupan todo el ancho de la columna */
+            font-size: 13px;                            /* 🔠 Texto coherente con la ficha */
+            padding: 4px 6px;                           /* 📏 Relleno suave */
+            border-radius: 4px;                         /* 🧈 Esquinas suaves */
+            border: 1px solid #ccc;                     /* 📏 Borde gris claro */
+            box-sizing: border-box;                     /* 📐 Incluye el padding en el ancho total */
+        }
+
+        .detail-value input[disabled] {
+            background: #f5f5f5;                        /* 🎨 Fondo gris claro para campos solo lectura */
+            color: #666;                                /* 🎨 Texto gris medio #*/
+        }
+
+        /* ========================================= */
+        /* 🏷️ BLOQUE 2.6: BADGES DE ESTADO           */
+        /* ========================================= */
+        .badge {
+            display: inline-block;                      /* 📐 Se comporta como etiqueta en línea */
+            padding: 2px 8px;                           /* 📏 Relleno del badge */
+            border-radius: 999px;                       /* 🧈 Forma de píldora */
+            font-size: 11px;                            /* 🔠 Texto pequeño */
+            font-weight: 600;                           /* 💪 Seminegrita */
+        }
+
+        .badge-libre {
+            background: #e8f8ec;                        /* 🎨 Verde muy claro de fondo */
+            color: #1e7e34;                             /* 🎨 Verde oscuro para texto */
+        }
+
+        .badge-ocupada {
+            background: #fde9e9;                        /* 🎨 Rojo muy claro de fondo */
+            color: #c0392b;                             /* 🎨 Rojo oscuro para texto */
+        }
+
+        /* ========================================= */
+        /* 📱 BLOQUE 2.7: RESPONSIVE PARA MÓVILES    */
+        /* ========================================= */
+        @media (max-width: 700px) {
+            .detail-grid {
+                grid-template-columns: 1fr;             /* 📐 Una sola columna en móviles */
+            }
+            .header {
+                flex-direction: column;                 /* 📐 Cabecera en columna en vez de fila */
+                align-items: flex-start;                /* ⬅️ Alineado a la izquierda */
+            }
+            .header-actions {
+                flex-direction: row;                    /* 📐 Botones uno al lado del otro */
+            }
+        }
+    </style>
+</head>
+
+<body>  {# 🧍 LÍNEA 120: Cuerpo visible de la página #}
+
+<div class="container">  {# 📦 LÍNEA 122: Caja principal centrada #}
+
+    {# ====================================================== #}
+    {# 🏁 SECCIÓN 3: CABECERA (título, subtítulo, botones)    #}
+    {# ====================================================== #}
+    <div class="header">
+        <div class="header-text">
+            <div class="header-title">
+                Plaza {{ plaza.codigo_plazas }} <!-- 🅿️ Código visible de la plaza -->
+            </div>
+            <div class="header-subtitle">
+                Detalle completo de la plaza, su ubicación y su ocupación actual. 📋
+            </div>
+        </div>
+
+        <div class="header-actions">
+            {# 🔙 SUBSECCIÓN 3.1: Botón para volver al listado de plazas #}
+            <a href="{{ url_for('plazas_bp.inicio_plazas') }}"
+               class="btn btn-secondary">
+                ← Volver a plazas
+            </a>
+
+            {# 🚪 SUBSECCIÓN 3.2: Botón de salir (usa el blueprint auth_bp) #}
+            <a href="{{ url_for('auth_bp.logout') }}"
+               class="btn btn-danger">
+                Salir
+            </a>
+        </div>
+    </div>
+
+    {# ====================================================== #}
+    {# 📋 SECCIÓN 4: FICHA EDITABLE DE LA PLAZA               #}
+    {# - Usamos un <form> que envía los cambios a editar_plaza.
+       - Los campos clave de tbl_plazas (incluida fecha_inicio) son editables.
+       ====================================================== #}
+    <form method="post"
+          action="{{ url_for('plazas_bp.editar_plaza', plaza_id=plaza.idtbl_plazas) }}">
+        <div class="detail-grid">
+
+            {# 🔹 ID interno de la plaza (solo lectura) #}
+            <div class="detail-label">ID interno</div>
+            <div class="detail-value">
+                <input type="text"
+                       value="{{ plaza.idtbl_plazas }}"
+                       disabled>
+            </div>
+
+            {# 🔹 Código / número de plaza (editable) #}
+            <div class="detail-label">Código / Nº plaza</div>
+            <div class="detail-value">
+                <input type="text"
+                       name="codigo_plazas"
+                       value="{{ plaza.codigo_plazas }}">
+            </div>
+
+            {# 🔹 Fila física dentro del parquin (editable) #}
+            <div class="detail-label">Fila</div>
+            <div class="detail-value">
+                <input type="number"
+                       name="fila"
+                       value="{{ plaza.fila }}">
+            </div>
+
+            {# 🔹 Fecha de inicio de uso de la plaza (editable)
+               - plaza.fecha_inicio suele venir como 'YYYY-MM-DD' o 'YYYY-MM-DD HH:MM:SS'
+               - Quitamos la parte horaria para que encaje con <input type="date"> #}
+            <div class="detail-label">Fecha inicio</div>
+            <div class="detail-value">
+                <input type="date"
+                       name="fecha_inicio"
+                       value="{{ plaza.fecha_inicio|default('', true)|replace(' 00:00:00','') }}">
+            </div>
+
+            {# 🔹 Estado de ocupación: Libre / Ocupada (solo lectura) #}
+            <div class="detail-label">Estado</div>
+            <div class="detail-value">
+                {% if plaza.idtbl_usuarios is none %}
+                    <span class="badge badge-libre">Libre ✅</span>
+                {% else %}
+                    <span class="badge badge-ocupada">Ocupada ❌</span>
+                {% endif %}
+            </div>
+
+            {# 🔹 Proveedor asociado a la plaza (vía usuario) (solo lectura) #}
+            <div class="detail-label">Proveedor</div>
+            <div class="detail-value">
+                {{ plaza.proveedor or 'Sin asignación 🏢' }}
+            </div>
+
+            {# 🔹 NIF del proveedor (si existe) (solo lectura) #}
+            <div class="detail-label">NIF proveedor</div>
+            <div class="detail-value">
+                {{ plaza.proveedor_nif or '-' }}
+            </div>
+
+            {# 🔹 Observaciones libres (texto editable) #}
+            <div class="detail-label">Observaciones</div>
+            <div class="detail-value">
+                <textarea name="observaciones"
+                          rows="2">{{ plaza.observaciones or '' }}</textarea>
+            </div>
+
+            {# 🔹 ID del usuario asignado (si hay) (solo lectura) #}
+            <div class="detail-label">ID usuario</div>
+            <div class="detail-value">
+                <input type="text"
+                       value="{{ plaza.idtbl_usuarios or '-' }}"
+                       disabled>
+            </div>
+        </div>
+
+        {# ====================================================== #}
+        {# ✏️ SECCIÓN 5: BOTÓN PARA GUARDAR LA EDICIÓN            #}
+        {# ====================================================== #}
+        <div style="margin-top: 18px; text-align: right;">
+            <button type="submit" class="btn btn-primary">
+                💾 Guardar cambios
+            </button>
+        </div>
+    </form>
+
+</div>  {# 🔚 Fin del contenedor principal #}
+
+</body>
+</html>
+

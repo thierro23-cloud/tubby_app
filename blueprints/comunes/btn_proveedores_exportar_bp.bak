@@ -1,0 +1,54 @@
+"""
+MÓDULO DE BOTÓN · Exportar proveedores
+--------------------------------------
+
+Este fichero define el BOTÓN de panel:
+
+    btn_proveedores_exportar
+
+Arquitectura:
+
+- PANEL (columna 1):
+    panel_comunes_bp
+
+- MÓDULO (columna 2):
+    modulo_comunes_proveedores_bp
+    (definido en modulo_comunes_proveedores_bp.py)
+
+- BOTÓN (columna 3):
+    btn_proveedores_exportar
+
+Comportamiento:
+
+- El Super Admin detecta este endpoint como un "botón" del módulo PROVEEDORES.
+- Al pulsarlo, se abre la misma UI de gestión de proveedores:
+
+      templates/proveedores/proveedores_gestionar.html
+
+- Es decir, este botón es solo otra ENTRADA al mismo panel de gestión
+  (por ejemplo, se puede usar para marcar la acción "Exportar proveedores"
+   aunque la exportación real se haga por AJAX desde la propia UI).
+"""
+
+from flask_login import login_required
+from flask import render_template
+from services.helpers import rol_required
+from blueprints.comunes.modulo_comunes_proveedores_bp import (
+    modulo_comunes_proveedores_bp,
+)
+
+
+@modulo_comunes_proveedores_bp.route(
+    "/btn_proveedores_exportar",
+    methods=["GET"],
+)
+@login_required
+@rol_required("gestor", "super_admin")
+def btn_proveedores_exportar():
+    """
+    BOTÓN · Exportar proveedores
+
+    - Endpoint de botón detectado por el Super Admin.
+    - Renderiza la misma UI principal de gestión de proveedores.
+    """
+    return render_template("proveedores/proveedores_gestionar.html")

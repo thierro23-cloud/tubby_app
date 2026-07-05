@@ -1,0 +1,625 @@
+{#==============================================================================
+  📄 VADOS_GESTION_SOLO.HTML
+  ==============================================================================
+  OBJETIVO
+  --------
+  Vista COMPLETAMENTE INDEPENDIENTE (sin base.html) para la gestión de vados:
+
+    · Cabecera profesional.
+    · Filtros de búsqueda (nº vado, NIF, titular).
+    · Tabla de vados con todos los botones operativos:
+
+        - Editar ficha del vado.
+        - Ver histórico general.
+        - Ver histórico de números.
+        - Ver histórico de titulares.
+        - Cambiar número (modal).
+        - Cambiar titular (modal).
+
+  REQUISITOS BACKEND (FLASK)
+  --------------------------
+  En tu blueprint `btn_vados_gestion_bp` debes tener endpoints:
+
+    - vados_nuevo()
+    - btn_vados_gestion()           → devuelve esta plantilla con `vados`.
+    - vados_editar(idtbl_vados)
+    - vados_historico(idtbl_vados)
+    - vados_historico_numeros(idtbl_vados)
+    - vados_historico_titulares(idtbl_vados)
+
+  Además, rutas POST (pueden estar en el mismo blueprint o en otro, pero aquí
+  las apuntamos a rutas "limpias"):
+
+    POST /vados/<idtbl_vados>/cambiar_numero
+    POST /vados/<idtbl_vados>/cambiar_titular
+
+  Donde el backend recibirá los campos:
+
+    · Para cambiar número:
+        - numero_nuevo
+        - motivo_cambio
+
+    · Para cambiar titular:
+        - idtbl_proveedor_nuevo
+        - motivo_cambio_titular
+
+==============================================================================#}
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <title>Gestión profesional de vados (independiente)</title>
+
+    {#---------------------------------------------------------------------------
+      Bootstrap 5 CSS (por CDN)
+      --------------------------------------------------------------------------
+      - Se carga directamente desde CDN para no depender de tu base.html.
+      - Si ya lo cargas en otro sitio, puedes quitar esta línea.
+    ---------------------------------------------------------------------------#}
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+          crossorigin="anonymous">
+
+    {#---------------------------------------------------------------------------
+      ESTILOS ESPECÍFICOS DE ESTA VISTA
+      --------------------------------------------------------------------------#}
+    <style>
+      /* Fondo general suave y texto legible */
+      body {
+        background: #f3f4f6;
+        color: #111827;
+      }
+
+      /* Contenedor principal centrado */
+      .vados-wrapper {
+        max-width: 1100px;
+        margin: 24px auto;
+      }
+
+      /* Tarjetas planas y limpias */
+      .card-plain {
+        border-radius: 8px;
+        border: 1px solid #e5e7eb;
+        background: #ffffff;
+      }
+
+      .card-plain-header {
+        border-bottom: 1px solid #e5e7eb;
+        background: #f9fafb;
+      }
+
+      /* Badges y texto secundario */
+      .badge-role {
+        background: #e0ecff;
+        color: #1d4ed8;
+        border-radius: 999px;
+        padding: 0.1rem 0.6rem;
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      .small-muted {
+        font-size: 0.8rem;
+        color: #6b7280;
+      }
+
+      /* Tabla de vados */
+      .table-vados thead {
+        background-color: #f3f4f6;
+      }
+
+      .table-vados thead th {
+        border-bottom-width: 1px;
+        font-size: 0.76rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #6b7280;
+      }
+
+      .table-vados tbody tr:hover {
+        background-color: #f9fafb;
+      }
+
+      /* Estados */
+      .badge-estado-activo {
+        background: #22c55e;
+        color: #ffffff;
+      }
+
+      .badge-estado-baja {
+        background: #6b7280;
+        color: #ffffff;
+      }
+
+      /* Botones en forma de píldora */
+      .btn-pill {
+        border-radius: 999px;
+      }
+
+      /* Modales compactos (no gigantes) */
+      .modal-dialog {
+        max-width: 480px;
+      }
+
+      .modal-body {
+        padding: 0.75rem 1rem;
+      }
+
+      .modal-header,
+      .modal-footer {
+        padding: 0.5rem 1rem;
+      }
+    </style>
+  </head>
+
+  <body>
+
+    <div class="container-fluid">
+      <div class="vados-wrapper">
+
+        {#======================================================================
+          CABECERA PRINCIPAL
+          ----------------------------------------------------------------------
+          - Muestra el contexto de la vista.
+          - No depende de base.html.
+        ======================================================================#}
+        <div class="mb-3">
+          <span class="badge-role">Módulo vados</span>
+          <h4 class="mb-1 mt-2 fw-semibold">
+            Gestión profesional de vados (vista independiente)
+          </h4>
+          <div class="small-muted">
+            Listado, edición e históricos de vados del municipio, con cambio de número y titular.
+          </div>
+        </div>
+
+        {#======================================================================
+          MENSAJES FLASH (opcional)
+          ----------------------------------------------------------------------
+          - Utiliza el mecanismo estándar de Flask flash().
+        ======================================================================#}
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <div class="mb-2">
+              {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm" role="alert">
+                  {{ message }}
+                  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
+
+        {#======================================================================
+          BLOQUE DE FILTROS + BOTÓN "NUEVO VADO"
+          ----------------------------------------------------------------------
+          - Formulario GET que recarga la misma vista con filtros.
+        ======================================================================#}
+        <div class="card-plain mb-3">
+          <div class="card-plain-header px-3 py-2">
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <strong>Filtros</strong>
+                <div class="small-muted">
+                  Buscar por número de vado, NIF o titular.
+                </div>
+              </div>
+              <div>
+                <a href="{{ url_for('btn_vados_gestion_bp.vados_nuevo') }}"
+                   class="btn btn-primary btn-sm btn-pill">
+                  Nuevo vado
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <div class="card-body px-3 pt-2 pb-2">
+            <form class="row g-2 align-items-end" method="GET"
+                  action="{{ url_for('btn_vados_gestion_bp.btn_vados_gestion') }}">
+              <div class="col-md-3">
+                <label for="buscar_numero" class="form-label mb-1">Nº vado</label>
+                <input type="text"
+                       class="form-control form-control-sm"
+                       id="buscar_numero"
+                       name="numero_vado"
+                       value="{{ request.args.get('numero_vado', '') }}">
+              </div>
+
+              <div class="col-md-3">
+                <label for="buscar_nif" class="form-label mb-1">NIF</label>
+                <input type="text"
+                       class="form-control form-control-sm"
+                       id="buscar_nif"
+                       name="nif"
+                       value="{{ request.args.get('nif', '') }}">
+              </div>
+
+              <div class="col-md-4">
+                <label for="buscar_nombre" class="form-label mb-1">Titular</label>
+                <input type="text"
+                       class="form-control form-control-sm"
+                       id="buscar_nombre"
+                       name="nombre"
+                       value="{{ request.args.get('nombre', '') }}">
+              </div>
+
+              <div class="col-md-2">
+                <button type="submit"
+                        class="btn btn-outline-primary btn-sm w-100 btn-pill mt-1 mt-md-0">
+                  Buscar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        {#======================================================================
+          LISTADO PRINCIPAL DE VADOS
+          ----------------------------------------------------------------------
+          - Muestra la lista de vados con todas las acciones.
+          - `vados` debe ser una lista de dicts con al menos:
+                idtbl_vados, numero_vado, nif, nombre_proveedor,
+                nombre_calle, baja (0/1).
+        ======================================================================#}
+        <div class="card-plain mb-3">
+          <div class="card-plain-header px-3 py-2">
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <strong>Vados</strong>
+                <div class="small-muted">
+                  Registros de <code>tbl_vados</code>.
+                </div>
+              </div>
+              <div class="small-muted">
+                Total: <strong>{{ vados|length }}</strong>
+              </div>
+            </div>
+          </div>
+
+          <div class="card-body px-3 py-2">
+
+            {% if vados %}
+              <div class="table-responsive">
+                <table class="table table-sm table-hover align-middle mb-0 table-vados">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Nº</th>
+                      <th>NIF</th>
+                      <th>Titular</th>
+                      <th>Calle</th>
+                      <th>Estado</th>
+                      <th class="text-end">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for v in vados %}
+                      <tr>
+                        <td class="text-nowrap">{{ v["idtbl_vados"] }}</td>
+                        <td class="text-nowrap">{{ v["numero_vado"] }}</td>
+                        <td class="text-nowrap">{{ v["nif"] if v.get("nif") else "-" }}</td>
+                        <td class="text-nowrap">{{ v["nombre_proveedor"] if v.get("nombre_proveedor") else "-" }}</td>
+                        <td class="text-nowrap">{{ v["nombre_calle"] if v.get("nombre_calle") else "-" }}</td>
+                        <td class="text-nowrap">
+                          {% if v["baja"] == 0 %}
+                            <span class="badge badge-estado-activo rounded-pill">
+                              Activo
+                            </span>
+                          {% else %}
+                            <span class="badge badge-estado-baja rounded-pill">
+                              Baja
+                            </span>
+                          {% endif %}
+                        </td>
+                        <td class="text-end text-nowrap">
+                          <div class="btn-group btn-group-sm" role="group">
+
+                            {#------------------------------------------------
+                              EDITAR FICHA DEL VADO
+                              -------------------------------------------------#}
+                            <a href="{{ url_for('btn_vados_gestion_bp.vados_editar',
+                                               idtbl_vados=v['idtbl_vados']) }}"
+                               class="btn btn-outline-primary btn-pill"
+                               title="Editar ficha del vado">
+                              <i class="bi bi-pencil-square"></i>
+                            </a>
+
+                            {#------------------------------------------------
+                              HISTÓRICO GENERAL DEL VADO
+                              (puede mostrar ambos históricos y más info)
+                              -------------------------------------------------#}
+                            <a href="{{ url_for('btn_vados_gestion_bp.vados_historico',
+                                               idtbl_vados=v['idtbl_vados']) }}"
+                               class="btn btn-outline-secondary btn-pill"
+                               title="Histórico completo">
+                              Hist.
+                            </a>
+
+                            {#------------------------------------------------
+                              HISTÓRICO DE NÚMEROS (placa)
+                              -------------------------------------------------#}
+                            <a href="{{ url_for('btn_vados_gestion_bp.vados_historico_numeros',
+                                               idtbl_vados=v['idtbl_vados']) }}"
+                               class="btn btn-outline-secondary btn-pill"
+                               title="Histórico de números de placa">
+                              Hist. Nº
+                            </a>
+
+                            {#------------------------------------------------
+                              HISTÓRICO DE TITULARES
+                              -------------------------------------------------#}
+                            <a href="{{ url_for('btn_vados_gestion_bp.vados_historico_titulares',
+                                               idtbl_vados=v['idtbl_vados']) }}"
+                               class="btn btn-outline-secondary btn-pill"
+                               title="Histórico de titulares">
+                              Hist. titular
+                            </a>
+
+                            {#------------------------------------------------
+                              CAMBIO DE NÚMERO (ABRE MODAL)
+                              -------------------------------------------------#}
+                            <button type="button"
+                                    class="btn btn-outline-warning btn-pill"
+                                    title="Cambiar número"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#modalCambiarNumero"
+                                    data-idtbl-vados="{{ v['idtbl_vados'] }}"
+                                    data-numero-actual="{{ v['numero_vado'] }}">
+                              Nº
+                            </button>
+
+                            {#------------------------------------------------
+                              CAMBIO DE TITULAR (ABRE MODAL)
+                              -------------------------------------------------#}
+                            <button type="button"
+                                    class="btn btn-outline-info btn-pill"
+                                    title="Cambiar titular"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#modalCambiarTitular"
+                                    data-idtbl-vados="{{ v['idtbl_vados'] }}"
+                                    data-titular-actual="{{ v['nombre_proveedor'] if v.get('nombre_proveedor') else '' }}">
+                              Titular
+                            </button>
+
+                          </div>
+                        </td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            {% else %}
+              <p class="text-muted mb-0">
+                No hay vados que cumplan los filtros actuales.
+              </p>
+            {% endif %}
+
+          </div>
+        </div>
+
+        {# Pie de información técnica -------------------------------------- #}
+        <div class="small-muted">
+          Operando sobre <code>control_via_publica.tbl_vados</code> y tablas de históricos asociadas.
+        </div>
+
+      </div>
+    </div>
+
+    {#======================================================================
+      MODAL · CAMBIO DE NÚMERO
+      ----------------------------------------------------------------------
+      - Se rellena con data-attributes del botón "Nº".
+      - Al enviar, realiza POST a /vados/<idtbl_vados>/cambiar_numero.
+    ======================================================================#}
+    <div class="modal fade" id="modalCambiarNumero" tabindex="-1"
+         aria-labelledby="modalCambiarNumeroLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+
+          <form id="formCambiarNumero" method="POST">
+            <div class="modal-header">
+              <h6 class="modal-title" id="modalCambiarNumeroLabel">
+                Cambiar número de vado
+              </h6>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"
+                      aria-label="Cerrar"></button>
+            </div>
+
+            <div class="modal-body">
+              <div class="mb-2">
+                <label class="form-label">Vado (ID)</label>
+                <input type="text"
+                       class="form-control form-control-sm"
+                       id="modal_idtbl_vados"
+                       readonly>
+              </div>
+
+              <div class="mb-2">
+                <label class="form-label">Número actual</label>
+                <input type="text"
+                       class="form-control form-control-sm"
+                       id="modal_numero_actual"
+                       readonly>
+              </div>
+
+              <div class="mb-2">
+                <label for="numero_nuevo" class="form-label">Número nuevo</label>
+                <input type="text"
+                       class="form-control form-control-sm"
+                       id="numero_nuevo"
+                       name="numero_nuevo"
+                       required>
+              </div>
+
+              <div class="mb-2">
+                <label for="motivo_cambio" class="form-label">Motivo del cambio</label>
+                <textarea class="form-control form-control-sm"
+                          id="motivo_cambio"
+                          name="motivo_cambio"
+                          rows="3"
+                          placeholder="Describe brevemente el motivo del cambio."></textarea>
+              </div>
+            </div>
+
+            <div class="modal-footer">
+              <button type="button"
+                      class="btn btn-secondary btn-sm btn-pill"
+                      data-bs-dismiss="modal">
+                Cancelar
+              </button>
+              <button type="submit" class="btn btn-warning btn-sm btn-pill">
+                Aplicar cambio
+              </button>
+            </div>
+          </form>
+
+        </div>
+      </div>
+    </div>
+
+    {#======================================================================
+      MODAL · CAMBIO DE TITULAR
+      ----------------------------------------------------------------------
+      - Se rellena con data-attributes del botón "Titular".
+      - Al enviar, realiza POST a /vados/<idtbl_vados>/cambiar_titular.
+    ======================================================================#}
+    <div class="modal fade" id="modalCambiarTitular" tabindex="-1"
+         aria-labelledby="modalCambiarTitularLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+
+          <form id="formCambiarTitular" method="POST">
+            <div class="modal-header">
+              <h6 class="modal-title" id="modalCambiarTitularLabel">
+                Cambiar titular del vado
+              </h6>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"
+                      aria-label="Cerrar"></button>
+            </div>
+
+            <div class="modal-body">
+              <div class="mb-2">
+                <label class="form-label">Vado (ID)</label>
+                <input type="text"
+                       class="form-control form-control-sm"
+                       id="modal_titular_idtbl_vados"
+                       readonly>
+              </div>
+
+              <div class="mb-2">
+                <label class="form-label">Titular actual</label>
+                <input type="text"
+                       class="form-control form-control-sm"
+                       id="modal_titular_actual"
+                       readonly>
+              </div>
+
+              <div class="mb-2">
+                <label for="idtbl_proveedor_nuevo" class="form-label">ID titular nuevo</label>
+                <input type="text"
+                       class="form-control form-control-sm"
+                       id="idtbl_proveedor_nuevo"
+                       name="idtbl_proveedor_nuevo"
+                       required>
+              </div>
+
+              <div class="mb-2">
+                <label for="motivo_cambio_titular" class="form-label">Motivo del cambio</label>
+                <textarea class="form-control form-control-sm"
+                          id="motivo_cambio_titular"
+                          name="motivo_cambio_titular"
+                          rows="3"
+                          placeholder="Describe brevemente el motivo del cambio de titular."></textarea>
+              </div>
+            </div>
+
+            <div class="modal-footer">
+              <button type="button"
+                      class="btn btn-secondary btn-sm btn-pill"
+                      data-bs-dismiss="modal">
+                Cancelar
+              </button>
+              <button type="submit" class="btn btn-info btn-sm btn-pill">
+                Aplicar cambio
+              </button>
+            </div>
+          </form>
+
+        </div>
+      </div>
+    </div>
+
+    {#======================================================================
+      SCRIPTS JS · BOOTSTRAP + LÓGICA MODALES
+      ======================================================================#}
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+            integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+            crossorigin="anonymous"></script>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+
+        // -------------------------------------------------------------------
+        // MODAL CAMBIO NÚMERO
+        // -------------------------------------------------------------------
+        var modalCambiarNumero = document.getElementById('modalCambiarNumero');
+        var formCambiarNumero = document.getElementById('formCambiarNumero');
+        var inputIdtblVados = document.getElementById('modal_idtbl_vados');
+        var inputNumeroActual = document.getElementById('modal_numero_actual');
+        var inputNumeroNuevo = document.getElementById('numero_nuevo');
+        var textareaMotivo = document.getElementById('motivo_cambio');
+
+        if (modalCambiarNumero) {
+          modalCambiarNumero.addEventListener('show.bs.modal', function (event) {
+            var button = event.relatedTarget;
+            // Datos que vienen del botón
+            var idtblVados = button.getAttribute('data-idtbl-vados');
+            var numeroActual = button.getAttribute('data-numero-actual');
+
+            // Rellenamos campos del formulario
+            inputIdtblVados.value = idtblVados;
+            inputNumeroActual.value = numeroActual;
+            inputNumeroNuevo.value = '';
+            textareaMotivo.value = '';
+
+            // Definimos la acción de POST para este vado concreto
+            formCambiarNumero.action = "/vados/" + idtblVados + "/cambiar_numero";
+          });
+        }
+
+        // -------------------------------------------------------------------
+        // MODAL CAMBIO TITULAR
+        // -------------------------------------------------------------------
+        var modalCambiarTitular = document.getElementById('modalCambiarTitular');
+        var formCambiarTitular = document.getElementById('formCambiarTitular');
+        var inputTitularIdtblVados = document.getElementById('modal_titular_idtbl_vados');
+        var inputTitularActual = document.getElementById('modal_titular_actual');
+        var inputIdProveedorNuevo = document.getElementById('idtbl_proveedor_nuevo');
+        var textareaMotivoTitular = document.getElementById('motivo_cambio_titular');
+
+        if (modalCambiarTitular) {
+          modalCambiarTitular.addEventListener('show.bs.modal', function (event) {
+            var button = event.relatedTarget;
+            // Datos que vienen del botón
+            var idtblVados = button.getAttribute('data-idtbl-vados');
+            var titularActual = button.getAttribute('data-titular-actual') || '';
+
+            // Rellenamos campos del formulario
+            inputTitularIdtblVados.value = idtblVados;
+            inputTitularActual.value = titularActual;
+            inputIdProveedorNuevo.value = '';
+            textareaMotivoTitular.value = '';
+
+            // Definimos la acción de POST para este vado concreto
+            formCambiarTitular.action = "/vados/" + idtblVados + "/cambiar_titular";
+          });
+        }
+
+      });
+    </script>
+
+  </body>
+</html>

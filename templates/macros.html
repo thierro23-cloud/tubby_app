@@ -1,0 +1,182 @@
+{# templates/macros.html #}
+
+{# ==========================================================
+   🧩 MACRO: selector_via
+   ----------------------------------------------------------
+   - Pinta 4 desplegables dependientes:
+       1) Provincia
+       2) Municipio
+       3) Tipo de vía
+       4) Calle
+   - Los datos deben venir ya cargados en:
+       provincias, municipios, tipos_via, calles
+   - Los parámetros sel_* marcan la opción seleccionada en edición.
+   ========================================================== #}
+{% macro selector_via(
+    provincias,
+    municipios,
+    tipos_via,
+    calles,
+    sel_provincia_id=None,
+    sel_municipio_id=None,
+    sel_tipo_via_id=None,
+    sel_calle_id=None
+) %}
+  <div class="row g-2">
+    {# 🌍 Provincia #}
+    <div class="col-md-3">
+      <label for="idtbl_provincias" class="form-label mb-1">
+        <i class="fas fa-map-marked-alt text-primary me-1"></i> Provincia
+      </label>
+      <select name="idtbl_provincias" id="idtbl_provincias"
+              class="form-select form-select-sm" required>
+        <option value="">-- Selecciona provincia --</option>
+        {% for p in provincias %}
+          <option value="{{ p.id }}"
+                  {% if sel_provincia_id and p.id == sel_provincia_id %}selected{% endif %}>
+            {{ p.nombre }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    {# 🏙️ Municipio #}
+    <div class="col-md-3">
+      <label for="idtbl_municipios" class="form-label mb-1">
+        <i class="fas fa-city text-success me-1"></i> Municipio
+      </label>
+      <select name="idtbl_municipios" id="idtbl_municipios"
+              class="form-select form-select-sm" required>
+        <option value="">-- Selecciona municipio --</option>
+        {% for m in municipios %}
+          <option value="{{ m.id }}"
+                  {% if sel_municipio_id and m.id == sel_municipio_id %}selected{% endif %}>
+            {{ m.nombre }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    {# 🚦 Tipo de vía #}
+    <div class="col-md-3">
+      <label for="idtbl_tipos_de_vias" class="form-label mb-1">
+        <i class="fas fa-road text-info me-1"></i> Tipo de vía
+      </label>
+      <select name="idtbl_tipos_de_vias" id="idtbl_tipos_de_vias"
+              class="form-select form-select-sm" required>
+        <option value="">-- Tipo de vía --</option>
+        {% for t in tipos_via %}
+          <option value="{{ t.id }}"
+                  {% if sel_tipo_via_id and t.id == sel_tipo_via_id %}selected{% endif %}>
+            {{ t.nombre }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    {# 🏠 Calle #}
+    <div class="col-md-3">
+      <label for="idtbl_calles" class="form-label mb-1">
+        <i class="fas fa-home text-warning me-1"></i> Calle
+      </label>
+      <select name="idtbl_calles" id="idtbl_calles"
+              class="form-select form-select-sm" required>
+        <option value="">-- Selecciona calle --</option>
+        {% for c in calles %}
+          <option value="{{ c.id }}"
+                  {% if sel_calle_id and c.id == sel_calle_id %}selected{% endif %}>
+            {{ c.nombre }}{% if c.Codigopostal %} (CP {{ c.Codigopostal }}){% endif %}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+{% endmacro %}
+
+
+{# ==========================================================
+   🧩 MACRO: selector_via_scripts
+   ----------------------------------------------------------
+   - Añade el JavaScript que:
+       * Cuando cambia provincia → recarga municipios.
+       * Cuando cambia municipio/tipo de vía → recarga calles.
+   - Depende de los endpoints:
+       /api/comunes/municipios
+       /api/comunes/calles
+   - Llama a esta macro en el block extra_js de la plantilla.
+   ========================================================== #}
+{% macro selector_via_scripts() %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const selProv  = document.getElementById('idtbl_provincias');
+  const selMun   = document.getElementById('idtbl_municipios');
+  const selTipo  = document.getElementById('idtbl_tipos_de_vias');
+  const selCalle = document.getElementById('idtbl_calles');
+
+  // Si la página no tiene estos selects, no hacemos nada
+  if (!selProv || !selMun || !selTipo || !selCalle) {
+    return;
+  }
+
+  function limpiarSelect(select, placeholder) {
+    select.innerHTML = '';
+    const opt = document.createElement('option');
+    opt.value = '';
+    opt.textContent = placeholder;
+    select.appendChild(opt);
+  }
+
+  // 🧩 Cuando cambia la provincia → carga municipios
+  selProv.addEventListener('change', function () {
+    const idProv = this.value || null;
+    limpiarSelect(selMun, '-- Selecciona municipio --');
+    limpiarSelect(selCalle, '-- Selecciona calle --');
+
+    if (!idProv) return;
+
+    fetch(`/api/comunes/municipios?id_provincia=${idProv}`)
+      .then(r => {
+        if (!r.ok) throw new Error('Error HTTP municipios');
+        return r.json();
+      })
+      .then(data => {
+        data.forEach(m => {
+          const opt = document.createElement('option');
+          opt.value = m.id;
+          opt.textContent = m.nombre;
+          selMun.appendChild(opt);
+        });
+      })
+      .catch(err => console.error('❌ Error cargando municipios', err));
+  });
+
+  // 🧩 Función común para recargar calles según municipio y tipo de vía
+  function recargarCalles() {
+    const idMun  = selMun.value || null;
+    const idTipo = selTipo.value || null;
+
+    limpiarSelect(selCalle, '-- Selecciona calle --');
+    if (!idMun || !idTipo) return;
+
+    fetch(`/api/comunes/calles?id_municipio=${idMun}&id_tipo_via=${idTipo}`)
+      .then(r => {
+        if (!r.ok) throw new Error('Error HTTP calles');
+        return r.json();
+      })
+      .then(data => {
+        data.forEach(c => {
+          const opt = document.createElement('option');
+          opt.value = c.id;
+          opt.textContent = c.nombre + (c.Codigopostal ? ` (CP ${c.Codigopostal})` : '');
+          selCalle.appendChild(opt);
+        });
+      })
+      .catch(err => console.error('❌ Error cargando calles', err));
+  }
+
+  // Cuando cambia municipio o tipo de vía → recalcular calles
+  selMun.addEventListener('change', recargarCalles);
+  selTipo.addEventListener('change', recargarCalles);
+});
+</script>
+{% endmacro %}

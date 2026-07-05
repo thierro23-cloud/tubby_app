@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+
+{% block title %}Endpoints de Super Admin{% endblock %}
+
+{% block content %}
+{# 
+  Plantilla: templates/diagnostico/endpoints.html
+  Propósito: Mostrar los endpoints registrados en el blueprint.
+  Recibe:
+    - endpoints: lista de objetos con rule, methods, endpoint, view_func
+#}
+
+<style>
+  /* 1️⃣ Layout con panel central y scroll parcial */
+  .sa-endpoints-wrapper {
+    min-height: calc(100vh - 56px);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .sa-endpoints-panel {
+    background: linear-gradient(135deg, #e0f2fe 0%, #dbeafe 40%, #bfdbfe 100%);
+    border-radius: 0.75rem;
+    padding: 0.75rem;
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.18);
+  }
+
+  .sa-endpoints-header {
+    background: linear-gradient(135deg, #0ea5e9 0%, #3b82f6 50%, #1d4ed8 100%);
+    color: #f9fafb;
+    border-radius: 0.6rem;
+    padding: 0.75rem 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .sa-endpoints-header h1 {
+    font-size: 1.1rem;
+    margin: 0;
+  }
+
+  .sa-endpoints-header .lead {
+    font-size: 0.85rem;
+    margin: 0;
+    opacity: 0.9;
+  }
+
+  .sa-endpoints-actions .btn {
+    font-size: 0.8rem;
+  }
+
+  /* Contenedor de contenido con scroll interno */
+  .sa-endpoints-body {
+    margin-top: 0.75rem;
+    background-color: #ffffff;
+    border-radius: 0.6rem;
+    padding: 0.5rem 0.75rem 0.75rem;
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 200px);
+  }
+
+  .sa-endpoints-table-wrapper {
+    flex: 1;
+    overflow-y: auto;
+    border-radius: 0.5rem;
+    border: 1px solid #e5e7eb;
+    background: linear-gradient(180deg, #f9fafb 0%, #ffffff 40%, #f3f4f6 100%);
+  }
+
+  .sa-endpoints-table-wrapper table {
+    margin-bottom: 0;
+  }
+
+  .sa-endpoints-footer-info {
+    margin-top: 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  code {
+    font-size: 0.8rem;
+  }
+</style>
+
+<div class="container-fluid sa-endpoints-wrapper">
+
+  <!-- 2️⃣ Cabecera fija con degradado -->
+  <div class="sa-endpoints-panel">
+    <div class="sa-endpoints-header">
+      <div>
+        <h1>
+          <i class="fas fa-route me-2"></i>
+          Endpoints de Super Admin
+        </h1>
+        <p class="lead">
+          Lista de todos los endpoints registrados en el blueprint actual.
+        </p>
+      </div>
+
+      <div class="sa-endpoints-actions d-flex flex-column flex-sm-row gap-2">
+        <button type="button"
+                class="btn btn-light btn-sm"
+                onclick="window.location.reload();">
+          <i class="fas fa-sync-alt me-1"></i>
+          Recargar
+        </button>
+        <a href="{{ url_for('super_admin_bp.super_admin') }}"
+           class="btn btn-outline-light btn-sm">
+          <i class="fas fa-arrow-left me-1"></i>
+          Volver a Super Admin
+        </a>
+      </div>
+    </div>
+
+    <!-- 3️⃣ Cuerpo con tabla y scroll parcial -->
+    <div class="sa-endpoints-body">
+
+      {% if endpoints %}
+        <div class="sa-endpoints-table-wrapper table-responsive">
+          <table class="table table-sm table-hover align-middle">
+            <thead class="table-primary">
+              <tr>
+                <th scope="col">Ruta</th>
+                <th scope="col">Métodos</th>
+                <th scope="col">Endpoint</th>
+                <th scope="col">Función de vista</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for endpoint in endpoints %}
+              <tr class="{% if loop.index is even %}table-light{% endif %}">
+                <td><code>{{ endpoint.rule }}</code></td>
+                <td>
+                  {% for method in endpoint.methods %}
+                    <span class="badge bg-primary-subtle text-primary me-1">
+                      {{ method }}
+                    </span>
+                  {% endfor %}
+                </td>
+                <td>{{ endpoint.endpoint }}</td>
+                <td><code>{{ endpoint.view_func }}</code></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="sa-endpoints-footer-info alert alert-info mt-2 mb-0 d-flex justify-content-between align-items-center">
+          <span>
+            <strong>Total:</strong> {{ endpoints|length }} endpoint(s) registrado(s).
+          </span>
+          <span class="small text-muted">
+            <i class="fas fa-info-circle me-1"></i>
+            Usa el scroll interno para recorrer la lista completa.
+          </span>
+        </div>
+      {% else %}
+        <div class="alert alert-warning mb-0 mt-2">
+          <i class="fas fa-exclamation-triangle me-1"></i>
+          No se encontraron endpoints registrados.
+        </div>
+      {% endif %}
+
+    </div>
+  </div>
+
+</div>
+{% endblock %}

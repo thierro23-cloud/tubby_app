@@ -1,0 +1,123 @@
+# blueprints/vigilantes/vigilantes_bp.py
+# =====================================================
+# 🛡️ PANEL VIGILANTES – tubby_app
+# =====================================================
+
+from flask import Blueprint, render_template                # 🎨 HTML para el panel
+from db import ejecutar_query                               # 🗄️ Consultas a la BD
+from services.helpers import rol_required             # 🎯 Control de roles (super_admin incluido)
+from core.registry import registrar_tarjeta
+DB_NAME = "parquin_camiones"  # 📚 BD lógica donde están las tablas del parquin
+
+# =====================================================
+# 🧱 DEFINICIÓN DEL BLUEPRINT
+# =====================================================
+vigilantes_bp = Blueprint(
+    "vigilantes_bp",        # 🏷️ Nombre interno del blueprint
+    __name__,               # 📦 Módulo actual
+    url_prefix="/vigilantes"  # 🌐 Prefijo de todas las rutas
+)
+
+
+# =====================================================
+# 🛡️ PANEL PRINCIPAL: /vigilantes/panel
+# =====================================================
+@vigilantes_bp.route("/panel")
+@rol_required("vigilante")  # 🎯 Permite rol "vigilante" y SIEMPRE "super_admin"
+def panel_vigilantes():
+    """
+    🛡️ Panel principal del vigilante.
+
+    Muestra:
+      • Número de camiones actualmente dentro del parquin.
+      • Plazas ocupadas asociadas a camiones dentro.
+      • Total de plazas del parquin.
+      • Últimos 10 accesos (entrada/salida) en una tabla.
+    """
+
+    # 📊 1) Total camiones dentro (todas las empresas)
+    dentro_row = ejecutar_query(
+        """
+        SELECT COUNT(*) AS dentro
+        FROM tbl_accesos
+        WHERE hora_entrada IS NOT NULL
+          AND horas_salida IS NULL
+        """,
+        bd=DB_NAME,
+    )[0]
+    total_dentro = dentro_row["dentro"]
+
+    # 📊 2) Plazas ocupadas por camiones dentro
+    plazas_ocupadas_row = ejecutar_query(
+        """
+        SELECT COUNT(DISTINCT p.idtbl_plazas) AS ocupadas
+        FROM tbl_plazas p
+        JOIN tbl_usuarios u ON u.idtbl_usuarios = p.idtbl_usuarios
+        JOIN tbl_camiones c ON c.idtbl_usuarios = u.idtbl_usuarios
+        JOIN tbl_accesos a ON a.idtbl_camion = c.idtbl_camiones
+        WHERE a.hora_entrada IS NOT NULL
+          AND a.horas_salida IS NULL
+        """,
+        bd=DB_NAME,
+    )[0]
+    plazas_ocupadas = plazas_ocupadas_row["ocupadas"]
+
+    # 📊 3) Total plazas del parquin
+    plazas_totales_row = ejecutar_query(
+        "SELECT COUNT(*) AS total FROM tbl_plazas",
+        bd=DB_NAME,
+    )[0]
+    plazas_totales = plazas_totales_row["total"]
+
+    # 📋 4) Últimos 10 accesos
+    accesos_recientes = ejecutar_query(
+        """
+        SELECT a.idtbl_accesos,
+               a.idtbl_camion,
+               c.matriculas,
+               u.Persona_contacto AS usuario,
+               a.hora_entrada,
+               a.horas_salida
+        FROM tbl_accesos a
+        LEFT JOIN tbl_camiones c ON c.idtbl_camiones = a.idtbl_camion
+        LEFT JOIN tbl_usuarios u ON u.idtbl_usuarios = c.idtbl_usuarios
+        ORDER BY a.hora_entrada DESC
+        LIMIT 10
+        """,
+        bd=DB_NAME,
+    )
+
+    # 🖼️ Render del panel
+    return render_template(
+        "vigilantes/panel_vigilantes.html",
+        total_dentro=total_dentro,
+        plazas_ocupadas=plazas_ocupadas,
+        plazas_totales=plazas_totales,
+        accesos_recientes=accesos_recientes,
+    )
+registrar_tarjeta(
+    panel="vigilantes",
+    titulo="Accesos Parking",
+    descripcion="Control de accesos al parking",
+    icono="🚗",
+    endpoint="accesos_bp.panel_accesos"
+)
+
+registrar_tarjeta(
+    panel="vigilantes",
+    titulo="Plano Parking",
+    descripcion="Visualizar plano del parking",
+    icono="🗺",
+    endpoint="plano_bp.ver_plano"
+)
+
+registrar_tarjeta(
+    panel="vigilantes",
+    titulo="Plazas",
+    descripcion="Estado de plazas",
+    icono="🅿",
+    endpoint="plazas_bp.ver_plazas"
+)
+
+# 🔔 Mensaje en consola al cargar este blueprint (opcional)
+print("✅ vigilantes_bp cargado: /vigilantes/panel (panel_vigilantes)")

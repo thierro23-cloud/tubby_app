@@ -1,0 +1,116 @@
+"""
+MÓDULO DE BOTÓN · Nuevo proveedor
+---------------------------------
+
+Este fichero define el BOTÓN:
+
+    btn_proveedores_nuevo
+
+Arquitectura:
+
+- PANEL (columna 1):
+    panel_comunes_bp
+
+- MÓDULO (columna 2):
+    modulo_comunes_proveedores_bp
+    (definido en modulo_comunes_proveedores_bp.py)
+
+- BOTÓN (columna 3):
+    btn_proveedores_nuevo
+
+Comportamiento:
+
+- El Super Admin detecta este endpoint como un botón del módulo
+  PROVEEDORES dentro del panel COMUNES.
+- GET:
+    · Muestra el formulario de alta de proveedor.
+- POST:
+    · Valida datos mínimos (Nombre, NIF).
+    · Inserta el registro en bd_tbl_comunes.tbl_proveedores.
+    · Redirige de vuelta a la UI principal de gestión de proveedores
+      (btn_proveedores_gestionar), donde se verá en la tabla.
+"""
+
+# =============================================================================
+# 1️⃣ IMPORTS
+# =============================================================================
+from flask import (
+    request,
+    render_template,
+    redirect,
+    url_for,
+    flash,
+    current_app,
+)
+from flask_login import login_required
+from services.helpers import rol_required
+from db import ejecutar_query
+
+# Importa el blueprint del módulo PROVEEDORES
+from blueprints.comunes.modulo_comunes_proveedores_bp import (
+    modulo_comunes_proveedores_bp,
+)
+
+
+# =============================================================================
+# 2️⃣ BOTÓN · NUEVO PROVEEDOR
+# =============================================================================
+@modulo_comunes_proveedores_bp.route(
+    "/btn_proveedores_nuevo",
+    methods=["GET", "POST"],
+)
+@login_required
+@rol_required("gestor", "super_admin")
+def btn_proveedores_nuevo():
+    """
+    BOTÓN · Nuevo proveedor (módulo PROVEEDORES).
+
+    - Nombre de la vista (Super Admin):
+          btn_proveedores_nuevo
+    - URL del botón:
+          /comunes/proveedores/btn_proveedores_nuevo
+
+    GET:
+      - Muestra formulario de alta de proveedor.
+
+    POST:
+      - Valida datos, inserta en bd_tbl_comunes.tbl_proveedores.
+      - Redirige a la vista principal de gestión de proveedores.
+    """
+    if request.method == "POST":
+        nombre = request.form.get("nombre", "").strip()
+        nif = request.form.get("nif", "").strip()
+
+        if not nombre or not nif:
+            flash("Nombre y NIF son obligatorios.", "warning")
+            return redirect(
+                url_for("modulo_comunes_proveedores_bp.btn_proveedores_nuevo")
+            )
+
+        try:
+            sql_insert = """
+                INSERT INTO bd_tbl_comunes.tbl_proveedores
+                    (Nombre_Razon_Social, NIF)
+                VALUES (%s, %s)
+            """
+            ejecutar_query(
+                sql_insert,
+                params=(nombre, nif),
+                nombre_bd="bd_tbl_comunes",
+            )
+            flash("Proveedor creado correctamente.", "success")
+        except Exception as e:
+            current_app.logger.error(
+                f"Error creando proveedor (btn_proveedores_nuevo): {e}"
+            )
+            flash("Error creando el proveedor.", "danger")
+
+        # Tras crear, volvemos a la UI principal de gestión
+        return redirect(
+            url_for(
+                "modulo_comunes_proveedores_bp.btn_proveedores_gestionar"
+            )
+        )
+
+    # GET → mostrar formulario de alta
+    return render_template("comunes/proveedores/nuevo_proveedor.html")

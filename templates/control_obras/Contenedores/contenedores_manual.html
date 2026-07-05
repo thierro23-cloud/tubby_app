@@ -1,0 +1,353 @@
+{# =============================================================================
+   🌐 PLANTILLA: templates/control_obras/contenedores_manual.html
+   🧱 FORMULARIO MANUAL DE CONTENEDORES
+   -----------------------------------------------------------------------------
+   ✅ QUÉ HACE
+   - Permite registrar contenedores manualmente cuando:
+     1️⃣ El PDF no se puede procesar automáticamente
+     2️⃣ Falta información
+     3️⃣ Hay que corregir datos
+     4️⃣ Se registra un contenedor histórico
+   - El formulario incluye todos los campos necesarios y validaciones de fecha.
+============================================================================= #}
+
+{% extends "base.html" %}
+
+{% block title %}
+📦 Registro manual de contenedores
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+
+  <h2 class="mb-4">
+    📦 Registro manual de contenedores
+  </h2>
+
+  <form method="POST">
+    <!-- =============================================================================
+       1️⃣ Identificación del Contenedor:
+
+Número expediente: El primer campo de entrada que permite registrar el número del expediente del contenedor.
+
+Número solicitud: El número de solicitud relacionado con el contenedor.
+
+Número colocación: Número que identifica la colocación del contenedor. Este campo es obligatorio.
+
+Proveedor: Se selecciona el proveedor del contenedor de un conjunto dinámico de opciones.
+       ============================================================================= -->
+    <div class="card mb-4">
+      <div class="card-header bg-primary text-white">
+        📁 Identificación del expediente
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <!-- Número expediente -->
+          <div class="col-md-3">
+            <label>Número expediente</label>
+            <input class="form-control" name="numero_expediente">
+          </div>
+
+          <!-- Número solicitud -->
+          <div class="col-md-3">
+            <label>Número solicitud</label>
+            <input class="form-control" name="numero_solicitud">
+          </div>
+
+          <!-- Número colocación -->
+          <div class="col-md-3">
+            <label>Número colocación</label>
+            <input class="form-control" name="numero_colocacion">
+          </div>
+
+          <!-- Proveedor -->
+          <div class="col-md-3">
+            <label>Proveedor</label>
+            <select class="form-control" name="idtbl_proveedores">
+              {% for p in proveedores %}
+                <option value="{{p.Idtbl_proveedores}}">
+                  {{p.Nombre_Razon_Social}}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- =============================================================================
+       2️⃣ Datos del Solicitante:
+
+Nombre solicitante: El nombre de la persona que hace la solicitud.
+
+NIF: El NIF (Número de Identificación Fiscal) del solicitante.
+
+Teléfono: El número de teléfono del solicitante.
+
+Gestor: Selección del gestor relacionado con la solicitud.
+       ============================================================================= -->
+    <div class="card mb-4">
+      <div class="card-header bg-info text-white">
+        👤 Datos del solicitante
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <!-- Nombre solicitante -->
+          <div class="col-md-4">
+            <label>Nombre solicitante</label>
+            <input class="form-control" name="nombre_solicitante">
+          </div>
+
+          <!-- NIF -->
+          <div class="col-md-3">
+            <label>NIF</label>
+            <input class="form-control" name="nif">
+          </div>
+
+          <!-- Teléfono -->
+          <div class="col-md-3">
+            <label>Teléfono</label>
+            <input class="form-control" name="telefono">
+          </div>
+
+          <!-- Gestor -->
+          <div class="col-md-2">
+            <label>Gestor</label>
+            <select class="form-control" name="idtbl_gestores">
+              {% for g in gestores %}
+                <option value="{{g.idtbl_gestores}}">
+                  {{g.nombre_gestor}}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- =============================================================================
+       3️⃣ Ubicación del Contenedor:
+
+Tipo de vía: El tipo de vía donde se encuentra el contenedor (calle, avenida, etc.).
+
+Calle: La calle donde se encuentra el contenedor.
+
+Latitud: La latitud de la ubicación del contenedor.
+
+Longitud: La longitud de la ubicación del contenedor.============================================================================= -->
+    <div class="card mb-4">
+      <div class="card-header bg-success text-white">
+        📍 Ubicación del contenedor
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <!-- Tipo de vía -->
+          <div class="col-md-3">
+            <label>Tipo de vía</label>
+            <select class="form-control" name="idtbl_tipos_de_vias">
+              {% for v in tipos_via %}
+                <option value="{{v.idtbl_tipos_de_vias}}">
+                  {{v.tipos_de_vias}}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <!-- Calle -->
+          <div class="col-md-5">
+            <label>Calle</label>
+            <select class="form-control" name="idtbl_calles">
+              {% for c in calles %}
+                <option value="{{c.idtbl_calles}}">
+                  {{c.calles}}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <!-- Latitud -->
+          <div class="col-md-2">
+            <label>Latitud</label>
+            <input class="form-control" name="latitud">
+          </div>
+
+          <!-- Longitud -->
+          <div class="col-md-2">
+            <label>Longitud</label>
+            <input class="form-control" name="longitud">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- =============================================================================
+      4️⃣ Características del Contenedor:
+
+Dimensión: Se selecciona la dimensión del contenedor de un conjunto dinámico de opciones.============================================================================= -->
+    <div class="card mb-4">
+      <div class="card-header bg-warning">
+        📦 Características del contenedor
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <!-- Dimensión -->
+          <div class="col-md-4">
+            <label>Dimensión</label>
+            <select class="form-control" name="idtbl_dimensiones">
+              {% for d in dimensiones %}
+                <option value="{{d.idtbl_dimensiones}}">
+                  {{d.descripcion}}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- =============================================================================
+       5️⃣ Fechas del Proceso:
+
+Fecha colocación: La fecha en que se coloca el contenedor.
+
+Fecha retirada: La fecha en que el contenedor fue retirado.
+
+Fecha instalación: La fecha de instalación del contenedor.
+
+Fecha firma inicial: La fecha en la que se firma la autorización o el acuerdo inicial.============================================================================= -->
+    <div class="card mb-4">
+      <div class="card-header bg-dark text-white">
+        📅 Fechas administrativas
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <!-- Fecha colocación -->
+          <div class="col-md-3">
+            <label>Fecha colocación</label>
+            <input type="date" class="form-control" name="fecha_colocacion">
+          </div>
+
+          <!-- Fecha retirada -->
+          <div class="col-md-3">
+            <label>Fecha retirada</label>
+            <input type="date" class="form-control" name="fecha_retirada">
+          </div>
+
+          <!-- Fecha instalación -->
+          <div class="col-md-3">
+            <label>Fecha instalación</label>
+            <input type="date" class="form-control" name="fecha_colocacion">
+          </div>
+
+          <!-- Fecha firma inicial -->
+          <div class="col-md-3">
+            <label>Fecha firma inicial</label>
+            <input type="date" class="form-control" name="fecha_firma_inicial">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- =============================================================================
+       6️⃣ Control Documental (CSV):
+
+CSV colocación: Un campo donde se registra el archivo CSV relacionado con la colocación del contenedor.
+
+CSV retirada: Un campo para el archivo CSV de la retirada del contenedor.
+       ============================================================================= -->
+    <div class="card mb-4">
+      <div class="card-header bg-secondary text-white">
+        🔐 Control documental
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <!-- CSV colocación -->
+          <div class="col-md-4">
+            <label>CSV colocación</label>
+            <input class="form-control" name="csv">
+          </div>
+
+          <!-- CSV retirada -->
+          <div class="col-md-4">
+            <label>CSV retirada</label>
+            <input class="form-control" name="csv_retirada">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- =============================================================================
+       7️⃣ Datos GPS:
+
+Precisión GPS: La precisión de las coordenadas GPS del contenedor.
+
+GPS validado: Indica si el GPS ha sido validado o no.
+
+Nivel calidad GPS: El nivel de calidad del GPS utilizado para la ubicación.
+
+Origen GPS: El origen del GPS utilizado.
+       ============================================================================= -->
+    <div class="card mb-4">
+      <div class="card-header">
+        🛰 Información GPS
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <!-- Precisión GPS -->
+          <div class="col-md-3">
+            <label>Precisión GPS</label>
+            <input class="form-control" name="precision_gps">
+          </div>
+
+          <!-- GPS validado -->
+          <div class="col-md-3">
+            <label>GPS validado</label>
+            <input class="form-control" name="gps_precision_ok">
+          </div>
+
+          <!-- Nivel calidad GPS -->
+          <div class="col-md-3">
+            <label>Nivel calidad GPS</label>
+            <input class="form-control" name="gps_nivel_calidad">
+          </div>
+
+          <!-- Origen GPS -->
+          <div class="col-md-3">
+            <label>Origen GPS</label>
+            <input class="form-control" name="gps_origen">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- =============================================================================
+       8️⃣ Observaciones:
+
+Un campo de texto donde se pueden registrar observaciones adicionales sobre el contenedor.
+       ============================================================================= -->
+    <div class="card mb-4">
+      <div class="card-header">
+        📝 Observaciones
+      </div>
+      <div class="card-body">
+        <textarea class="form-control" rows="4" name="observaciones"></textarea>
+      </div>
+    </div>
+
+    <!-- =============================================================================
+      9️⃣ Botones de Acción:
+
+Botón de "Guardar contenedor": Este botón guarda todos los datos ingresados y los envía para procesar el contenedor.
+       ============================================================================= -->
+    <div class="text-end mb-5">
+      <!-- Botón guardar -->
+      <button class="btn btn-success btn-lg">
+        💾 Guardar contenedor
+      </button>
+    </div>
+
+  </form>
+
+</div>
+
+{% endblock %}

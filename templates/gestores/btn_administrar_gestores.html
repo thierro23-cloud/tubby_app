@@ -1,0 +1,1050 @@
+{# ============================================================================
+   📄 PLANTILLA: btn_administrar_gestores.html
+   🎯 PROPÓSITO: Panel de administración de gestores con sistema de ubicación
+   📍 UBICACIÓN: Sistema cascada España (Provincia → Municipio → Tipo Vía → Calle)
+   🔧 VERSIÓN: v4.1-FINAL-CON-NAVEGACION
+   👤 AUTOR: Tino Hierro
+   📅 FECHA: 2026-05-23
+   
+   CARACTERÍSTICAS:
+   - Sistema de ubicación en cascada con carga AJAX
+   - Creación y edición de gestores
+   - Asignación de roles/tableros
+   - Activación/desactivación de usuarios
+   - Navegación inteligente (vuelve a la página anterior)
+   - Diseño responsivo sin scroll de página
+   ============================================================================ #}
+
+{% extends "base.html" %}
+
+{% block content %}
+
+<style>
+  /* ==========================================================================
+     🚫 BLOQUEO TOTAL DE SCROLL DE PÁGINA
+     ========================================================================== */
+  html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden !important; /* Evita scroll en toda la página */
+  }
+
+  .container, .container-fluid {
+    height: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+  }
+
+  /* ==========================================================================
+     🎨 VARIABLES CSS (DISEÑO PROFESIONAL)
+     ========================================================================== */
+  :root {
+    --gest-bg: #f8fafc;
+    --gest-card: #ffffff;
+    --gest-border: #e2e8f0;
+    --gest-primary: #1e40af;
+    --gest-success: #059669;
+    --gest-muted: #64748b;
+    --gest-radius: 10px;
+    --gest-shadow: 0 4px 12px rgba(0,0,0,.08);
+    
+    /* Colores por rol */
+    --rol-super-admin: #b91c1c;
+    --rol-gestor: #1d4ed8;
+    --rol-policia: #047857;
+    --rol-usuario: #c05621;
+    --rol-vigilante: #6d28d9;
+  }
+
+  body {
+    background: var(--gest-bg);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+
+  /* ==========================================================================
+     📦 WRAPPER PRINCIPAL - 100VH ESTRICTO
+     ========================================================================== */
+  .gest-wrapper {
+    width: 100vw;
+    height: 100vh;
+    max-width: 100vw;
+    max-height: 100vh;
+    margin: 0;
+    padding: 0.4rem;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden !important;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+  }
+
+  /* ==========================================================================
+     🎯 HEADER ULTRACOMPACTO CON NAVEGACIÓN
+     ========================================================================== */
+  .gest-header {
+    background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+    border-radius: 8px;
+    padding: 0.35rem 0.7rem;
+    box-shadow: var(--gest-shadow);
+    color: #f8fafc;
+    margin-bottom: 0.4rem;
+    flex: 0 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .gest-header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .gest-header-left h1 {
+    font-size: 0.9rem;
+    font-weight: 700;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+
+  .gest-header-version {
+    font-size: 0.55rem;
+    opacity: 0.6;
+    font-family: 'Courier New', monospace;
+    margin-left: 0.5rem;
+    background: rgba(255,255,255,0.15);
+    padding: 0.1rem 0.3rem;
+    border-radius: 3px;
+  }
+
+  /* ==========================================================================
+     ◀️ BOTÓN VOLVER (NAVEGACIÓN)
+     ========================================================================== */
+  .btn-volver-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.2);
+    color: #fff;
+    text-decoration: none;
+    font-size: 1.2rem;
+    transition: all 0.2s;
+    border: 2px solid rgba(255,255,255,0.3);
+  }
+
+  .btn-volver-header:hover {
+    background: rgba(255,255,255,0.35);
+    transform: scale(1.1);
+    box-shadow: 0 0 15px rgba(255,255,255,0.4);
+  }
+
+  /* ==========================================================================
+     📊 ESTADÍSTICAS EN HEADER
+     ========================================================================== */
+  .gest-header-stats {
+    display: flex;
+    gap: 0.4rem;
+  }
+
+  .gest-stat {
+    text-align: center;
+    background: rgba(255,255,255,.15);
+    padding: 0.2rem 0.45rem;
+    border-radius: 5px;
+    border: 1px solid rgba(255,255,255,.2);
+  }
+
+  .gest-stat-number {
+    font-size: 0.8rem;
+    font-weight: 700;
+    display: block;
+    line-height: 1;
+  }
+
+  .gest-stat-label {
+    font-size: 0.55rem;
+    opacity: 0.85;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    line-height: 1.1;
+  }
+
+  /* ==========================================================================
+     📊 GRID PRINCIPAL (DOS COLUMNAS)
+     ========================================================================== */
+  .gest-main-grid {
+    flex: 1 1 auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* Formulario | Tabla */
+    gap: 0.4rem;
+    min-height: 0;
+    overflow: hidden !important;
+  }
+
+  /* ==========================================================================
+     🃏 TARJETAS (FORMULARIO Y TABLA)
+     ========================================================================== */
+  .gest-card {
+    background: var(--gest-card);
+    border-radius: var(--gest-radius);
+    border: 1px solid var(--gest-border);
+    box-shadow: var(--gest-shadow);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .gest-card-header {
+    background: linear-gradient(90deg, #f1f5f9, #e2e8f0);
+    padding: 0.45rem 0.6rem;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.4rem;
+    flex: 0 0 auto;
+  }
+
+  .gest-card-title {
+    margin: 0;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #1e293b;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+
+  .gest-card-subtitle {
+    margin: 0;
+    font-size: 0.65rem;
+    color: var(--gest-muted);
+  }
+
+  /* Tarjeta de formulario con scroll vertical */
+  .gest-card-form {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .gest-card-form .gest-card-body {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-height: 0;
+    padding: 0.6rem;
+  }
+
+  /* Tarjeta de lista (tabla) */
+  .gest-card-list {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .gest-card-list .gest-card-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  /* ==========================================================================
+     📋 FORMULARIO
+     ========================================================================== */
+  .gest-form-group {
+    margin-bottom: 0.45rem;
+  }
+
+  .gest-form-label {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 0.15rem;
+  }
+
+  .gest-form-control,
+  .gest-form-select {
+    width: 100%;
+    padding: 0.35rem 0.5rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 5px;
+    font-size: 0.7rem;
+    background: #fafbfc;
+    transition: all 0.15s;
+    box-sizing: border-box;
+    height: 28px;
+  }
+
+  .gest-form-control:focus,
+  .gest-form-select:focus {
+    outline: none;
+    border-color: var(--gest-primary);
+    box-shadow: 0 0 0 2px rgba(30,64,175,.1);
+    background: #fff;
+  }
+
+  /* Grid de dos columnas dentro del formulario */
+  .gest-form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.4rem;
+  }
+
+  /* ==========================================================================
+     🔘 BOTONES
+     ========================================================================== */
+  .gest-btn {
+    border-radius: 6px;
+    padding: 0.45rem 0.8rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+  }
+
+  .gest-btn-primary {
+    background: linear-gradient(135deg, var(--gest-primary), #1d4ed8);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(30,64,175,.3);
+  }
+
+  .gest-btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(30,64,175,.4);
+  }
+
+  .btn-edit {
+    border-radius: 999px;
+    padding: 0.2rem 0.5rem;
+    border: none;
+    background: #e5e7eb;
+    color: #111827;
+    font-size: 0.65rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    cursor: pointer;
+  }
+
+  .btn-edit:hover {
+    background: #d4d4d8;
+  }
+
+  /* ==========================================================================
+     📊 TABLA
+     ========================================================================== */
+  .table-responsive {
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    box-sizing: border-box;
+  }
+
+  .table-responsive::-webkit-scrollbar { width: 6px; }
+  .table-responsive::-webkit-scrollbar-track { background: #e5e7eb; }
+  .table-responsive::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+  }
+
+  .gest-table {
+    width: 100%;
+    margin: 0;
+    font-size: 0.7rem;
+    border-collapse: collapse;
+    background: #f8fafc;
+  }
+
+  .gest-table thead {
+    background: #e5edff;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  .gest-table thead th {
+    text-align: left;
+    padding: 0.35rem 0.4rem;
+    font-weight: 600;
+    color: #1e293b;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    border-bottom: 2px solid #d0d7ef;
+    white-space: nowrap;
+  }
+
+  .gest-table tbody td {
+    padding: 0.35rem 0.4rem;
+    vertical-align: middle;
+    border-bottom: 1px solid #e2e8f0;
+    color: #111827;
+  }
+
+  .gest-table tbody tr:nth-child(odd) { background: #ffffff; }
+  .gest-table tbody tr:nth-child(even) { background: #f1f5f9; }
+  .gest-table tbody tr:hover { background: #e0ecff; }
+  .gest-table tbody td small { font-size: 0.6rem; }
+
+  /* ==========================================================================
+     🏷️ BADGES
+     ========================================================================== */
+  .gest-badge {
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    display: inline-block;
+  }
+
+  .gest-badge-activo {
+    background: linear-gradient(90deg, #10b981, #34d399);
+    color: #fff;
+  }
+
+  .rol-badge {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.6rem;
+    font-weight: 600;
+    color: #fff;
+    white-space: nowrap;
+  }
+
+  .rol-super-admin { background: var(--rol-super-admin); }
+  .rol-gestor { background: var(--rol-gestor); }
+  .rol-policia { background: var(--rol-policia); }
+  .rol-usuario { background: var(--rol-usuario); }
+  .rol-vigilante { background: var(--rol-vigilante); }
+
+  /* ==========================================================================
+     ⚠️ ALERTAS (FLASH MESSAGES)
+     ========================================================================== */
+  .alert {
+    border: none;
+    border-radius: 6px;
+    padding: 0.4rem 0.6rem;
+    margin-bottom: 0.4rem;
+    box-shadow: 0 2px 6px rgba(0,0,0,.08);
+    font-size: 0.7rem;
+  }
+
+  /* ==========================================================================
+     📜 SCROLLBAR PERSONALIZADA (FORMULARIO)
+     ========================================================================== */
+  .gest-card-form .gest-card-body::-webkit-scrollbar { width: 6px; }
+  .gest-card-form .gest-card-body::-webkit-scrollbar-track { background: #f1f5f9; }
+  .gest-card-form .gest-card-body::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+  }
+
+  /* ==========================================================================
+     🔧 UTILIDADES
+     ========================================================================== */
+  .d-grid { display: grid; }
+  .mb-2 { margin-bottom: 0.5rem; }
+  .mt-1 { margin-top: 0.25rem; }
+  .ms-2 { margin-left: 0.5rem; }
+  .text-muted { color: var(--gest-muted) !important; }
+  .text-decoration-none { text-decoration: none !important; }
+  .text-center { text-align: center !important; }
+  .text-success { color: var(--gest-success) !important; }
+</style>
+
+{# =============================================================================
+   🎨 ESTRUCTURA HTML PRINCIPAL
+   ============================================================================= #}
+
+<div class="gest-wrapper">
+
+  {# ---------------------------------------------------------------------------
+     📊 HEADER CON ESTADÍSTICAS Y NAVEGACIÓN
+     --------------------------------------------------------------------------- #}
+  <div class="gest-header">
+    <div class="gest-header-left">
+      {# Botón volver a la página anterior #}
+      <a href="{{ request.referrer or url_for('index') }}" class="btn-volver-header" title="Volver">
+        <i class="bi bi-arrow-left-circle"></i>
+      </a>
+      <h1>
+        Administrar Gestores
+        <span class="gest-header-version">v4.1-FINAL</span>
+      </h1>
+    </div>
+    <div class="gest-header-stats">
+      <div class="gest-stat">
+        <span class="gest-stat-number">{{ gestores|length }}</span>
+        <span class="gest-stat-label">Total</span>
+      </div>
+      <div class="gest-stat">
+        <span class="gest-stat-number">{{ roles|length }}</span>
+        <span class="gest-stat-label">Roles</span>
+      </div>
+      <div class="gest-stat">
+        <span class="gest-stat-number">{{ gestores|selectattr('activo')|list|length }}</span>
+        <span class="gest-stat-label">Activos</span>
+      </div>
+    </div>
+  </div>
+
+  {# ---------------------------------------------------------------------------
+     ⚠️ MENSAJES FLASH
+     --------------------------------------------------------------------------- #}
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div>
+        {% for category, message in messages %}
+          <div class="alert alert-{{ 'danger' if category == 'error' else category }}">
+            {{ message }}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  {# ---------------------------------------------------------------------------
+     📊 GRID PRINCIPAL (DOS COLUMNAS)
+     --------------------------------------------------------------------------- #}
+  <div class="gest-main-grid">
+
+    {# =========================================================================
+       📝 PANEL IZQUIERDO: FORMULARIO
+       ========================================================================= #}
+    <div class="gest-card gest-card-form">
+      <div class="gest-card-header">
+        <div>
+          {% if gestor_edicion %}
+            <h3 class="gest-card-title">Editar Gestor #{{ gestor_edicion.idtbl_gestores }}</h3>
+            <p class="gest-card-subtitle">Modificar datos del gestor</p>
+          {% else %}
+            <h3 class="gest-card-title">Nuevo Gestor</h3>
+            <p class="gest-card-subtitle">Registrar gestor con rol inicial</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="gest-card-body">
+        <form method="post" action="{{ url_for('btn_administrar_gestores_bp.btn_administrar_gestores') }}">
+          
+          {# Acción del formulario (nuevo o editar) #}
+          {% if gestor_edicion %}
+            <input type="hidden" name="accion" value="guardar_edicion">
+            <input type="hidden" name="idtbl_gestores" value="{{ gestor_edicion.idtbl_gestores }}">
+          {% else %}
+            <input type="hidden" name="accion" value="nuevo_gestor">
+          {% endif %}
+
+          {# ===================================================================
+             👤 DATOS PERSONALES
+             =================================================================== #}
+          <div class="gest-form-group">
+            <div class="gest-form-row">
+              <div>
+                <label class="gest-form-label">Nombre *</label>
+                <input type="text" name="nombre" class="gest-form-control" required
+                       value="{{ gestor_edicion.nombre if gestor_edicion else '' }}">
+              </div>
+              <div>
+                <label class="gest-form-label">Email *</label>
+                <input type="email" name="email" class="gest-form-control" required
+                       value="{{ gestor_edicion.email if gestor_edicion else '' }}">
+              </div>
+            </div>
+          </div>
+
+          <div class="gest-form-group">
+            <div class="gest-form-row">
+              <div>
+                <label class="gest-form-label">1er Apellido</label>
+                <input type="text" name="apellido1" class="gest-form-control"
+                       value="{{ gestor_edicion.apellido1 if gestor_edicion else '' }}">
+              </div>
+              <div>
+                <label class="gest-form-label">2 Apellido</label>
+                <input type="text" name="apellido2" class="gest-form-control"
+                       value="{{ gestor_edicion.apellido2 if gestor_edicion else '' }}">
+              </div>
+            </div>
+          </div>
+
+          <div class="gest-form-group">
+            <div class="gest-form-row">
+              <div>
+                <label class="gest-form-label">DNI/NIF</label>
+                <input type="text" name="DNI" class="gest-form-control"
+                       value="{{ gestor_edicion.DNI if gestor_edicion else '' }}">
+              </div>
+              <div>
+                <label class="gest-form-label">Telefono</label>
+                <input type="tel" name="telefono" class="gest-form-control"
+                       value="{{ gestor_edicion.telefono if gestor_edicion else '' }}">
+              </div>
+            </div>
+          </div>
+
+          <div class="gest-form-group">
+            <div class="gest-form-row">
+              <div>
+                <label class="gest-form-label">Numero Profesional</label>
+                <input type="text" name="numero_profesional" class="gest-form-control"
+                       value="{{ gestor_edicion.numero_profesional if gestor_edicion else '' }}">
+              </div>
+              <div>
+                <label class="gest-form-label">Extension</label>
+                <input type="text" name="extension" class="gest-form-control"
+                       value="{{ gestor_edicion.extension if gestor_edicion else '' }}">
+              </div>
+            </div>
+          </div>
+
+          {# ===================================================================
+             🔑 CONTRASEÑA
+             =================================================================== #}
+          <div class="gest-form-group">
+            <label class="gest-form-label">Contrasena</label>
+            <input type="password" name="password" class="gest-form-control"
+                   placeholder="{% if gestor_edicion %}Dejar vacio para no cambiar{% else %}Obligatoria{% endif %}">
+          </div>
+
+          {# ===================================================================
+             📍 UBICACIÓN (PROVINCIA → MUNICIPIO → TIPO VÍA → CALLE)
+             Sistema de carga dinámica en cascada vía AJAX
+             =================================================================== #}
+          <div class="gest-form-group">
+            <label class="gest-form-label">Provincia</label>
+            <select name="idtbl_provincias" class="gest-form-select" id="provincia">
+              <option value="">-- Provincia --</option>
+              {% for p in provincias %}
+                <option value="{{ p.idtbl_provincias }}"
+                  {% if gestor_edicion and gestor_edicion.idtbl_provincias == p.idtbl_provincias %}selected{% endif %}>
+                  {{ p.provincias }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="gest-form-group">
+            <label class="gest-form-label">Municipio</label>
+            <select name="idtbl_municipios" class="gest-form-select" id="municipio" disabled>
+              <option value="">-- Seleccione provincia primero --</option>
+            </select>
+          </div>
+
+          <div class="gest-form-group">
+            <div class="gest-form-row">
+              <div>
+                <label class="gest-form-label">Tipo via</label>
+                <select name="idtbl_tipos_de_vias" class="gest-form-select" id="tipo_via">
+                  <option value="">-- Tipo via --</option>
+                  {% for t in tipos_via %}
+                    <option value="{{ t.idtbl_tipos_de_vias }}"
+                      {% if gestor_edicion and gestor_edicion.idtbl_tipos_de_vias == t.idtbl_tipos_de_vias %}selected{% endif %}>
+                      {{ t.tipos_de_vias }}
+                    </option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div>
+                <label class="gest-form-label">Calle</label>
+                <select name="idtbl_calles" class="gest-form-select" id="calle" disabled>
+                  <option value="">-- Municipio y tipo primero --</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {# ===================================================================
+             🎛️ ROL Y CONFIGURACIÓN
+             =================================================================== #}
+          <div class="gest-form-group">
+            <label class="gest-form-label">Rol *</label>
+            <select name="idtbl_roles" class="gest-form-select" required>
+              <option value="">-- Rol/Tablero --</option>
+              {% for r in roles %}
+                <option value="{{ r.id }}"
+                  {% if gestor_edicion and r.id == gestor_edicion.idtbl_roles %}selected{% endif %}>
+                  {{ r.nombre_rol }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="gest-form-group">
+            <div class="gest-form-row">
+              <div>
+                <input type="checkbox" id="chk_activo" name="activo" value="1"
+                  {% if not gestor_edicion or gestor_edicion.activo %}checked{% endif %}>
+                <label for="chk_activo" style="display:inline;font-size:.7rem;font-weight:400;margin-left:0.3rem;">Activo</label>
+              </div>
+              <div>
+                <input type="checkbox" id="chk_must_change" name="must_change" value="1"
+                  {% if gestor_edicion and gestor_edicion.must_change %}checked{% endif %}>
+                <label for="chk_must_change" style="display:inline;font-size:.7rem;font-weight:400;margin-left:0.3rem;">Cambiar pass</label>
+              </div>
+            </div>
+          </div>
+
+          {# Botón de envío #}
+          <div class="d-grid">
+            <button type="submit" class="gest-btn gest-btn-primary">
+              {{ 'Guardar Cambios' if gestor_edicion else 'Crear Gestor' }}
+            </button>
+          </div>
+
+        </form>
+      </div>
+    </div>
+
+    {# =========================================================================
+       📊 PANEL DERECHO: TABLA DE GESTORES
+       ========================================================================= #}
+    <div class="gest-card gest-card-list">
+      <div class="gest-card-header">
+        <div>
+          <h3 class="gest-card-title">
+            Gestores Registrados
+            <span class="gest-badge gest-badge-activo ms-2">{{ gestores|length }}</span>
+          </h3>
+        </div>
+      </div>
+
+      <div class="gest-card-body">
+        <div class="table-responsive">
+          <table class="gest-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Gestor</th>
+                <th>Email</th>
+                <th>Tel</th>
+                <th>Estado</th>
+                <th>Rol/Accion</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for g in gestores %}
+                <tr>
+                  <td><strong>#{{ g.idtbl_gestores }}</strong></td>
+                  <td>
+                    <div>{{ g.nombre }} {{ g.apellido1 or '' }}</div>
+                    <small class="text-muted">{{ g.numero_profesional or 'N/A' }}</small>
+                  </td>
+                  <td>
+                    <a href="mailto:{{ g.email }}" class="text-decoration-none" style="font-size:0.65rem;">{{ g.email }}</a>
+                  </td>
+                  <td>{{ g.telefono if g.telefono else '-' }}</td>
+                  <td>
+                    {# Formulario para activar/desactivar gestor #}
+                    <form method="post" action="{{ url_for('btn_administrar_gestores_bp.btn_administrar_gestores') }}" style="margin:0;">
+                      <input type="hidden" name="accion" value="toggle_activo">
+                      <input type="hidden" name="idtbl_gestores" value="{{ g.idtbl_gestores }}">
+                      <input type="hidden" name="estado_actual" value="{{ 1 if g.activo else 0 }}">
+                      <button type="submit" class="btn-edit">
+                        {{ 'Activo' if g.activo else 'Inactivo' }}
+                      </button>
+                    </form>
+                  </td>
+                  <td>
+                    {# Formulario para editar gestor #}
+                    <form method="post" action="{{ url_for('btn_administrar_gestores_bp.btn_administrar_gestores') }}" style="margin:0;">
+                      <input type="hidden" name="accion" value="editar_gestor">
+                      <input type="hidden" name="idtbl_gestores" value="{{ g.idtbl_gestores }}">
+                      
+                      {# Badge de rol con color dinámico según el tipo #}
+                      {% set rol_nombre = g.nombre_rol or '' %}
+                      {% set nombre_rol_lower = rol_nombre|lower %}
+                      {% set clase_rol = (
+                        'rol-super-admin' if 'super_admin' in nombre_rol_lower else
+                        'rol-gestor' if 'gestor' in nombre_rol_lower else
+                        'rol-policia' if 'policia' in nombre_rol_lower or 'policía' in nombre_rol_lower else
+                        'rol-usuario' if 'usuario' in nombre_rol_lower else
+                        'rol-vigilante' if 'vigilante' in nombre_rol_lower else ''
+                      ) %}
+                      
+                      {% if rol_nombre %}
+                        <span class="rol-badge {{ clase_rol }}">{{ rol_nombre }}</span>
+                      {% else %}
+                        <small class="text-muted">Sin rol</small>
+                      {% endif %}
+                      
+                      <button type="submit" class="btn-edit mt-1">Editar</button>
+                    </form>
+                  </td>
+                </tr>
+              {% else %}
+                <tr>
+                  <td colspan="6" class="text-center text-muted" style="padding:2rem;">
+                    No hay gestores registrados
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{# =============================================================================
+   📍 JAVASCRIPT: SISTEMA DE UBICACIÓN CASCADA
+   ============================================================================= 
+   
+   FLUJO:
+   1. Usuario selecciona PROVINCIA → Carga MUNICIPIOS vía AJAX
+   2. Usuario selecciona MUNICIPIO + TIPO VÍA → Carga CALLES vía AJAX
+   3. En modo edición, precarga automáticamente los valores guardados
+   
+   ENDPOINTS REQUERIDOS:
+   - GET /helpers_vias/municipios?id_provincia=X
+   - GET /helpers_vias/calles?id_municipio=X&id_tipo_via=Y
+   
+   REUTILIZABLE: Cualquier plantilla puede usar este módulo copiando:
+   - El <select> con id="provincia"
+   - El <select> con id="municipio"
+   - El <select> con id="tipo_via"
+   - El <select> con id="calle"
+   - Este bloque <script>
+   
+   ============================================================================= #}
+
+<script>
+/**
+ * ============================================================================
+ * 📍 MÓDULO DE UBICACIÓN ESPAÑA v2.0
+ * ============================================================================
+ * Sistema de carga dinámica de ubicaciones en cascada.
+ * Compatible con cualquier formulario que use los IDs estándar.
+ * 
+ * AUTOR: Tino Hierro
+ * FECHA: 2026-05-23
+ * ============================================================================
+ */
+
+document.addEventListener('DOMContentLoaded', function () {
+  
+  // =========================================================================
+  // 🎯 REFERENCIAS A ELEMENTOS DEL DOM
+  // =========================================================================
+  const provincia = document.getElementById('provincia');
+  const municipio = document.getElementById('municipio');
+  const tipoVia = document.getElementById('tipo_via');
+  const calle = document.getElementById('calle');
+
+  /**
+   * =========================================================================
+   * 🏙️ FUNCIÓN: CARGAR MUNICIPIOS
+   * =========================================================================
+   * Carga los municipios de una provincia mediante petición AJAX.
+   * 
+   * @param {string} idProvincia - ID de la provincia seleccionada
+   * @param {string} seleccionado - ID del municipio a preseleccionar (opcional)
+   * 
+   * ENDPOINT: GET /helpers_vias/municipios?id_provincia=X
+   * RESPUESTA ESPERADA: { "ok": true, "municipios": [...] } o [...]
+   */
+  async function cargarMunicipios(idProvincia, seleccionado = '') {
+    console.log('📍 Cargando municipios para provincia:', idProvincia);
+    
+    // Resetear select de municipios
+    municipio.innerHTML = '<option value="">-- Cargando municipios --</option>';
+    municipio.disabled = true;
+
+    // Resetear select de calles (dependiente)
+    calle.innerHTML = '<option value="">-- Seleccione municipio y tipo --</option>';
+    calle.disabled = true;
+
+    // Validar que haya provincia seleccionada
+    if (!idProvincia) {
+      municipio.innerHTML = '<option value="">-- Seleccione provincia primero --</option>';
+      return;
+    }
+
+    try {
+      // Realizar petición AJAX
+      const res = await fetch('/helpers_vias/municipios?id_provincia=' + encodeURIComponent(idProvincia));
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+
+      const data = await res.json();
+      
+      // Extraer array de municipios (compatible con diferentes formatos)
+      const lista = Array.isArray(data) ? data : (data.municipios || []);
+
+      // Resetear select con opción por defecto
+      municipio.innerHTML = '<option value="">-- Seleccione municipio --</option>';
+
+      // Agregar opciones al select
+      lista.forEach(item => {
+        const opt = document.createElement('option');
+        opt.value = item.idtbl_municipios;
+        opt.textContent = item.municipios;
+        
+        // Preseleccionar si coincide con el valor guardado
+        if (String(item.idtbl_municipios) === String(seleccionado)) {
+          opt.selected = true;
+        }
+        
+        municipio.appendChild(opt);
+      });
+
+      // Habilitar select solo si hay municipios disponibles
+      municipio.disabled = lista.length === 0;
+      console.log('✅ Municipios cargados:', lista.length);
+      
+    } catch (e) {
+      console.error('❌ Error cargando municipios:', e);
+      municipio.innerHTML = '<option value="">-- Error al cargar --</option>';
+    }
+  }
+
+  /**
+   * =========================================================================
+   * 🚏 FUNCIÓN: CARGAR CALLES
+   * =========================================================================
+   * Carga las calles de un municipio y tipo de vía específicos.
+   * 
+   * @param {string} idMunicipio - ID del municipio
+   * @param {string} idTipoVia - ID del tipo de vía
+   * @param {string} seleccionado - ID de la calle a preseleccionar (opcional)
+   * 
+   * ENDPOINT: GET /helpers_vias/calles?id_municipio=X&id_tipo_via=Y
+   * RESPUESTA ESPERADA: { "ok": true, "calles": [...] } o [...]
+   */
+  async function cargarCalles(idMunicipio, idTipoVia, seleccionado = '') {
+    console.log('🛣️ Cargando calles para municipio:', idMunicipio, 'tipo:', idTipoVia);
+    
+    // Resetear select
+    calle.innerHTML = '<option value="">-- Cargando calles --</option>';
+    calle.disabled = true;
+
+    // Validar parámetros requeridos
+    if (!idMunicipio || !idTipoVia) {
+      calle.innerHTML = '<option value="">-- Seleccione municipio y tipo --</option>';
+      return;
+    }
+
+    try {
+      // Construir URL con parámetros
+      const url = '/helpers_vias/calles?id_municipio=' + encodeURIComponent(idMunicipio) + '&id_tipo_via=' + encodeURIComponent(idTipoVia);
+      
+      // Realizar petición AJAX
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+
+      const data = await res.json();
+      
+      // Extraer array de calles
+      const lista = Array.isArray(data) ? data : (data.calles || []);
+
+      // Resetear select
+      calle.innerHTML = '<option value="">-- Seleccione calle --</option>';
+
+      // Agregar opciones
+      lista.forEach(item => {
+        const opt = document.createElement('option');
+        opt.value = item.idtbl_calles;
+        opt.textContent = item.calles;
+        
+        // Preseleccionar si coincide
+        if (String(item.idtbl_calles) === String(seleccionado)) {
+          opt.selected = true;
+        }
+        
+        calle.appendChild(opt);
+      });
+
+      // Habilitar select solo si hay calles
+      calle.disabled = lista.length === 0;
+      console.log('✅ Calles cargadas:', lista.length);
+      
+    } catch (e) {
+      console.error('❌ Error cargando calles:', e);
+      calle.innerHTML = '<option value="">-- Error al cargar --</option>';
+    }
+  }
+
+  /**
+   * =========================================================================
+   * 🎯 REGISTRAR EVENTOS
+   * =========================================================================
+   * Asociar las funciones de carga a los eventos change de los select.
+   */
+  
+  // Evento: Cambio de provincia → Cargar municipios
+  provincia.addEventListener('change', function () {
+    cargarMunicipios(this.value);
+  });
+
+  // Evento: Cambio de municipio → Cargar calles
+  municipio.addEventListener('change', function () {
+    cargarCalles(this.value, tipoVia.value);
+  });
+
+  // Evento: Cambio de tipo de vía → Recargar calles
+  tipoVia.addEventListener('change', function () {
+    cargarCalles(municipio.value, this.value);
+  });
+
+  /**
+   * =========================================================================
+   * 🔄 PRECARGA EN MODO EDICIÓN
+   * =========================================================================
+   * Si estamos editando un gestor que ya tiene ubicación guardada,
+   * precargamos los selects de forma secuencial (provincia → municipio → calle).
+   * 
+   * FLUJO:
+   * 1. Cargar municipios de la provincia guardada
+   * 2. Preseleccionar el municipio guardado
+   * 3. Cargar calles del municipio y tipo guardados
+   * 4. Preseleccionar la calle guardada
+   */
+  {% if gestor_edicion and gestor_edicion.idtbl_provincias %}
+    console.log('🔄 MODO EDICIÓN: Precargando ubicación guardada');
+    
+    // Paso 1: Cargar municipios de la provincia guardada
+    cargarMunicipios(
+      "{{ gestor_edicion.idtbl_provincias }}",
+      "{{ gestor_edicion.idtbl_municipios or '' }}"
+    ).then(function() {
+      
+      // Paso 2: Si hay municipio y tipo de vía guardados, cargar calles
+      {% if gestor_edicion and gestor_edicion.idtbl_municipios and gestor_edicion.idtbl_tipos_de_vias %}
+        cargarCalles(
+          "{{ gestor_edicion.idtbl_municipios }}",
+          "{{ gestor_edicion.idtbl_tipos_de_vias }}",
+          "{{ gestor_edicion.idtbl_calles or '' }}"
+        );
+      {% endif %}
+      
+    });
+  {% endif %}
+
+  console.log('✅ Sistema de ubicación España v2.0 inicializado correctamente');
+});
+</script>
+
+{% endblock %}

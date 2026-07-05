@@ -1,0 +1,175 @@
+{#============================================================================
+  📄 BASE.HTML · LAYOUT GENERAL DE LA APLICACIÓN
+  -----------------------------------------------------------------------------
+  - Define la estructura base: sidebar fijo + área principal de contenido.
+  - No impone estilos específicos a las vistas, solo distribuye el espacio.
+  - Las vistas hijas extienden esta base y rellenan:
+        · {% block extra_css %} para CSS adicional opcional.
+        · {% block content %} para el cuerpo específico (tiras, formularios…).
+============================================================================#}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>{% block title %}TUBBY_APP{% endblock %}</title>
+
+  <style>
+    /* LAYOUT GLOBAL · SIDEBAR + MAIN */
+
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    body {
+      background: #e5e7eb;
+      color: #0f172a;
+    }
+
+    .layout {
+      display: flex;
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+    }
+
+    /* SIDEBAR LATERAL */
+
+    .sidebar {
+      flex: 0 0 260px;       /* ancho fijo de la barra lateral */
+      background: #0f172a;
+      color: #e5e7eb;
+      display: flex;
+      flex-direction: column;
+      padding: 16px 14px;
+      box-sizing: border-box;
+    }
+
+    .logo {
+      font-weight: 700;
+      font-size: 18px;
+      margin-bottom: 18px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .sidebar-section {
+      margin-bottom: 18px;
+    }
+
+    .sidebar-title {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .12em;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #cbd5f5;
+    }
+
+    .sidebar-title i {
+      font-size: 14px;
+    }
+
+    .sidebar-module {
+      margin-left: 8px;
+      margin-bottom: 8px;
+    }
+
+    .module-title {
+      font-size: 11px;
+      font-weight: 500;
+      color: #9ca3af;
+      margin-bottom: 4px;
+    }
+
+    .sidebar-link {
+      display: block;
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      color: #e5e7eb;
+      text-decoration: none;
+      margin-bottom: 3px;
+      background: transparent;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+
+    .sidebar-link:hover {
+      background: rgba(148, 163, 184, 0.3);
+      color: #f9fafb;
+    }
+
+    /* ÁREA PRINCIPAL DE CONTENIDO */
+
+    .content {
+      flex: 1;                /* ocupa todo el espacio restante */
+      display: flex;
+      flex-direction: column;
+      overflow: auto;
+      background: transparent; /* la vista hija define su propio fondo */
+    }
+
+    /* Bloque opcional para que las vistas añadan estilos propios */
+  </style>
+
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+<div class="layout">
+
+  {#========================
+    2️⃣ ASIDE · BARRA LATERAL
+    ========================#}
+  <aside class="sidebar">
+
+    <div class="logo">
+      🧸 TUBBY_APP
+    </div>
+
+    <nav>
+      {% for bloque in sistema %}
+        <div class="sidebar-section">
+
+          <div class="sidebar-title">
+            <i class="{{ bloque.panel.icono }}"></i>
+            {{ bloque.panel.titulo }}
+          </div>
+
+          {% for modulo in bloque.modulos %}
+            <div class="sidebar-module">
+              <div class="module-title">
+                {{ modulo.info.titulo }}
+              </div>
+
+              {% for b in modulo.botones %}
+                <a href="{{ b.ruta }}" class="sidebar-link">
+                  {{ b.titulo }}
+                </a>
+              {% endfor %}
+            </div>
+          {% endfor %}
+
+        </div>
+      {% endfor %}
+    </nav>
+
+  </aside>
+
+  {#===========================
+    3️⃣ MAIN · CONTENIDO DINÁMICO
+    ===========================#}
+  <main class="content">
+    {% block content %}{% endblock %}
+  </main>
+
+</div>
+
+</body>
+</html>

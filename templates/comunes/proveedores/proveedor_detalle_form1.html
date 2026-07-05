@@ -1,0 +1,351 @@
+{# =============================================================================
+   templates/proveedores/proveedor_detalle_form.html
+   🧾 FICHA DETALLE DE UN PROVEEDOR (UN SOLO REGISTRO + NAVEGACIÓN)
+   -----------------------------------------------------------------------------
+   OBJETIVO
+   --------
+   - Mostrar en pantalla toda la información de UN proveedor (tbl_proveedores).
+   - Permitir editar y guardar directamente los campos (POST sobre la misma vista).
+   - Navegar al proveedor anterior / siguiente con flechas.
+   - Volver al panel de BDs comunes con un solo clic.
+
+   CONTEXTO
+   --------
+   - Esta plantilla la renderiza:
+       proveedores_bp.proveedor_detalle_form(prov_id)
+   - Variables de contexto esperadas:
+       · proveedor → dict con todos los campos del proveedor actual.
+       · prev_id   → Idtbl_proveedores del registro anterior (o None).
+       · next_id   → Idtbl_proveedores del registro siguiente (o None).
+   ============================================================================= #}
+
+{% extends "base.html" %}
+
+{# ============================================================================
+   0️⃣ TÍTULO DE LA PÁGINA
+   - Se muestra en la pestaña del navegador.
+   - Usa el Id y el nombre/razón social para identificar la ficha.
+   ============================================================================ #}
+{% block title %}Proveedor {{ proveedor.Idtbl_proveedores }}{% endblock %}
+
+
+{% block content %}
+<div class="container mt-3">
+
+  {# ==========================================================================
+     1️⃣ CABECERA DE FICHA + BOTÓN VOLVER
+     --------------------------------------------------------------------------
+     - Izquierda: título con icono 🧾 y datos básicos (ID + nombre).
+     - Derecha: botón ⬅️ Volver al panel de BDs comunes.
+     ========================================================================== #}
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h5 mb-0">
+      🧾 Proveedor {{ proveedor.Idtbl_proveedores }} – {{ proveedor.Nombre_Razon_Social }}
+    </h1>
+
+    {# 🔙 BOTÓN VOLVER AL PANEL COMUNES
+       - Llama a la vista panel_comunes_bp.panel_comunes.
+       - Útil para salir de la ficha y regresar al mapa de tablas comunes. #}
+    <a href="{{ url_for('panel_comunes_bp.panel_comunes') }}"
+       class="btn btn-sm btn-secondary">
+      ⬅️ Volver a comunes
+    </a>
+  </div>
+
+
+  {# ==========================================================================
+     2️⃣ NAVEGACIÓN ENTRE REGISTROS (ANTERIOR / SIGUIENTE)
+     --------------------------------------------------------------------------
+     - Muestra dos botones:
+         · ⬅️ Anterior (ID X) → va al proveedor con Idtbl_proveedores < actual.
+         · Siguiente (ID Y) ➡️ → va al proveedor con Idtbl_proveedores > actual.
+     - Si no hay registro anterior/siguiente, el botón aparece deshabilitado.
+     ========================================================================== #}
+  <div class="d-flex justify-content-between mb-3">
+
+    {# 2.1 ⬅️ BOTÓN ANTERIOR #}
+    <div>
+      {% if prev_id %}
+        <a href="{{ url_for('proveedores_bp.proveedor_detalle_form', prov_id=prev_id) }}"
+           class="btn btn-sm btn-outline-primary">
+          ⬅️ Anterior (ID {{ prev_id }})
+        </a>
+      {% else %}
+        <button class="btn btn-sm btn-outline-secondary" disabled>
+          ⬅️ Anterior
+        </button>
+      {% endif %}
+    </div>
+
+    {# 2.2 ➡️ BOTÓN SIGUIENTE #}
+    <div>
+      {% if next_id %}
+        <a href="{{ url_for('proveedores_bp.proveedor_detalle_form', prov_id=next_id) }}"
+           class="btn btn-sm btn-outline-primary">
+          Siguiente (ID {{ next_id }}) ➡️
+        </a>
+      {% else %}
+        <button class="btn btn-sm btn-outline-secondary" disabled>
+          Siguiente ➡️
+        </button>
+      {% endif %}
+    </div>
+
+  </div>
+
+
+  {# ==========================================================================
+     3️⃣ FORMULARIO PRINCIPAL (MÉTODO POST)
+     --------------------------------------------------------------------------
+     - method="post": al pulsar "Guardar cambios" se hace POST a la misma URL.
+     - Los nombres de los inputs coinciden con los campos esperados en la vista
+       proveedor_detalle_form (proveedores_bp.py).
+     ========================================================================== #}
+  <form method="post">
+
+    {# ------------------------------------------------------------------------
+       3.1 DATOS GENERALES DEL PROVEEDOR
+       ------------------------------------------------------------------------
+       - NIF: campo fiscal identificativo del proveedor.
+       - Nombre_Razon_Social: nombre comercial o razón social.
+       ------------------------------------------------------------------------ #}
+    <div class="row g-2">
+      <div class="col-md-3">
+        <label class="form-label mb-1">NIF</label>
+        <input type="text"
+               name="NIF"
+               value="{{ proveedor.NIF or '' }}"
+               class="form-control form-control-sm">
+      </div>
+
+      <div class="col-md-9">
+        <label class="form-label mb-1">Nombre / Razón social</label>
+        <input type="text"
+               name="Nombre_Razon_Social"
+               value="{{ proveedor.Nombre_Razon_Social or '' }}"
+               class="form-control form-control-sm">
+      </div>
+    </div>
+
+
+    <hr class="my-2">
+
+    {# ------------------------------------------------------------------------
+       3.2 BLOQUE DIRECCIÓN POSTAL
+       ------------------------------------------------------------------------
+       - Provincia: texto descriptivo de la provincia (no el id).
+       - Poblacion: ciudad o población.
+       - Codigo_Postal: CP (habitualmente 5 dígitos).
+       - Domicilio: calle + número + resto.
+       ------------------------------------------------------------------------ #}
+    <div class="row g-2">
+      <div class="col-md-3">
+        <label class="form-label mb-1">Provincia</label>
+        <input type="text"
+               name="Provincia"
+               value="{{ proveedor.Provincia or '' }}"
+               class="form-control form-control-sm">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label mb-1">Población</label>
+        <input type="text"
+               name="Poblacion"
+               value="{{ proveedor.Poblacion or '' }}"
+               class="form-control form-control-sm">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label mb-1">Código Postal</label>
+        <input type="text"
+               name="Codigo_Postal"
+               value="{{ proveedor.Codigo_Postal or '' }}"
+               class="form-control form-control-sm">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label mb-1">Domicilio</label>
+        <input type="text"
+               name="Domicilio"
+               value="{{ proveedor.Domicilio or '' }}"
+               class="form-control form-control-sm">
+      </div>
+    </div>
+
+
+    <div class="row g-2 mt-2">
+
+      {# ----------------------------------------------------------------------
+         3.3 BLOQUE CONTACTO COMERCIAL BÁSICO
+         ----------------------------------------------------------------------
+         - Telefono: número principal del proveedor.
+         - telefono_movil: móvil de contacto comercial.
+         - correo_electronico_comercial: email del departamento comercial.
+         - ALIAS: nombre corto o alias para identificar al proveedor.
+         ---------------------------------------------------------------------- #}
+      <div class="col-md-3">
+        <label class="form-label mb-1">Teléfono</label>
+        <input type="text"
+               name="Telefono"
+               value="{{ proveedor.Telefono or '' }}"
+               class="form-control form-control-sm">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label mb-1">Teléfono móvil comercial</label>
+        <input type="text"
+               name="telefono_movil"
+               value="{{ proveedor.telefono_movil or '' }}"
+               class="form-control form-control-sm">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label mb-1">Correo comercial</label>
+        <input type="email"
+               name="correo_electronico_comercial"
+               value="{{ proveedor.correo_electronico_comercial or '' }}"
+               class="form-control form-control-sm">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label mb-1">Alias</label>
+        <input type="text"
+               name="ALIAS"
+               value="{{ proveedor.ALIAS or '' }}"
+               class="form-control form-control-sm">
+      </div>
+    </div>
+
+
+    <hr class="my-2">
+
+    {# ------------------------------------------------------------------------
+       3.4 BLOQUE PERSONAS DE CONTACTO
+       ------------------------------------------------------------------------
+       - Persona_contacto_comercial: nombre de la persona de comercial.
+       - Persona_contacto_admi: nombre de la persona de administración.
+       - correo_electronico_admi: email del área de administración.
+       ------------------------------------------------------------------------ #}
+    <div class="row g-2">
+      <div class="col-md-4">
+        <label class="form-label mb-1">Persona contacto comercial</label>
+        <input type="text"
+               name="Persona_contacto_comercial"
+               value="{{ proveedor.Persona_contacto_comercial or '' }}"
+               class="form-control form-control-sm">
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label mb-1">Persona contacto administración</label>
+        <input type="text"
+               name="Persona_contacto_admi"
+               value="{{ proveedor.Persona_contacto_admi or '' }}"
+               class="form-control form-control-sm">
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label mb-1">Correo administración</label>
+        <input type="email"
+               name="correo_electronico_admi"
+               value="{{ proveedor.correo_electronico_admi or '' }}"
+               class="form-control form-control-sm">
+      </div>
+    </div>
+
+
+    <hr class="my-2">
+
+    {# ------------------------------------------------------------------------
+       3.5 BLOQUE DATOS ECONÓMICOS / REGISTRALES
+       ------------------------------------------------------------------------
+       - numero_cuenta: IBAN o CCC para pagos.
+       - n_registro: número de registro (ej: registro municipal).
+       - peticion_parquin: nota/código interno sobre petición de parquin.
+       ------------------------------------------------------------------------ #}
+    <div class="row g-2">
+      <div class="col-md-4">
+        <label class="form-label mb-1">Número de cuenta</label>
+        <input type="text"
+               name="numero_cuenta"
+               value="{{ proveedor.numero_cuenta or '' }}"
+               class="form-control form-control-sm">
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label mb-1">Nº registro</label>
+        <input type="text"
+               name="n_registro"
+               value="{{ proveedor.n_registro or '' }}"
+               class="form-control form-control-sm">
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label mb-1">Petición parquin</label>
+        <input type="text"
+               name="peticion_parquin"
+               value="{{ proveedor.peticion_parquin or '' }}"
+               class="form-control form-control-sm">
+      </div>
+    </div>
+
+
+    <hr class="my-2">
+
+    {# ------------------------------------------------------------------------
+       3.6 BLOQUE FLAGS / TIPOS DE ACTIVIDAD
+       ------------------------------------------------------------------------
+       Cada flag se representa como un interruptor (switch) Bootstrap:
+       - parquin: el proveedor está asociado al parquin (1/0).
+       - coloca_contenedores: coloca contenedores.
+       - empresa_construccion: empresa de construcción.
+       - vende_material_construccion: vende materiales de construcción.
+       - es_bar: es un bar.
+       - terraza_fija: tiene terraza fija.
+       - terraza_desmontable: tiene terraza desmontable.
+       - restuarante: es restaurante (tal como está escrito en BD).
+       ------------------------------------------------------------------------ #}
+    <div class="row g-2">
+
+      {# MACRO REUTILIZABLE PARA PINTAR UN SWITCH #}
+      {% macro chk(name, label, value) -%}
+        <div class="col-md-2 form-check form-switch">
+          <input class="form-check-input"
+                 type="checkbox"
+                 name="{{ name }}"
+                 value="1"
+                 id="{{ name }}"
+                 {% if value %}checked{% endif %}>
+          <label class="form-check-label small" for="{{ name }}">
+            {{ label }}
+          </label>
+        </div>
+      {%- endmacro %}
+
+      {{ chk('parquin', 'Parquin', proveedor.parquin) }}
+      {{ chk('coloca_contenedores', 'Coloca contenedores', proveedor.coloca_contenedores) }}
+      {{ chk('empresa_construccion', 'Empresa construcción', proveedor.empresa_construccion) }}
+      {{ chk('vende_material_construccion', 'Vende material construcción', proveedor.vende_material_construccion) }}
+      {{ chk('es_bar', 'Bar', proveedor.es_bar) }}
+      {{ chk('terraza_fija', 'Terraza fija', proveedor.terraza_fija) }}
+      {{ chk('terraza_desmontable', 'Terraza desmontable', proveedor.terraza_desmontable) }}
+      {{ chk('restuarante', 'Restaurante', proveedor.restuarante) }}
+
+    </div>
+
+
+    {# ------------------------------------------------------------------------
+       3.7 BOTÓN GUARDAR CAMBIOS
+       ------------------------------------------------------------------------
+       - Envía el formulario por POST.
+       - La vista proveedor_detalle_form realiza el UPDATE en BD.
+       ------------------------------------------------------------------------ #}
+    <div class="mt-3 d-flex justify-content-end">
+      <button type="submit" class="btn btn-sm btn-primary">
+        💾 Guardar cambios
+      </button>
+    </div>
+
+  </form>
+
+</div>
+{% endblock %}

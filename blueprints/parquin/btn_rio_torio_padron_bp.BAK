@@ -1,0 +1,663 @@
+from __future__ import annotations
+
+from datetime import date, timedelta
+from pathlib import Path
+
+from flask import (
+    Blueprint,
+    current_app,
+    flash,
+    redirect,
+    url_for,
+    session,
+    request,
+    render_template,
+)
+
+from services.helpers import rol_required
+from docx import Document
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.shared import Cm
+from db import ejecutar_query, get_connection
+
+
+# =============================================================================
+# 0️⃣ OBJETIVO GENERAL DEL MÓDULO
+# =============================================================================
+# Este módulo implementa un botón independiente dentro del área de Río Torío
+# que permite:
+#   1. Mostrar un formulario donde el usuario selecciona MES y AÑO.
+#   2. Al enviar el formulario, generar un documento Word (.docx) con:
+#       - Relación de abonados y nº de plazas activas.
+#       - Histórico de plazas que han estado ocupadas en algún momento
+#         del periodo (intersección con el mes/año elegido).
+#       - Bajas de plazas registradas en la tabla tbl_historico_plazas
+#         durante ese mes (si no hay bajas, se muestra "SIN BAJAS EN ESTE MES").
+#   3. Guardar el archivo generado en una carpeta "padron" del proyecto,
+#      con nombre <Mes>_<Año>_Padron_de_parking_Rio_Torio.docx.
+# El acceso a la vista está restringido por rol a "gestor" y "super_admin".
+# =============================================================================
+
+
+# =============================================================================
+# 1️⃣ RUTAS DE ARCHIVOS Y NOMBRES DE MESES
+# =============================================================================
+
+# BASE_DIR apunta a la carpeta raíz del proyecto (tubby_app),
+# partiendo de la ubicación de este fichero (blueprint).
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+
+def localizar_padron(base_dir: Path) -> Path | None:
+    """
+    Busca recursivamente, a partir de base_dir, un directorio llamado 'padron'.
+
+    Si lo encuentra, devuelve la primera ruta que coincida.
+    Si no existe ningún directorio con ese nombre, devuelve None.
+
+    Esto permite tener flexibilidad de ubicación (por ejemplo,
+    parquin/padron o cualquier subcarpeta que se llame igual).
+    """
+    for p in base_dir.rglob("padron"):
+        if p.is_dir():
+            return p
+    return None
+
+
+# Intentamos localizar un directorio 'padron' en el proyecto.
+PADRON_DIR = localizar_padron(BASE_DIR)
+
+# Si no se encuentra ninguno de forma recursiva,
+# se fija por defecto la ruta tubby_app/parquin/padron.
+if PADRON_DIR is None:
+    PADRON_DIR = BASE_DIR / "parquin" / "padron"
+
+# RUTA_DESTINO será la carpeta donde se guardarán los .docx generados.
+RUTA_DESTINO = PADRON_DIR
+
+
+# Lista de nombres de meses en castellano.
+# El índice 0 se deja vacío para poder acceder por número de mes (1-12).
+MESES_ES = [
+    "",  # 0 (no se usa)
+    "enero",
+    "febrero",
+    "marzo",
+    "abril",
+    "mayo",
+    "junio",
+    "julio",
+    "agosto",
+    "septiembre",
+    "octubre",
+    "noviembre",
+    "diciembre",
+]
+
+
+# =============================================================================
+# 2️⃣ BLUEPRINT DEL BOTÓN DE PADRÓN RÍO TORÍO
+# =============================================================================
+
+# Definimos un Blueprint específico para el botón de padrón de Río Torío.
+# - name: "btn_rio_torio_padron" → sirve como prefijo de endpoint en url_for.
+# - url_prefix: todas las rutas de este blueprint colgarán de /parquin/rio_torio.
+btn_rio_torio_padron_bp = Blueprint(
+    "btn_rio_torio_padron_bp",
+    __name__,
+    url_prefix="/parquin/rio_torio",
+)
+
+
+# =============================================================================
+# 3️⃣ HELPERS SQL: ABONADOS, PLAZAS, HISTÓRICO Y BAJAS
+# =============================================================================
+
+def _obtener_abonados_y_plazas():
+    """
+    Obtiene la información de abonados y sus plazas actuales.
+
+    Devuelve:
+      - abonados: lista de dicts con:
+          · nombre_razon_social
+          · nif
+          · total_plazas (nº de plazas asignadas).
+      - plazas_por_abonado: diccionario donde la clave es el nombre_razon_social
+        y el valor es una lista de códigos de plaza (codigo_plaza) asociados.
+
+    Utiliza:
+      - parquin_camiones.tbl_usuarios (relación usuario-proveedor).
+      - bd_tbl_comunes.tbl_proveedores (nombre y nif).
+      - parquin_camiones.tbl_plazas (plazas asignadas a usuarios).
+    """
+    # Consulta para obtener abonados y total de plazas
+    sql_abonados = """
+        SELECT
+            pr.Nombre_Razon_Social AS nombre_razon_social,
+            pr.NIF                 AS nif,
+            COUNT(p.idtbl_plazas)  AS total_plazas
+        FROM parquin_camiones.tbl_usuarios AS u
+        INNER JOIN bd_tbl_comunes.tbl_proveedores AS pr
+            ON u.idtbl_proveedores = pr.Idtbl_proveedores
+        INNER JOIN parquin_camiones.tbl_plazas AS p
+            ON p.idtbl_usuarios = u.idtbl_usuarios
+        GROUP BY pr.Idtbl_proveedores, pr.Nombre_Razon_Social, pr.NIF
+        ORDER BY pr.Nombre_Razon_Social
+    """
+    abonados = ejecutar_query(sql_abonados, nombre_bd="bd_tbl_comunes")
+
+    # Consulta para obtener el detalle de códigos de plaza por abonado
+    sql_plazas = """
+        SELECT
+            pr.Nombre_Razon_Social AS nombre_razon_social,
+            p.codigo_plazas        AS codigo_plaza
+        FROM parquin_camiones.tbl_usuarios AS u
+        INNER JOIN bd_tbl_comunes.tbl_proveedores AS pr
+            ON u.idtbl_proveedores = pr.Idtbl_proveedores
+        INNER JOIN parquin_camiones.tbl_plazas AS p
+            ON p.idtbl_usuarios = u.idtbl_usuarios
+        ORDER BY pr.Nombre_Razon_Social, p.fila, p.codigo_plazas
+    """
+    filas_plazas = ejecutar_query(sql_plazas, nombre_bd="bd_tbl_comunes")
+
+    # Construimos un diccionario nombre -> lista de códigos de plaza
+    plazas_por_abonado: dict[str, list[str]] = {}
+    for fila in filas_plazas:
+        nom = fila["nombre_razon_social"]
+        cod = fila["codigo_plaza"]
+        plazas_por_abonado.setdefault(nom, []).append(cod)
+
+    return abonados, plazas_por_abonado
+
+
+def _obtener_historico_plazas(fecha_inicio_periodo, fecha_fin_periodo):
+    """
+    Obtiene el histórico de plazas que han estado ocupadas en algún momento
+    dentro del periodo [fecha_inicio_periodo, fecha_fin_periodo].
+
+    Criterio de inclusión:
+      - Una plaza se considera parte del histórico del periodo si:
+          · fecha_inicio <= fecha_fin_periodo
+          · y (fecha_fin IS NULL o fecha_fin >= fecha_inicio_periodo)
+
+    Es decir, seleccionamos todas las ocupaciones cuyo intervalo de uso
+    se solapa con el intervalo del mes consultado, incluyendo plazas
+    que empezaron antes del mes y/o terminaron después.
+    """
+    sql_hist = """
+        SELECT
+            p.codigo_plazas        AS codigo_plaza,
+            p.fila                 AS fila,
+            p.numero_expediente    AS numero_expediente,
+            p.fecha_inicio         AS fecha_inicio,
+            p.fecha_fin            AS fecha_fin,
+            pr.Nombre_Razon_Social AS nombre_razon_social,
+            pr.NIF                 AS nif
+        FROM parquin_camiones.tbl_plazas AS p
+        LEFT JOIN parquin_camiones.tbl_usuarios AS u
+            ON u.idtbl_usuarios = p.idtbl_usuarios
+        LEFT JOIN bd_tbl_comunes.tbl_proveedores AS pr
+            ON pr.Idtbl_proveedores = u.idtbl_proveedores
+        WHERE
+            p.fecha_inicio IS NOT NULL
+            AND p.fecha_inicio <= %s
+            AND (p.fecha_fin IS NULL OR p.fecha_fin >= %s)
+        ORDER BY p.fila, p.codigo_plazas, p.fecha_inicio
+    """
+    # Parámetros:
+    #   1) fecha_fin_periodo: para la condición p.fecha_inicio <= fin_periodo
+    #   2) fecha_inicio_periodo: para la condición fecha_fin >= inicio_periodo
+    params = (
+        fecha_fin_periodo,
+        fecha_inicio_periodo,
+    )
+    return ejecutar_query(sql_hist, params=params, nombre_bd="bd_tbl_comunes")
+
+
+def _obtener_bajas_mes(fecha_inicio_periodo, fecha_fin_periodo):
+    """
+    Obtiene las bajas de plazas registradas en tbl_historico_plazas
+    dentro del mes consultado.
+
+    Estructura de la tabla tbl_historico_plazas:
+      - idtbl_historico_plazas
+      - idtbl_plazas
+      - idtbl_proveedores
+      - fecha_inicio
+      - fecha_baja
+      - exp_solicitud_fin
+
+    Criterio de selección:
+      - Solo filas con fecha_baja no nula.
+      - Con fecha_baja entre fecha_inicio_periodo y fecha_fin_periodo (inclusive).
+
+    Mediante JOIN se añaden:
+      - código de plaza y fila desde parquin_camiones.tbl_plazas.
+      - nombre y NIF desde bd_tbl_comunes.tbl_proveedores.
+    """
+    sql_bajas = """
+        SELECT
+            h.fecha_baja           AS fecha_baja,
+            p.codigo_plazas        AS codigo_plaza,
+            p.fila                 AS fila,
+            pr.Nombre_Razon_Social AS nombre_razon_social,
+            pr.NIF                 AS nif
+        FROM parquin_camiones.tbl_historico_plazas AS h
+        INNER JOIN parquin_camiones.tbl_plazas AS p
+            ON p.idtbl_plazas = h.idtbl_plazas
+        INNER JOIN bd_tbl_comunes.tbl_proveedores AS pr
+            ON pr.Idtbl_proveedores = h.idtbl_proveedores
+        WHERE
+            h.fecha_baja IS NOT NULL
+            AND h.fecha_baja BETWEEN %s AND %s
+        ORDER BY h.fecha_baja, p.fila, p.codigo_plazas
+    """
+    params = (fecha_inicio_periodo, fecha_fin_periodo)
+    return ejecutar_query(sql_bajas, params=params, nombre_bd="parquin_camiones")
+
+def _obtener_resumen_plazas_rio_torio() -> dict:
+    """
+    Devuelve un resumen de plazas del parquin Rio Torio:
+      - totales
+      - libres
+      - ocupadas
+
+    Basado en:
+      - BD: parquin_camiones
+      - Tabla: tbl_plazas
+      - Una plaza está ocupada si idtbl_usuarios IS NOT NULL.
+    """
+    conn = get_connection("parquin_camiones")
+    cursor = conn.cursor(dictionary=True)
+
+    cursor.execute(
+        """
+        SELECT
+            COUNT(*) AS total,
+            SUM(CASE WHEN idtbl_usuarios IS NULL THEN 1 ELSE 0 END) AS libres,
+            SUM(CASE WHEN idtbl_usuarios IS NOT NULL THEN 1 ELSE 0 END) AS ocupadas
+        FROM tbl_plazas
+        """
+    )
+    row = cursor.fetchone() or {"total": 0, "libres": 0, "ocupadas": 0}
+
+    cursor.close()
+    conn.close()
+
+    return {
+        "totales": row["total"],
+        "libres": row["libres"],
+        "ocupadas": row["ocupadas"],
+    }
+# =============================================================================
+# 4️⃣ FUNCIÓN PRINCIPAL: GENERAR EL DOCUMENTO WORD
+# =============================================================================
+
+def _generar_informe_word(mes_informe: int, anio_informe: int) -> Path:
+    """
+    Genera el informe mensual de abonados del parking Río Torío
+    para el MES/AÑO indicados, y lo guarda en un archivo .docx.
+
+    Contenido del documento:
+      1. Cabecera y texto introductorio del asunto y destinatario.
+      2. Tabla de abonados con total de plazas activas.
+      3. Listado de plazas por abonado.
+      4. Tabla de histórico de plazas (ocupaciones en el periodo).
+      5. Tabla de bajas registradas en el mes desde tbl_historico_plazas
+         o, si no hay, el texto "SIN BAJAS EN ESTE MES.".
+      6. Párrafo final y firma del Jefe de Policía Local.
+
+    El fichero se guarda en RUTA_DESTINO con nombre:
+      <Mes>_<Año>_Padron_de_parking_Rio_Torio.docx
+    """
+    # -------------------------------------------------------------------------
+    # 4.1 Cálculo del rango de fechas del mes consultado
+    # -------------------------------------------------------------------------
+    # Día 1 del mes seleccionado
+    fecha_inicio_periodo = date(anio_informe, mes_informe, 1)
+
+    # Calculamos el primer día del mes siguiente:
+    #   - Si el mes es diciembre (12), pasamos a enero del año siguiente.
+    #   - En otro caso, sumamos 1 al número de mes manteniendo el año.
+    if mes_informe == 12:
+        fecha_inicio_mes_siguiente = date(anio_informe + 1, 1, 1)
+    else:
+        fecha_inicio_mes_siguiente = date(anio_informe, mes_informe + 1, 1)
+
+    # El último día del mes es el día anterior al primer día del mes siguiente.
+    fecha_fin_periodo = fecha_inicio_mes_siguiente - timedelta(days=1)
+
+    # Nombre del mes en castellano, capitalizado (Enero, Febrero, etc.).
+    nombre_mes = MESES_ES[mes_informe].capitalize()
+
+    # Nombre del fichero de salida (.docx).
+    nombre_fichero = f"{nombre_mes}_{anio_informe}_Padron_de_parking_Rio_Torio.docx"
+
+    # -------------------------------------------------------------------------
+    # 4.2 Preparación de la ruta de destino
+    # -------------------------------------------------------------------------
+    # Aseguramos que la carpeta de destino exista (padres incluidos).
+    RUTA_DESTINO.mkdir(parents=True, exist_ok=True)
+
+    # Ruta completa del archivo que se va a generar.
+    ruta_completa = RUTA_DESTINO / nombre_fichero
+
+    # -------------------------------------------------------------------------
+    # 4.3 Creación del documento Word y cabeceras
+    # -------------------------------------------------------------------------
+    document = Document()
+    section = document.sections[0]
+    hoy = date.today()
+
+    # Cabecera del documento (encabezado de sección).
+    header = section.header
+    header_paragraph = header.paragraphs[0]
+    header_paragraph.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+    header_paragraph.add_run("Jefatura de Policía Local\nAdministración")
+
+    # Ajuste de márgenes (por ejemplo, 3 cm a la izquierda).
+    section.left_margin = Cm(3)
+
+    # Párrafo de "ASUNTO" en negrita, justificado.
+    p_asunto = document.add_paragraph()
+    p_asunto.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+    p_asunto.add_run(
+        "ASUNTO: Comunicación de las modificaciones de los abonados del "
+        "parking de camiones de la Calle Río Torío."
+    ).bold = True
+
+    # Párrafo de "Interesado".
+    document.add_paragraph()
+    p_interesado = document.add_paragraph()
+    p_interesado.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+    p_interesado.add_run("Interesado: Gestión Tributaria.")
+
+    # Párrafo introductorio que indica el mes y año del informe.
+    document.add_paragraph()
+    p_comunico = document.add_paragraph()
+    p_comunico.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+    # Se aplica sangría de primera línea para apariencia formal.
+    p_comunico.paragraph_format.first_line_indent = Cm(2)
+    p_comunico.add_run(
+        f"Comunico a Vd. que durante el mes de {nombre_mes} de {anio_informe} "
+        "la relación de abonados es la siguiente:"
+    )
+    document.add_paragraph()
+
+    # -------------------------------------------------------------------------
+    # 4.4 Obtención de datos desde la base de datos
+    # -------------------------------------------------------------------------
+    # · abonados: listado con nombre, nif, total de plazas.
+    # · plazas_por_abonado: diccionario nombre -> lista de códigos de plaza.
+    abonados, plazas_por_abonado = _obtener_abonados_y_plazas()
+
+    # · historico_plazas: ocupaciones que se solapan con el periodo consultado.
+    historico_plazas = _obtener_historico_plazas(
+        fecha_inicio_periodo,
+        fecha_fin_periodo,
+    )
+
+    # · bajas_mes: bajas registradas en tbl_historico_plazas en el periodo.
+    bajas_mes = _obtener_bajas_mes(
+        fecha_inicio_periodo,
+        fecha_fin_periodo,
+    )
+
+    # -------------------------------------------------------------------------
+    # 4.5 Tabla de abonados y relación de plazas
+    # -------------------------------------------------------------------------
+    if abonados:
+        # Creamos una tabla con cabecera y tres columnas:
+        # "Nombre / Razón social", "NIF", "Total plazas".
+        table = document.add_table(rows=1, cols=3)
+        table.style = "Table Grid"
+        hdr_cells = table.rows[0].cells
+        hdr_cells[0].text = "Nombre / Razón social"
+        hdr_cells[1].text = "NIF"
+        hdr_cells[2].text = "Total plazas"
+
+        # Añadimos una fila por cada abonado.
+        for a in abonados:
+            row_cells = table.add_row().cells
+            row_cells[0].text = str(a["nombre_razon_social"])
+            row_cells[1].text = str(a["nif"])
+            row_cells[2].text = str(a["total_plazas"])
+
+        # Texto previo al listado de códigos de plaza por abonado.
+        document.add_paragraph()
+        p_relacion = document.add_paragraph()
+        p_relacion.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+        p_relacion.paragraph_format.first_line_indent = Cm(2)
+        p_relacion.add_run("Relación de plazas por cada abonado:")
+
+        # Para cada abonado, se escribe un párrafo con sus códigos de plaza.
+        for nom, lista_plazas in plazas_por_abonado.items():
+            p = document.add_paragraph()
+            p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+            p.paragraph_format.first_line_indent = Cm(2)
+            # El nombre del abonado en negrita.
+            p.add_run(f"{nom}: ").bold = True
+            # A continuación, la lista de plazas separadas por coma.
+            if lista_plazas:
+                p.add_run(", ".join(lista_plazas))
+            else:
+                p.add_run("Sin plazas asignadas.")
+    else:
+        # Si no existe ningún abonado, se indica expresamente en cursiva.
+        p_sin = document.add_paragraph()
+        p_sin.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+        p_sin.add_run("Actualmente no existen abonados registrados.").italic = True
+
+    document.add_paragraph()
+
+    # -------------------------------------------------------------------------
+    # 4.6 Tabla de histórico de plazas (ocupaciones en el periodo)
+    # -------------------------------------------------------------------------
+    if historico_plazas:
+        # Título de la sección de histórico.
+        p_hist_titulo = document.add_paragraph()
+        p_hist_titulo.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+        p_hist_titulo.paragraph_format.first_line_indent = Cm(2)
+        p_hist_titulo.add_run(
+            "Histórico de plazas con altas/bajas durante el periodo:"
+        ).bold = True
+
+        # Tabla con columnas: Plaza, Fila, Abonado, NIF, Fecha inicio, Fecha fin.
+        table_hist = document.add_table(rows=1, cols=6)
+        table_hist.style = "Table Grid"
+        hdr = table_hist.rows[0].cells
+        hdr[0].text = "Plaza"
+        hdr[1].text = "Fila"
+        hdr[2].text = "Abonado"
+        hdr[3].text = "NIF"
+        hdr[4].text = "Fecha inicio"
+        hdr[5].text = "Fecha fin"
+
+        # Añadimos una fila por cada registro del histórico.
+        for h in historico_plazas:
+            row = table_hist.add_row().cells
+            row[0].text = str(h.get("codigo_plaza") or "")
+            row[1].text = str(h.get("fila") or "")
+            row[2].text = str(h.get("nombre_razon_social") or "")
+            row[3].text = str(h.get("nif") or "")
+            fecha_ini = h.get("fecha_inicio")
+            fecha_fin = h.get("fecha_fin")
+            row[4].text = fecha_ini.strftime("%d/%m/%Y") if fecha_ini else ""
+            row[5].text = fecha_fin.strftime("%d/%m/%Y") if fecha_fin else ""
+
+        document.add_paragraph()
+
+    # -------------------------------------------------------------------------
+    # 4.7 Tabla de bajas del mes (tbl_historico_plazas)
+    # -------------------------------------------------------------------------
+    p_bajas_titulo = document.add_paragraph()
+    p_bajas_titulo.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+    p_bajas_titulo.paragraph_format.first_line_indent = Cm(2)
+    p_bajas_titulo.add_run(
+        "Bajas de plazas registradas durante el mes:"
+    ).bold = True
+
+    if bajas_mes:
+        # Tabla con encabezado: Fecha baja, Plaza, Fila, Abonado, NIF.
+        table_bajas = document.add_table(rows=1, cols=5)
+        table_bajas.style = "Table Grid"
+        hdr_b = table_bajas.rows[0].cells
+        hdr_b[0].text = "Fecha baja"
+        hdr_b[1].text = "Plaza"
+        hdr_b[2].text = "Fila"
+        hdr_b[3].text = "Abonado"
+        hdr_b[4].text = "NIF"
+
+        # Una fila por cada baja registrada en el periodo.
+        for b in bajas_mes:
+            rowb = table_bajas.add_row().cells
+            fb = b.get("fecha_baja")
+            rowb[0].text = fb.strftime("%d/%m/%Y") if fb else ""
+            rowb[1].text = str(b.get("codigo_plaza") or "")
+            rowb[2].text = str(b.get("fila") or "")
+            rowb[3].text = str(b.get("nombre_razon_social") or "")
+            rowb[4].text = str(b.get("nif") or "")
+    else:
+        # Si no existieron bajas en el mes, se indica con un texto en negrita.
+        p_sin_bajas = document.add_paragraph()
+        p_sin_bajas.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+        p_sin_bajas.paragraph_format.first_line_indent = Cm(2)
+        p_sin_bajas.add_run("SIN BAJAS EN ESTE MES.").bold = True
+
+    document.add_paragraph()
+
+    # -------------------------------------------------------------------------
+    # 4.8 Párrafo final y firma
+    # -------------------------------------------------------------------------
+    # Texto de cierre estándar.
+    p_final = document.add_paragraph()
+    p_final.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+    p_final.paragraph_format.first_line_indent = Cm(2)
+    p_final.add_run(
+        "Lo que comunico a Vd., para su conocimiento y efectos oportunos."
+    )
+
+    # Fecha de firma (fecha actual) centrada.
+    document.add_paragraph()
+    p_firma_fecha = document.add_paragraph()
+    p_firma_fecha.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    p_firma_fecha.add_run(f"En Ávila, a {hoy.strftime('%d/%m/%Y')}.")
+
+    # Cargo del firmante.
+    document.add_paragraph()
+    p_cargo = document.add_paragraph()
+    p_cargo.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    p_cargo.add_run("El Jefe de la Policía Local.")
+
+    # Nombre del firmante.
+    document.add_paragraph()
+    p_nombre = document.add_paragraph()
+    p_nombre.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    p_nombre.add_run("D. Carlos Blanco Rubio")
+
+    # Indicación de firma digital.
+    p_digital = document.add_paragraph()
+    p_digital.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    p_digital.add_run("(documento firmado digitalmente)").italic = True
+
+    # Guardamos el documento en disco y devolvemos la ruta completa.
+    document.save(ruta_completa)
+    return ruta_completa
+
+
+# =============================================================================
+# 5️⃣ VISTA DEL BOTÓN: FORMULARIO (GET) + GENERACIÓN (POST)
+# =============================================================================
+
+@btn_rio_torio_padron_bp.route(
+    "/btn_rio_torio_padron_bp",
+    methods=["GET", "POST"],
+)
+@rol_required("gestor", "super_admin")
+def btn_rio_torio_padron():
+    """
+    Vista asociada al botón de generación del padrón mensual (Río Torío).
+
+    Flujo:
+      - Si el usuario no tiene sesión iniciada → redirige a login.
+      - Si la petición es GET:
+          · Calcula un mes y año por defecto (el mes anterior).
+          · Renderiza el formulario para que el usuario elija MES y AÑO.
+      - Si la petición es POST:
+          · Valida los valores de MES y AÑO.
+          · Llama a _generar_informe_word(mes, año).
+          · Muestra un mensaje flash de éxito o error.
+          · Redirige de nuevo al formulario.
+    """
+    # -------------------------------------------------------------------------
+    # 5.1 Control de acceso: verificar que el usuario tiene sesión
+    # -------------------------------------------------------------------------
+    if not session.get("user_id"):
+        flash("Debes iniciar sesión", "danger")
+        return redirect(url_for("auth_bp.login"))
+
+    # -------------------------------------------------------------------------
+    # 5.2 Petición GET: mostrar formulario con mes/año por defecto
+    # -------------------------------------------------------------------------
+    if request.method == "GET":
+        hoy = date.today()
+
+        # Lógica para el mes por defecto:
+        #   - Si estamos en enero, por defecto se propone diciembre del año anterior.
+        #   - En otro caso, se propone el mes anterior del mismo año.
+        if hoy.month == 1:
+            mes_defecto = 12
+            anio_defecto = hoy.year - 1
+        else:
+            mes_defecto = hoy.month - 1
+            anio_defecto = hoy.year
+
+        # Renderiza una plantilla HTML con el formulario,
+        # pasándole:
+        #   - la lista de nombres de meses,
+        #   - el mes por defecto,
+        #   - el año por defecto.
+        return render_template(
+            "parquin/rio_torio/rio_torio_padron_form.html",
+            meses=MESES_ES,
+            mes_defecto=mes_defecto,
+            anio_defecto=anio_defecto,
+        )
+
+    # -------------------------------------------------------------------------
+    # 5.3 Petición POST: procesar formulario y generar el informe
+    # -------------------------------------------------------------------------
+    # Recuperamos mes y año desde los campos del formulario.
+    mes_str = request.form.get("mes")
+    anio_str = request.form.get("anio")
+
+    # Intentamos convertirlos a enteros y validar el rango del mes.
+    try:
+        mes = int(mes_str)
+        anio = int(anio_str)
+        if mes < 1 or mes > 12:
+            raise ValueError("Mes fuera de rango")
+    except Exception:
+        # Si algo falla (valores vacíos, no numéricos, fuera de rango...),
+        # se muestra un mensaje de error y se redirige al propio formulario.
+        flash("Mes o año no válidos.", "danger")
+        return redirect(url_for("btn_rio_torio_padron.btn_rio_torio_padron"))
+
+    # -------------------------------------------------------------------------
+    # 5.4 Llamada a la generación del informe y gestión de errores
+    # -------------------------------------------------------------------------
+    try:
+        ruta = _generar_informe_word(mes, anio)
+        # Si todo va bien, se informa del nombre del archivo generado.
+        flash(f"Informe generado correctamente: {ruta.name}", "success")
+    except Exception as e:
+        # En caso de error, se deja registro en el log de la aplicación
+        # y se muestra un mensaje flash de error genérico al usuario.
+        current_app.logger.error(f"Error generando padrón Rio Torío: {e}")
+        flash("Error generando el informe de padrón.", "danger")
+
+    # Tras el proceso (éxito o error), se redirige de nuevo al formulario
+    # para permitir generar otro mes o simplemente mostrar el resultado.
+    return redirect(
+        url_for("btn_rio_torio_padron_bp.btn_rio_torio_padron")
+    )

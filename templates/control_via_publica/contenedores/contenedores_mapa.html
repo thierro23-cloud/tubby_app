@@ -1,0 +1,647 @@
+{# templates/control_obras/contenedores_mapa.html #}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Mapa de contenedores · Panel orbital</title>
+
+    {# Leaflet CSS #}
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+        crossorigin=""
+    />
+
+    <style>
+        /* Reset básico */
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+                         Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+            background: radial-gradient(circle at top, #0f172a 0, #020617 40%, #000 100%);
+            color: #e5e7eb;
+            overflow: hidden;
+        }
+
+        /* Contenedor general: panel lateral + mapa */
+        .layout {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            height: 100vh;
+            position: relative;
+        }
+
+        /* Panel lateral tipo “HUD” */
+        .sidebar {
+            background: linear-gradient(180deg, rgba(15,23,42,0.95), rgba(15,23,42,0.98));
+            border-right: 1px solid rgba(148,163,184,0.3);
+            box-shadow: 0 0 40px rgba(15,23,42,0.9);
+            padding: 20px 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            position: relative;
+            overflow-y: auto;
+        }
+
+        .sidebar::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background-image:
+                radial-gradient(circle at 0 0, rgba(56,189,248,0.12) 0, transparent 55%),
+                radial-gradient(circle at 100% 100%, rgba(248,113,113,0.16) 0, transparent 60%);
+            opacity: 0.8;
+            pointer-events: none;
+            mix-blend-mode: screen;
+        }
+
+        .sidebar-inner {
+            position: relative;
+            z-index: 1;
+        }
+
+        .sidebar-header {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .tagline {
+            font-size: 0.75rem;
+            letter-spacing: .18em;
+            text-transform: uppercase;
+            color: #64748b;
+        }
+
+        .title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: #e5e7eb;
+        }
+
+        .title-badge {
+            font-size: 0.68rem;
+            letter-spacing: .18em;
+            text-transform: uppercase;
+            padding: 3px 8px;
+            border-radius: 999px;
+            border: 1px solid rgba(96,165,250,0.5);
+            background: radial-gradient(circle at 20% 0, rgba(96,165,250,0.32), transparent 60%);
+            color: #bfdbfe;
+        }
+
+        .subtitle {
+            font-size: 0.8rem;
+            color: #9ca3af;
+            margin-top: 4px;
+        }
+
+        hr.divider {
+            border: none;
+            border-top: 1px solid rgba(75,85,99,0.7);
+            margin: 10px 0 12px;
+        }
+
+        /* Tarjetas / secciones dentro del panel */
+        .panel-section {
+            border-radius: 14px;
+            border: 1px solid rgba(148,163,184,0.4);
+            background:
+                linear-gradient(135deg, rgba(15,23,42,0.95), rgba(15,23,42,0.98)),
+                radial-gradient(circle at 0 0, rgba(96,165,250,0.2), transparent 55%);
+            padding: 10px 12px;
+            box-shadow: 0 0 15px rgba(15,23,42,0.9);
+            margin-bottom: 8px;
+        }
+
+        .panel-section h3 {
+            margin: 0 0 6px;
+            font-size: 0.78rem;
+            letter-spacing: .2em;
+            text-transform: uppercase;
+            color: #9ca3af;
+        }
+
+        .panel-section p {
+            margin: 0;
+            font-size: 0.8rem;
+            color: #d1d5db;
+        }
+
+        /* Leyenda de estados */
+        .legend {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            font-size: 0.78rem;
+        }
+
+        .legend-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .legend-dot {
+            width: 11px;
+            height: 11px;
+            border-radius: 999px;
+            box-shadow: 0 0 10px currentColor;
+        }
+
+        .legend-dot.instalado {
+            background: #f97373;
+            color: #f97373;
+        }
+
+        .legend-dot.retirado {
+            background: #22c55e;
+            color: #22c55e;
+        }
+
+        /* Filtros rápidos */
+        .filters {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .chip {
+            font-size: 0.75rem;
+            padding: 4px 10px;
+            border-radius: 999px;
+            border: 1px solid rgba(148,163,184,0.6);
+            background: rgba(15,23,42,0.9);
+            color: #e5e7eb;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.18s ease-out;
+        }
+
+        .chip span.dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 999px;
+        }
+
+        .chip dot-inst { background: #f97373; }
+        .chip dot-ret { background: #22c55e; }
+
+        .chip.active {
+            background: radial-gradient(circle at 20% 0, rgba(96,165,250,0.6), rgba(59,130,246,0.3));
+            border-color: rgba(129,140,248,0.9);
+            box-shadow: 0 0 14px rgba(59,130,246,0.8);
+        }
+
+        /* Contador */
+        .stats {
+            display: flex;
+            gap: 10px;
+            margin-top: 4px;
+        }
+
+        .stat-pill {
+            flex: 1;
+            border-radius: 11px;
+            border: 1px solid rgba(148,163,184,0.5);
+            padding: 6px 8px;
+            font-size: 0.72rem;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .stat-label {
+            color: #9ca3af;
+        }
+
+        .stat-value {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #e5e7eb;
+        }
+
+        /* Mapa Leaflet */
+        #map {
+            width: 100%;
+            height: 100vh;
+            position: relative;
+            z-index: 0;
+        }
+
+        /* Popups Leaflet personalizados */
+        .leaflet-popup-content-wrapper {
+            background: rgba(15,23,42,0.96);
+            border-radius: 12px;
+            border: 1px solid rgba(148,163,184,0.7);
+            box-shadow: 0 0 20px rgba(15,23,42,0.9);
+        }
+
+        .leaflet-popup-tip {
+            background: rgba(15,23,42,0.96);
+            border: 1px solid rgba(148,163,184,0.7);
+        }
+
+        .popup-card {
+            font-size: 0.8rem;
+            color: #e5e7eb;
+        }
+
+        .popup-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+
+        .popup-tag {
+            font-size: 0.65rem;
+            padding: 2px 6px;
+            border-radius: 999px;
+            letter-spacing: .14em;
+            text-transform: uppercase;
+            border: 1px solid rgba(148,163,184,0.7);
+        }
+
+        .popup-tag.instalado {
+            border-color: rgba(248,113,113,0.9);
+            color: #fecaca;
+        }
+
+        .popup-tag.retirado {
+            border-color: rgba(34,197,94,0.9);
+            color: #bbf7d0;
+        }
+
+        .popup-title {
+            font-weight: 600;
+        }
+
+        .popup-body-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .popup-label {
+            color: #9ca3af;
+        }
+
+        /* Efectos HUD flotantes en el mapa */
+        .hud-overlay {
+            position: absolute;
+            right: 16px;
+            top: 10px;
+            z-index: 400;
+            display: flex;
+            gap: 8px;
+            pointer-events: none;
+        }
+
+        .hud-pill {
+            pointer-events: auto;
+            font-size: 0.7rem;
+            border-radius: 999px;
+            padding: 4px 10px;
+            background: rgba(15,23,42,0.92);
+            border: 1px solid rgba(148,163,184,0.7);
+            color: #e5e7eb;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .hud-pill span.dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 999px;
+            background: #22c55e;
+            box-shadow: 0 0 10px #22c55e;
+        }
+
+        .hud-pill span.dot-red {
+            background: #f97373;
+            box-shadow: 0 0 10px #f97373;
+        }
+
+        .hud-pill-label {
+            text-transform: uppercase;
+            letter-spacing: .14em;
+            color: #9ca3af;
+        }
+
+        /* Responsivo: ocultar panel lateral en pantallas muy pequeñas */
+        @media (max-width: 900px) {
+            .layout {
+                grid-template-columns: 1fr;
+            }
+            .sidebar {
+                position: absolute;
+                z-index: 500;
+                width: 280px;
+                height: 100vh;
+                transform: translateX(-100%);
+                transition: transform 0.25s ease-out;
+            }
+            .sidebar.open {
+                transform: translateX(0);
+            }
+            .map-toggle {
+                position: absolute;
+                z-index: 600;
+                left: 10px;
+                top: 10px;
+                background: rgba(15,23,42,0.96);
+                border-radius: 999px;
+                border: 1px solid rgba(148,163,184,0.7);
+                padding: 4px 10px;
+                font-size: 0.75rem;
+                color: #e5e7eb;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+            }
+        }
+
+        @media (min-width: 901px) {
+            .map-toggle {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="layout">
+
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-inner">
+            <div class="sidebar-header">
+                <div class="tagline">VÍA PÚBLICA · CONTAINERS</div>
+                <div class="title">
+                    <span>Mapa de contenedores</span>
+                    <span class="title-badge">NIVEL ESTELAR</span>
+                </div>
+                <div class="subtitle">
+                    Vista orbital de contenedores de obra, proyectados sobre coordenadas precalculadas.
+                </div>
+            </div>
+
+            <hr class="divider">
+
+            <div class="panel-section">
+                <h3>Estado</h3>
+                <div class="legend">
+                    <div class="legend-row">
+                        <span class="legend-dot instalado"></span>
+                        <span>Instalado (sin retirada registrada)</span>
+                    </div>
+                    <div class="legend-row">
+                        <span class="legend-dot retirado"></span>
+                        <span>Retirado (con fecha de retirada)</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <h3>Filtros rápidos</h3>
+                <div class="filters">
+                    <div class="chip active" data-filter="all" id="chip-all">
+                        <span class="dot" style="background: linear-gradient(90deg,#f97373,#22c55e);"></span>
+                        Todo
+                    </div>
+                    <div class="chip" data-filter="instalado" id="chip-instalado">
+                        <span class="dot" style="background:#f97373;"></span>
+                        Instalado
+                    </div>
+                    <div class="chip" data-filter="retirado" id="chip-retirado">
+                        <span class="dot" style="background:#22c55e;"></span>
+                        Retirado
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <h3>Telemetría</h3>
+                <div class="stats">
+                    <div class="stat-pill">
+                        <span class="stat-label">Total</span>
+                        <span class="stat-value" id="stat-total">0</span>
+                    </div>
+                    <div class="stat-pill">
+                        <span class="stat-label">Instalados</span>
+                        <span class="stat-value" id="stat-instalado">0</span>
+                    </div>
+                    <div class="stat-pill">
+                        <span class="stat-label">Retirados</span>
+                        <span class="stat-value" id="stat-retirado">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <h3>Detalle rápido</h3>
+                <p id="hover-info">
+                    Sitúa el cursor sobre un marcador para ver un resumen inmediato.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div id="map"></div>
+
+    <button class="map-toggle" id="mapToggle">
+        ☰ Panel
+    </button>
+
+    <div class="hud-overlay">
+        <div class="hud-pill">
+            <span class="dot"></span>
+            <span class="hud-pill-label">Sistema</span>
+            <span>Leaflet · OSM</span>
+        </div>
+        <div class="hud-pill">
+            <span class="dot dot-red"></span>
+            <span class="hud-pill-label">Modo</span>
+            <span>Contenedores obra</span>
+        </div>
+    </div>
+</div>
+
+{# Leaflet JS #}
+<script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+></script>
+
+<script>
+  // Datos desde Flask: lista de contenedores con lat/long, estado, etc.
+  const contenedores = {{ contenedores|tojson|safe }};
+
+  // Mapa base
+ const map = L.map('map', {
+  zoomControl: true,
+}).setView([40.656, -4.681], 13);  // Centro en Ávila
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; OpenStreetMap · Tubby control contenedores'
+  }).addTo(map);
+
+  // Iconos personalizados
+  const iconInstalado = L.icon({
+    iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [0, -32],
+    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+    shadowSize: [41, 41],
+    className: 'marker-instalado'
+  });
+
+  const iconRetirado = L.icon({
+    iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [0, -32],
+    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+    shadowSize: [41, 41],
+    className: 'marker-retirado'
+  });
+
+  // Capas por estado para poder filtrar
+  const layerInstalado = L.layerGroup().addTo(map);
+  const layerRetirado  = L.layerGroup().addTo(map);
+
+  // Estadísticas
+  let countInstalado = 0;
+  let countRetirado  = 0;
+
+  // Para ajustar el bounds al conjunto de marcadores
+  const bounds = [];
+
+  const hoverInfo = document.getElementById('hover-info');
+
+  contenedores.forEach(c => {
+    if (!c.latitud || !c.longitud) return;
+
+    const latLng = [c.latitud, c.longitud];
+    bounds.push(latLng);
+
+    const esRetirado = c.estado === 'retirado';
+
+    const icon = esRetirado ? iconRetirado : iconInstalado;
+    const targetLayer = esRetirado ? layerRetirado : layerInstalado;
+
+    if (esRetirado) {
+      countRetirado++;
+    } else {
+      countInstalado++;
+    }
+
+    const popupHtml = `
+      <div class="popup-card">
+        <div class="popup-header">
+          <div class="popup-title">
+            Expediente <span>#${c.numero_expediente || '—'}</span>
+          </div>
+          <div class="popup-tag ${c.estado}">
+            ${c.estado.toUpperCase()}
+          </div>
+        </div>
+        <div class="popup-body-row">
+          <div>
+            <div class="popup-label">Dirección</div>
+            <div>${c.direccion}</div>
+          </div>
+        </div>
+        <div class="popup-body-row" style="margin-top:4px;">
+          <div>
+            <div class="popup-label">Colocación</div>
+            <div>${c.fecha_colocacion || '—'}</div>
+          </div>
+          <div>
+            <div class="popup-label">Retirada</div>
+            <div>${c.fecha_retirada || '—'}</div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const marker = L.marker(latLng, { icon })
+      .bindPopup(popupHtml);
+
+    marker.on('mouseover', () => {
+      hoverInfo.textContent = `Expediente ${c.numero_expediente || '—'} · ${c.direccion} · ${c.estado}`;
+    });
+
+    marker.on('mouseout', () => {
+      hoverInfo.textContent = 'Sitúa el cursor sobre un marcador para ver un resumen inmediato.';
+    });
+
+    targetLayer.addLayer(marker);
+  });
+
+  // Ajustar el mapa a los bounds si hay marcadores
+  if (bounds.length > 0) {
+    map.fitBounds(bounds, { padding: [40, 40] });
+  }
+
+  // Actualizar stats
+  const statTotal = document.getElementById('stat-total');
+  const statInst  = document.getElementById('stat-instalado');
+  const statRet   = document.getElementById('stat-retirado');
+
+  statInst.textContent  = countInstalado;
+  statRet.textContent   = countRetirado;
+  statTotal.textContent = countInstalado + countRetirado;
+
+  // Filtros por estado
+  const chipAll        = document.getElementById('chip-all');
+  const chipInstalado  = document.getElementById('chip-instalado');
+  const chipRetirado   = document.getElementById('chip-retirado');
+
+  function setActiveChip(chip) {
+    [chipAll, chipInstalado, chipRetirado].forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+  }
+
+  chipAll.addEventListener('click', () => {
+    setActiveChip(chipAll);
+    map.addLayer(layerInstalado);
+    map.addLayer(layerRetirado);
+  });
+
+  chipInstalado.addEventListener('click', () => {
+    setActiveChip(chipInstalado);
+    map.addLayer(layerInstalado);
+    map.removeLayer(layerRetirado);
+  });
+
+  chipRetirado.addEventListener('click', () => {
+    setActiveChip(chipRetirado);
+    map.removeLayer(layerInstalado);
+    map.addLayer(layerRetirado);
+  });
+
+  // Toggle del panel en móvil
+  const sidebar = document.getElementById('sidebar');
+  const mapToggle = document.getElementById('mapToggle');
+
+  mapToggle.addEventListener('click', () => {
+    sidebar.classList.toggle('open');
+  });
+
+</script>
+</body>
+</html>

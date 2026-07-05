@@ -1,0 +1,327 @@
+{# ============================================================================
+  🧩 PLANTILLA: consulta_proveedores_parquin.html
+  OBJETIVO:
+    - Mostrar una lista consultable de proveedores con parquin activado.
+    - Permitir filtrar por nombre/razón social y email.
+    - Visualizar dirección formateada y IDs de localización.
+    - Incluir acciones de edición y (futuro) desactivación de parquin.
+
+  ESTRUCTURA GENERAL:
+    1) <head> · Título, CSS y JS base (Bootstrap + estilos propios + jQuery).
+    2) Cabecera visible · Título y subtítulo explicativo.
+    3) Sección de filtros · Inputs de búsqueda (nombre/email) + botones.
+    4) Sección tabla · Tabla de resultados + mensaje "sin datos".
+    5) JS principal:
+       5.1) cargar()        · Llama a la API backend y obtiene proveedores.
+       5.2) pintarTabla()   · Construye dinámicamente las filas de la tabla.
+       5.3) limpiarFiltros()· Resetea filtros y recarga.
+       5.4) editarProveedor() y desactivarParquin() · Acciones por fila.
+       5.5) $(document).ready() · Carga inicial.
+
+  BACKEND ESPERADO (RESUMEN):
+    - Ruta GET JSON: /consulta_proveedores_parquin/lista
+      · Parámetros opcionales:
+          - nombre: texto para filtrar por Nombre_Razon_Social (LIKE).
+          - email : texto para filtrar por email (según campo que exponga el backend).
+      · Devuelve JSON:
+          {
+            "proveedores": [
+              {
+                "Idtbl_proveedores": INT,
+                "Nombre_Razon_Social": STR,
+                "Domicilio": STR,
+                "Codigo_Postal": STR,
+                "Poblacion": STR,
+                "Provincia": STR,
+                "idtbl_provincias": INT,
+                "idtbl_municipios": INT,
+                "idtbl_tipos_de_vias": INT,
+                "idtbl_calles": INT,
+                "Email": STR,          # nombre de campo que use el backend para email
+                "Telefono": STR,
+                "persona_contacto": STR,
+                "parquin": 0/1
+              },
+              ...
+            ]
+          }
+
+    - Ruta GET HTML:
+        · Esta plantilla se renderiza desde una vista tipo:
+          @bp.route("/consulta_proveedores_parquin")
+          def consulta_proveedores_parquin():
+              return render_template("control_via_publica/rio_torio/consulta_proveedores_parquin.html")
+
+    - Futuro: ruta POST para desactivar parquin:
+        · Endpoint sugerido: POST /consulta_proveedores_parquin/desactivar/<int:id>
+        · Recibe Idtbl_proveedores, pone parquin=0 y devuelve JSON de estado.
+
+  NOTAS DE INTEGRACIÓN:
+    - La URL /consulta_proveedores_parquin/lista debe estar implementada en tu blueprint
+      control_via_publica/rio_torio (o equivalente), devolviendo el JSON con proveedores.
+    - La función editarProveedor(id) debe redirigir a tu formulario general de proveedores.
+      Ajusta la URL dentro de esa función según tu arquitectura actual.
+ ============================================================================ #}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Consulta proveedores con parquin</title>
+
+    <!-- 1) CSS base: Bootstrap 5 para tabla, botones y layout general -->
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+
+    <!-- 2) ESTILOS ESPECÍFICOS DE LA PANTALLA -->
+    <style>
+        /* 2.1. Layout general de la página */
+        body {
+            padding: 1.5rem 2rem;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            margin-bottom: 0.3rem;
+        }
+        .subtitulo {
+            margin-bottom: 1rem;
+            color: #555;
+        }
+
+        /* 2.2. Bloque de filtros superiores */
+        .filtros {
+            margin-bottom: 1rem;
+        }
+        .filtros .form-control {
+            max-width: 250px;
+        }
+
+        /* 2.3. Contenedor visual de la tabla (card ligera) */
+        .tabla-contenedor {
+            background: #ffffff;
+            border-radius: 4px;
+            padding: 0.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+
+        /* 2.4. Columnas de dirección (texto formateado + IDs) */
+        .col-direccion {
+            font-size: 0.85rem;
+            color: #444;
+        }
+        .col-id-dir {
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        /* 2.5. Mensaje cuando no hay datos */
+        .sin-datos {
+            padding: 1rem;
+            text-align: center;
+            color: #777;
+        }
+
+        /* 2.6. Contenedor de botones por fila (acciones) */
+        .acciones {
+            display: flex;
+            gap: .25rem;
+            flex-wrap: wrap;
+        }
+
+        /* 2.7. Badge que indica el estado del parquin */
+        .badge-parquin {
+            font-size: 0.75rem;
+        }
+    </style>
+
+    <!-- 3) jQuery para llamadas AJAX sencillas (puedes sustituirlo por fetch si prefieres) -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+
+    <!-- SECCIÓN 1 · CABECERA VISUAL -->
+    <h1>Proveedores con parquin activado</h1>
+    <p class="subtitulo">
+        Consulta específica de todos los proveedores que tienen parquin activado.
+    </p>
+
+    <!-- SECCIÓN 2 · FILTROS DE BÚSQUEDA -->
+    <!-- 2.1. Filtro por nombre/razón social y email, con botones Buscar/Limpiar -->
+    <div class="filtros row g-2 align-items-end">
+        <div class="col-auto">
+            <label for="filtro_nombre" class="form-label mb-1">Nombre / razón social</label>
+            <input type="text" class="form-control form-control-sm" id="filtro_nombre"
+                   placeholder="Buscar por nombre...">
+        </div>
+        <div class="col-auto">
+            <label for="filtro_email" class="form-label mb-1">Email</label>
+            <input type="text" class="form-control form-control-sm" id="filtro_email"
+                   placeholder="Buscar por email...">
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-sm btn-primary" onclick="cargar()">Buscar</button>
+            <button class="btn btn-sm btn-secondary" onclick="limpiarFiltros()">Limpiar</button>
+        </div>
+        {# Más adelante puedes añadir aquí un botón global de exportar a Excel/CSV. #}
+    </div>
+
+    <!-- SECCIÓN 3 · TABLA DE RESULTADOS -->
+    <!-- 3.1. Contenedor "card" + tabla HTML + mensaje "sin datos" oculto -->
+    <div class="tabla-contenedor">
+        <table class="table table-sm table-striped table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Nombre / Razón social</th>
+                    <th>Dirección (texto)</th>
+                    <th>IDs dirección</th>
+                    <th>Email / Teléfono</th>
+                    <th>Persona contacto</th>
+                    <th>Parquin</th>
+                    <th style="width: 160px;">Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="tbody_proveedores">
+                <!-- Se rellena dinámicamente desde JS (pintarTabla) -->
+            </tbody>
+        </table>
+        <div id="mensaje_sin_datos" class="sin-datos" style="display:none;">
+            No se han encontrado proveedores con parquin activo.
+        </div>
+    </div>
+
+    <!-- SECCIÓN 4 · JS PRINCIPAL: CARGA + PINTADO + ACCIONES -->
+    <script>
+    // 4.1. Función cargar():
+    //      - Llama al backend /consulta_proveedores_parquin/lista (GET JSON).
+    //      - Envía los filtros nombre/email como query params.
+    //      - Recibe lista de proveedores y delega en pintarTabla().
+    function cargar() {
+        const nombre = $("#filtro_nombre").val();
+        const email  = $("#filtro_email").val();
+
+        $.getJSON("/consulta_proveedores_parquin/lista", {
+            nombre: nombre,
+            email: email
+        }, function(r) {
+            const proveedores = r.proveedores || [];
+            pintarTabla(proveedores);
+        }).fail(function() {
+            alert("Error al cargar la lista de proveedores con parquin.");
+        });
+    }
+
+    // 4.2. Función pintarTabla():
+    //      - Recibe un array de proveedores (JSON).
+    //      - Limpia el cuerpo de la tabla.
+    //      - Si no hay datos �?muestra mensaje "sin datos".
+    //      - Si hay datos �?genera filas HTML con:
+    //          · Columna nombre/razón social.
+    //          · Dirección formateada (texto).
+    //          · IDs de dirección (para depuración o integración).
+    //          · Email / teléfono.
+    //          · Persona de contacto.
+    //          · Badge de estado parquin.
+    //          · Botones de acción (editar / desactivar parquin).
+    function pintarTabla(proveedores) {
+        const $tbody = $("#tbody_proveedores");
+        $tbody.empty();
+
+        if (!proveedores.length) {
+            $("#mensaje_sin_datos").show();
+            return;
+        }
+        $("#mensaje_sin_datos").hide();
+
+        proveedores.forEach(function(p) {
+            // 4.2.1. Columna de dirección visible (texto amigable)
+            let direccionTexto = `
+                ${p.Domicilio || ""}<br>
+                ${p.Codigo_Postal || ""} ${p.Poblacion || ""}<br>
+                ${p.Provincia || ""}
+            `;
+
+            // 4.2.2. Columna de IDs de dirección (útil para debugging/joins)
+            let direccionIds = `
+                idprov: ${p.idtbl_provincias || ""}<br>
+                idmuni: ${p.idtbl_municipios || ""}<br>
+                idtipo_via: ${p.idtbl_tipos_de_vias || ""}<br>
+                idcalle: ${p.idtbl_calles || ""}
+            `;
+
+            // 4.2.3. Email + Teléfono (nombres de campos según backend)
+            let contactoTexto = `
+                Email: ${p.Email || ""}<br>
+                Teléfono: ${p.Telefono || ""}
+            `;
+
+            const parquinTexto = p.parquin ? "Activado" : "Desactivado";
+            const parquinClase = p.parquin ? "bg-success" : "bg-secondary";
+
+            const fila = `
+                <tr>
+                    <td>${p.Nombre_Razon_Social || ""}</td>
+                    <td class="col-direccion">${direccionTexto}</td>
+                    <td class="col-id-dir">${direccionIds}</td>
+                    <td>${contactoTexto}</td>
+                    <td>${p.persona_contacto || ""}</td>
+                    <td>
+                        <span class="badge ${parquinClase} badge-parquin text-white">
+                            ${parquinTexto}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="acciones">
+                            <!-- 4.2.4. Editar proveedor completo -->
+                            <button class="btn btn-sm btn-primary"
+                                    onclick="editarProveedor(${p.Idtbl_proveedores})">
+                                Editar
+                            </button>
+
+                            <!-- 4.2.5. Desactivar parquin (pendiente implementar POST real) -->
+                            <button class="btn btn-sm btn-danger"
+                                    onclick="desactivarParquin(${p.Idtbl_proveedores})">
+                                Desactivar
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+            $tbody.append(fila);
+        });
+    }
+
+    // 4.3. Función limpiarFiltros():
+    //      - Resetea inputs de filtro.
+    //      - Llama a cargar() para recargar la lista sin filtros.
+    function limpiarFiltros() {
+        $("#filtro_nombre").val("");
+        $("#filtro_email").val("");
+        cargar();
+    }
+
+    // 4.4. Función editarProveedor(id):
+    //      - Redirige a la pantalla general de edición de proveedor.
+    //      - AJUSTA la URL según la ruta real que tengas en tu app para editar.
+    function editarProveedor(id) {
+        // Ejemplo: si tu formulario general está en /comunes/proveedores/formulario?prov_id=...
+        window.location.href = `/comunes/proveedores/formulario?prov_id=${id}`;
+        // Si fuera otra ruta, por ejemplo:
+        // window.location.href = "/proveedores/" + id;
+    }
+
+    // 4.5. Función desactivarParquin(id):
+    //      - De momento solo avisa; en el futuro llamará a una ruta POST del backend.
+    //      - Ejemplo futuro:
+    //          $.post("/consulta_proveedores_parquin/desactivar/" + id, function(r) { ... });
+    function desactivarParquin(id) {
+        alert("TODO: llamar a ruta POST para poner parquin = 0 al proveedor " + id);
+    }
+
+    // 4.6. Carga inicial al entrar en la página:
+    //      - Cuando el DOM está listo, se llama a cargar() sin filtros.
+    $(document).ready(function() {
+        cargar();
+    });
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,16 @@
+En tus plantillas debes tener disponible algo como:
+
+current_user.rol
+
+Y definimos permisos así:
+
+{% set puede_editar = current_user.rol in ['super_admin', 'gestor'] %}
+
+
+# ============================================================================
+# 🔐 CONTROL DE ROLES
+# ============================================================================
+
+def solo_admin_gestor():
+    if current_user.rol not in ['super_admin', 'gestor']:
+        abort(403)

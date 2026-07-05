@@ -1,0 +1,382 @@
+{# =============================================================================
+   🧾 FORMULARIO TIPO ACCESS · GESTIÓN DE PROVEEDORES
+   -----------------------------------------------------------------------------
+   OBJETIVO DE ESTA PANTALLA
+   -------------------------
+   - Formulario único para ver/editar un proveedor de tbl_proveedores.
+   - Dos campos de búsqueda en cabecera:
+       · filtro_nombre → Nombre_Razon_Social (coincidencia parcial).
+       · filtro_nif    → NIF (coincidencia parcial).
+     Se puede usar cualquiera de los dos para localizar proveedores.
+   - Las flechas ⬅️ / ➡️ permiten moverse al registro anterior / siguiente
+     dentro del subconjunto filtrado (sin mostrar el número total).
+   - Botón "Nuevo" limpia el formulario para dar de alta un nuevo proveedor.
+   - Botón "Guardar cambios" realiza INSERT o UPDATE según haya Idtbl_proveedores.
+
+   CONTEXTO ESPERADO DESDE FLASK
+   -----------------------------
+   - Renderizada por:
+       btn_proveedores_gestionar_bp.btn_proveedores_gestionar()
+   - Variables Jinja:
+       · proveedor      → dict de tbl_proveedores (o None si es alta nueva).
+       · filtro_nombre  → str, texto actual del filtro por nombre/razón social.
+       · filtro_nif     → str, texto actual del filtro por NIF.
+       · prev_id        → int o None, Idtbl_proveedores anterior dentro del filtro.
+       · next_id        → int o None, Idtbl_proveedores siguiente dentro del filtro.
+   ============================================================================= #}
+
+{% extends "base.html" %}
+
+{# =============================================================================
+   🔖 TÍTULO DE LA PESTAÑA · USA ID O "NUEVO PROVEEDOR"
+   ============================================================================= #}
+{% block title %}
+  {% if proveedor %}Proveedor {{ proveedor.Idtbl_proveedores }}{% else %}Nuevo proveedor{% endif %}
+{% endblock %}
+
+
+{# =============================================================================
+   🧩 BLOQUE PRINCIPAL DE CONTENIDO
+   ============================================================================= #}
+{% block content %}
+<div class="container-fluid mt-3">
+
+  {# ===========================================================================
+     1️⃣ CABECERA SUPERIOR · BÚSQUEDA + NAVEGACIÓN + NUEVO
+     ---------------------------------------------------------------------------
+     - Diseño tipo "toolbar" sobre fondo claro, usando Bootstrap.
+     - A la izquierda, dos campos de búsqueda.
+     - En el centro, flechas Anterior / Siguiente.
+     - A la derecha, un botón NUEVO para limpiar el formulario.
+     =========================================================================== #}
+  <div class="card shadow-sm mb-3 border-0">
+    <div class="card-body py-2">
+
+      <form method="get" class="row g-2 align-items-end">
+
+        {# 1.1️⃣ CAMPO DE BÚSQUEDA POR NOMBRE / RAZÓN SOCIAL #}
+        <div class="col-lg-4 col-md-6">
+          <label class="form-label mb-1 small text-muted">Nombre / Razón social</label>
+          <div class="input-group input-group-sm">
+            <span class="input-group-text bg-light border-end-0">
+              <i class="bi bi-building"></i>
+            </span>
+            <input type="text"
+                   name="filtro_nombre"
+                   id="filtro_nombre"
+                   value="{{ filtro_nombre or '' }}"
+                   class="form-control form-control-sm border-start-0"
+                   placeholder="Escriba parte del nombre..."
+                   autocomplete="off"
+                   oninput="buscarProveedorPorNombre()">
+          </div>
+        </div>
+
+        {# 1.2️⃣ CAMPO DE BÚSQUEDA POR NIF #}
+        <div class="col-lg-3 col-md-4">
+          <label class="form-label mb-1 small text-muted">NIF</label>
+          <div class="input-group input-group-sm">
+            <span class="input-group-text bg-light border-end-0">
+              <i class="bi bi-credit-card-2-front"></i>
+            </span>
+            <input type="text"
+                   name="filtro_nif"
+                   id="filtro_nif"
+                   value="{{ filtro_nif or '' }}"
+                   class="form-control form-control-sm border-start-0"
+                   placeholder="Escriba parte del NIF..."
+                   autocomplete="off"
+                   oninput="buscarProveedorPorNif()">
+          </div>
+        </div>
+
+        {# 1.3️⃣ NAVEGACIÓN · ANTERIOR / SIGUIENTE #}
+        <div class="col-lg-3 col-md-6 d-flex justify-content-center gap-2 mt-3 mt-md-0">
+          {% if prev_id %}
+            <a class="btn btn-sm btn-outline-primary px-3"
+               href="{{ url_for('btn_proveedores_gestionar_bp.btn_proveedores_gestionar',
+                                prov_id=prev_id,
+                                filtro_nombre=filtro_nombre,
+                                filtro_nif=filtro_nif) }}">
+              ⬅️ Anterior
+            </a>
+          {% else %}
+            <button class="btn btn-sm btn-outline-secondary px-3" disabled>⬅️ Anterior</button>
+          {% endif %}
+
+          {% if next_id %}
+            <a class="btn btn-sm btn-outline-primary px-3"
+               href="{{ url_for('btn_proveedores_gestionar_bp.btn_proveedores_gestionar',
+                                prov_id=next_id,
+                                filtro_nombre=filtro_nombre,
+                                filtro_nif=filtro_nif) }}">
+              Siguiente ➡️
+            </a>
+          {% else %}
+            <button class="btn btn-sm btn-outline-secondary px-3" disabled>Siguiente ➡️</button>
+          {% endif %}
+        </div>
+
+        {# 1.4️⃣ BOTÓN NUEVO · LIMPIA FORMULARIO (NUEVA ALTA) #}
+        <div class="col-lg-2 col-md-6 d-flex justify-content-end mt-3 mt-lg-0">
+          <a href="{{ url_for('btn_proveedores_gestionar_bp.btn_proveedores_gestionar') }}"
+             class="btn btn-sm btn-success px-3">
+            <i class="bi bi-plus-circle me-1"></i> Nuevo
+          </a>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+
+  {# ===========================================================================
+     2️⃣ PANEL PRINCIPAL · FORMULARIO DE ALTA / EDICIÓN
+     ---------------------------------------------------------------------------
+     - Mostrar todos los campos importantes de tbl_proveedores.
+     - El backend decide si INSERT o UPDATE según haya Idtbl_proveedores.
+     - Se preservan los filtros en hidden para volver al mismo contexto.
+     =========================================================================== #}
+  <div class="card shadow-sm border-0">
+    <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center">
+      <div class="small text-muted">
+        {% if proveedor %}
+          Ficha de proveedor · ID {{ proveedor.Idtbl_proveedores }}
+        {% else %}
+          Alta de nuevo proveedor
+        {% endif %}
+      </div>
+      <a href="{{ url_for('panel_comunes_bp.panel_comunes') }}"
+         class="btn btn-sm btn-outline-secondary">
+        ⬅️ Volver a comunes
+      </a>
+    </div>
+
+    <form method="post" class="card-body">
+
+      {# 2.1️⃣ HIDDENS PARA ID Y FILTROS #}
+      {% if proveedor %}
+        <input type="hidden" name="Idtbl_proveedores" value="{{ proveedor.Idtbl_proveedores }}">
+      {% endif %}
+      <input type="hidden" name="filtro_nombre" value="{{ filtro_nombre or '' }}">
+      <input type="hidden" name="filtro_nif" value="{{ filtro_nif or '' }}">
+
+      {# 2.2️⃣ BLOQUE · IDENTIFICACIÓN BÁSICA (NIF + NOMBRE) #}
+      <div class="row g-2 mb-3">
+        <div class="col-md-3">
+          <label class="form-label mb-1 small text-muted">NIF</label>
+          <input type="text"
+                 name="NIF"
+                 value="{{ proveedor.NIF if proveedor else '' }}"
+                 class="form-control form-control-sm">
+        </div>
+        <div class="col-md-9">
+          <label class="form-label mb-1 small text-muted">Nombre / Razón social</label>
+          <input type="text"
+                 name="Nombre_Razon_Social"
+                 value="{{ proveedor.Nombre_Razon_Social if proveedor else '' }}"
+                 class="form-control form-control-sm">
+        </div>
+      </div>
+
+      {# 2.3️⃣ BLOQUE · DIRECCIÓN POSTAL (TEXTO) #}
+      <div class="row g-2 mb-3">
+        <div class="col-md-3">
+          <label class="form-label mb-1 small text-muted">Provincia</label>
+          <input type="text"
+                 name="Provincia"
+                 value="{{ proveedor.Provincia if proveedor else '' }}"
+                 class="form-control form-control-sm">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label mb-1 small text-muted">Población</label>
+          <input type="text"
+                 name="Poblacion"
+                 value="{{ proveedor.Poblacion if proveedor else '' }}"
+                 class="form-control form-control-sm">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label mb-1 small text-muted">Código Postal</label>
+          <input type="text"
+                 name="Codigo_Postal"
+                 value="{{ proveedor.Codigo_Postal if proveedor else '' }}"
+                 class="form-control form-control-sm">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label mb-1 small text-muted">Domicilio</label>
+          <input type="text"
+                 name="Domicilio"
+                 value="{{ proveedor.Domicilio if proveedor else '' }}"
+                 class="form-control form-control-sm">
+        </div>
+      </div>
+
+      {# 2.4️⃣ BLOQUE · CONTACTO COMERCIAL + ALIAS #}
+      <div class="row g-2 mb-3">
+        <div class="col-md-3">
+          <label class="form-label mb-1 small text-muted">Teléfono</label>
+          <input type="text"
+                 name="Telefono"
+                 value="{{ proveedor.Telefono if proveedor else '' }}"
+                 class="form-control form-control-sm">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label mb-1 small text-muted">Teléfono móvil</label>
+          <input type="text"
+                 name="telefono_movil"
+                 value="{{ proveedor.telefono_movil if proveedor else '' }}"
+                 class="form-control form-control-sm">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label mb-1 small text-muted">Correo comercial</label>
+          <input type="email"
+                 name="correo_electronico_comercial"
+                 value="{{ proveedor.correo_electronico_comercial if proveedor else '' }}"
+                 class="form-control form-control-sm">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label mb-1 small text-muted">Alias</label>
+          <input type="text"
+                 name="ALIAS"
+                 value="{{ proveedor.ALIAS if proveedor else '' }}"
+                 class="form-control form-control-sm">
+        </div>
+      </div>
+
+      {# 2.5️⃣ BLOQUE · PERSONAS DE CONTACTO Y CORREOS ADMIN #}
+      <div class="row g-2 mb-3">
+        <div class="col-md-4">
+          <label class="form-label mb-1 small text-muted">Persona contacto comercial</label>
+          <input type="text"
+                 name="Persona_contacto_comercial"
+                 value="{{ proveedor.Persona_contacto_comercial if proveedor else '' }}"
+                 class="form-control form-control-sm">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label mb-1 small text-muted">Persona contacto administración</label>
+          <input type="text"
+                 name="Persona_contacto_admin"
+                 value="{{ proveedor.Persona_contacto_admin if proveedor else '' }}"
+                 class="form-control form-control-sm">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label mb-1 small text-muted">Correo administración</label>
+          <input type="email"
+                 name="correo_electronico_admin"
+                 value="{{ proveedor.correo_electronico_admin if proveedor else '' }}"
+                 class="form-control form-control-sm">
+        </div>
+      </div>
+
+      {# 2.6️⃣ BLOQUE · DATOS ECONÓMICOS / REGISTRALES / PARQUIN #}
+      <div class="row g-2 mb-3">
+        <div class="col-md-4">
+          <label class="form-label mb-1 small text-muted">Número de cuenta</label>
+          <input type="text"
+                 name="numero_cuenta"
+                 value="{{ proveedor.numero_cuenta if proveedor else '' }}"
+                 class="form-control form-control-sm">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label mb-1 small text-muted">Nº registro</label>
+          <input type="text"
+                 name="n_registro"
+                 value="{{ proveedor.n_registro if proveedor else '' }}"
+                 class="form-control form-control-sm">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label mb-1 small text-muted">Petición parquin</label>
+          <input type="text"
+                 name="peticion_parquin"
+                 value="{{ proveedor['petición_parquin'] if proveedor and proveedor['petición_parquin'] else '' }}"
+                 class="form-control form-control-sm">
+        </div>
+      </div>
+
+      {# 2.7️⃣ BLOQUE · FLAGS PRINCIPALES (SWITCHES) #}
+      <div class="row g-2 mb-3 border-top pt-2">
+        {% macro chk(name, label, value) -%}
+          <div class="col-lg-3 col-md-4 col-sm-6 form-check form-switch">
+            <input class="form-check-input"
+                   type="checkbox"
+                   name="{{ name }}"
+                   value="1"
+                   id="{{ name }}"
+                   {% if value %}checked{% endif %}>
+            <label class="form-check-label small" for="{{ name }}">{{ label }}</label>
+          </div>
+        {%- endmacro %}
+
+        {{ chk('parquin', 'Parquin', proveedor.parquin if proveedor else 0) }}
+        {{ chk('coloca_contenedores', 'Coloca contenedores', proveedor.coloca_contenedores if proveedor else 0) }}
+        {{ chk('empresa_construccion', 'Empresa construcción', proveedor.empresa_construccion if proveedor else 0) }}
+        {{ chk('vende_material_construccion', 'Vende material construcción', proveedor.vende_material_construccion if proveedor else 0) }}
+        {{ chk('es_bar', 'Bar', proveedor.es_bar if proveedor else 0) }}
+        {{ chk('terraza_fija', 'Terraza fija', proveedor.terraza_fija if proveedor else 0) }}
+        {{ chk('terraza_desmontable', 'Terraza desmontable', proveedor.terraza_desmontable if proveedor else 0) }}
+        {{ chk('restuarante', 'Restaurante', proveedor.restuarante if proveedor else 0) }}
+        {{ chk('recibir_informe_pendientes', 'Recibir informes pendientes', proveedor.recibir_informe_pendientes if proveedor else 0) }}
+      </div>
+
+      {# 2.8️⃣ PIE DEL FORMULARIO · BOTÓN GUARDAR CAMBIOS #}
+      <div class="d-flex justify-content-end">
+        <button type="submit" class="btn btn-sm btn-primary px-4">
+          💾 Guardar cambios
+        </button>
+      </div>
+
+    </form>
+  </div>
+
+</div>
+
+{# =============================================================================
+   3️⃣ JS · HOOKS PARA BÚSQUEDA AUTOCOMPLETADA
+   -----------------------------------------------------------------------------
+   - Estos métodos llaman a endpoints JSON del backend:
+       · api_buscar_proveedor_por_nombre
+       · api_buscar_proveedor_por_nif
+   - El backend devuelve { "prov_id": X } y redirigimos a la ficha de ese ID.
+   ============================================================================= #}
+<script>
+  async function buscarProveedorPorNombre() {
+    const texto = document.getElementById("filtro_nombre").value;
+    if (texto.length < 3) return;  // se espera mínimo 3 caracteres
+
+    const url = "{{ url_for('btn_proveedores_gestionar_bp.api_buscar_proveedor_por_nombre') }}?texto=" + encodeURIComponent(texto);
+    const resp = await fetch(url);
+    if (!resp.ok) return;
+
+    const data = await resp.json();
+    if (data.prov_id) {
+      const nif = document.getElementById("filtro_nif").value || "";
+      const params = new URLSearchParams({
+        prov_id: data.prov_id,
+        filtro_nombre: texto,
+        filtro_nif: nif,
+      });
+      window.location = "{{ url_for('btn_proveedores_gestionar_bp.btn_proveedores_gestionar') }}?" + params.toString();
+    }
+  }
+
+  async function buscarProveedorPorNif() {
+    const texto = document.getElementById("filtro_nif").value;
+    if (texto.length < 3) return;
+
+    const url = "{{ url_for('btn_proveedores_gestionar_bp.api_buscar_proveedor_por_nif') }}?texto=" + encodeURIComponent(texto);
+    const resp = await fetch(url);
+    if (!resp.ok) return;
+
+    const data = await resp.json();
+    if (data.prov_id) {
+      const nombre = document.getElementById("filtro_nombre").value || "";
+      const params = new URLSearchParams({
+        prov_id: data.prov_id,
+        filtro_nombre: nombre,
+        filtro_nif: texto,
+      });
+      window.location = "{{ url_for('btn_proveedores_gestionar_bp.btn_proveedores_gestionar') }}?" + params.toString();
+    }
+  }
+</script>
+{% endblock %}

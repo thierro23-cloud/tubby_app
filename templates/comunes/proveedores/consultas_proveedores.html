@@ -1,0 +1,100 @@
+# ============================================
+# 🧱 proveedores_bp.py (fragmento)
+# ============================================
+# IMPORTS ESPECIALES PARA EXPORTAR A "EXCEL"
+# ============================================
+# Vamos a usar:
+# - Response: para crear una respuesta HTTP personalizada.
+# - csv + StringIO: para construir un "fichero" en memoria.
+from flask import Response
+import csv
+from io import StringIO
+
+
+# =====================================================
+# 🧾 EXPORTAR PROVEEDORES CON PARQUIN A EXCEL (CSV)
+# =====================================================
+# Esta ruta crea un "fichero" que Excel sabe abrir.
+# Es un CSV, pero le decimos al navegador que lo trate como si fuera Excel.
+#
+# ¿Qué hace?
+# 1. Pregunta a la BD por todos los proveedores con parquin = 1.
+# 2. Escribe esos datos en un CSV en memoria.
+# 3. Devuelve ese CSV como descarga (attachment) al navegador.
+
+@proveedores_bp.route("/exportar_parquin_xls", methods=["GET"])
+def exportar_proveedores_parquin_xls():
+    """
+    Genera un fichero tipo Excel (CSV) con todos los proveedores
+    que tienen parquin = 1.
+    """
+
+    # 1️⃣ CONECTAMOS CON LA BASE DE DATOS
+    # Abrimos la "puerta" de la base de datos usando tu función común.
+    conn = get_parquin_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    # 2️⃣ PREGUNTAMOS A LA BASE DE DATOS
+    # Queremos:
+    # - Id del proveedor
+    # - NIF
+    # - Nombre / razón social
+    # - Teléfono
+    # - Si tiene parquin (1) o no (0)
+    # SOLO de los que tienen parquin = 1.
+    cursor.execute("""
+        SELECT
+            p.Idtbl_proveedores,
+            p.NIF,
+            p.Nombre_Razon_Social,
+            p.Telefono,
+            p.parquin
+        FROM bd_tbl_comunes.tbl_proveedores p
+        WHERE p.parquin = 1
+        ORDER BY p.Nombre_Razon_Social
+    """)
+    filas = cursor.fetchall()  # "filas" es una lista de diccionarios
+
+    cursor.close()
+    conn.close()
+
+    # 3️⃣ CREAMOS UN CSV EN MEMORIA
+    # StringIO es como un "folleto" en blanco en memoria.
+    output = StringIO()
+    # El escritor CSV sabe escribir filas separadas por punto y coma.
+    # Usamos ";" porque Excel en español se lleva mejor con ese separador.
+    writer = csv.writer(output, delimiter=';')
+
+    # 4️⃣ ESCRIBIMOS LA CABECERA DEL FICHERO
+    # Esto será la fila 1 del Excel.
+    writer.writerow(["ID", "NIF", "Nombre / Razón social", "Teléfono", "Parquin"])
+
+    # 5️⃣ ESCRIBIMOS UNA FILA POR CADA PROVEEDOR
+    for f in filas:
+        writer.writerow([
+            f["Idtbl_proveedores"],
+            f["NIF"] or "",
+            f["Nombre_Razon_Social"] or "",
+            f["Telefono"] or "",
+            # Si parquin es 1 → "Sí", si no → "No"
+            "Sí" if f["parquin"] else "No"
+        ])
+
+    # 6️⃣ SACAMOS EL TEXTO DEL CSV DE LA "CAJITA" EN MEMORIA
+    # getvalue() nos da todo el contenido del CSV como texto.
+    # Lo convertimos a bytes y añadimos "utf-8-sig" para que Excel
+    # entienda bien los acentos.
+    csv_data = output.getvalue().encode("utf-8-sig")
+    output.close()
+
+    # 7️⃣ DEVOLVEMOS UNA RESPUESTA HTTP ESPECIAL
+    # - mimetype: le decimos al navegador que esto es tipo "Excel".
+    # - Content-Disposition: attachment => el navegador lo descarga.
+    #   filename=... => nombre del fichero que verá el usuario.
+    return Response(
+        csv_data,
+        mimetype="application/vnd.ms-excel",
+        headers={
+            "Content-Disposition": "attachment; filename=proveedores_parquin.csv"
+        }
+    )

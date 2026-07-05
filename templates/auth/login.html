@@ -1,0 +1,343 @@
+{# ============================================================
+   📄 templates/auth/login.html
+   Login profesional con:
+   - Email / identificador
+   - Mostrar / ocultar contraseña
+   - Recordarme
+   - Enlace "¿Olvidaste tu contraseña?" con modal
+   - Mensajes flash bonitos
+   👶 Comentado para entenderlo paso a paso
+   ============================================================ #}
+<!DOCTYPE html> {# 📜 Documento HTML moderno #}
+<html lang="es"> {# 🌍 Idioma español #}
+<head> {# 🧠 Configuración de la página #}
+    <meta charset="utf-8"> {# 🔤 Soporta acentos, ñ, etc. #}
+    <title>Acceso al Panel Municipal</title> {# 🏷️ Título de la pestaña del navegador #}
+
+    {# 🎨 Bootstrap 5 desde CDN #}
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+    >
+
+    {# 🎯 Iconos de Bootstrap #}
+    <link
+        rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
+    >
+
+    <style>
+        /* 🎨 body: fondo y tipografía general */
+        body {
+            background: radial-gradient(circle at top, #1e88e5 0, #0d47a1 40%, #020b1a 100%);
+            /* 🎨 Fondo azul degradado */
+            min-height: 100vh;            /* 📏 ocupa toda la altura de la ventana */
+            display: flex;                /* 🧱 usamos flex para centrar */
+            align-items: center;          /* ↕️ centrado vertical */
+            justify-content: center;      /* ↔️ centrado horizontal */
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            /* 🔤 Fuente moderna y legible */
+        }
+
+        .login-card {
+            max-width: 420px;            /* 📏 ancho máximo de la tarjeta */
+            width: 100%;                 /* 📏 se adapta al ancho disponible */
+            border-radius: 18px;         /* 🔵 esquinas redondeadas */
+            overflow: hidden;            /* ✂️ recorta lo que se salga */
+            box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45); /* 🌫️ sombra bonita */
+            background: #ffffff;         /* ⚪ fondo blanco dentro */
+        }
+
+        .login-header {
+            background: linear-gradient(135deg, #1976d2, #42a5f5); /* 🌈 degradado azul */
+            color: #fff;                /* ⚪ texto blanco */
+            padding: 18px 24px;         /* 📏 espacio interno */
+        }
+
+        .login-header h1 {
+            font-size: 1.4rem;          /* 🔤 tamaño del título */
+            margin: 0;                  /* 🧽 sin márgenes extras */
+        }
+
+        .login-header p {
+            margin: 0;                  /* 🧽 sin márgenes extras */
+            font-size: 0.9rem;          /* 🔤 texto algo más pequeño */
+            opacity: 0.9;               /* 🌫️ un pelín transparente */
+        }
+
+        .login-body {
+            padding: 24px;              /* 📏 espacio interno del cuerpo */
+        }
+
+        .form-label {
+            font-weight: 600;           /* 📝 etiqueta en negrita */
+        }
+
+        .input-group-text {
+            background-color: #f4f6f8;  /* 🎨 fondo suave para iconos en inputs */
+        }
+
+        .login-footer {
+            padding: 16px 24px 20px;    /* 📏 espacio del pie */
+            background-color: #f9fafb;  /* 🎨 gris muy claro */
+            font-size: 0.85rem;         /* 🔤 texto pequeño */
+            color: #6b7280;             /* 🎨 gris medio */
+        }
+
+        .brand-badge {
+            font-size: 0.8rem;          /* 🔤 pequeño */
+            letter-spacing: 0.04em;     /* 📏 separa un poco las letras */
+            text-transform: uppercase;  /* 🔠 mayúsculas */
+            opacity: 0.9;               /* 🌫️ un poco transparente */
+        }
+
+        .small-link {
+            font-size: 0.85rem;         /* 🔤 enlaces discretos */
+        }
+
+        .alert {
+            font-size: 0.85rem;         /* 🔤 tamaño pequeño para mensajes */
+            padding: 0.6rem 0.75rem;    /* 📏 espacio interno */
+            margin-bottom: 0.75rem;     /* 📏 separación inferior */
+            border-radius: 8px;         /* 🔵 esquinas redondeadas */
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #1976d2, #1565c0); /* 🌈 botón azul degradado */
+            border: none;              /* ❌ sin borde extra */
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #1565c0, #0d47a1); /* 🌈 azul más oscuro al pasar ratón */
+        }
+
+        .form-check-label {
+            font-size: 0.85rem;        /* 🔤 texto pequeño del checkbox */
+        }
+    </style>
+</head>
+<body> {# 🧍 Aquí empieza lo que se ve #}
+
+<div class="login-card">
+    {# 🔷 CABECERA #}
+    <div class="login-header d-flex justify-content-between align-items-center">
+        <div>
+            <div class="brand-badge">
+                <i class="bi bi-shield-lock-fill me-1"></i> {# 🛡️ escudo con candado #}
+                ACCESO SEGURO
+            </div>
+            <h1 class="mt-1">
+                Panel Municipal Profesional {# 🏛️ título principal #}
+            </h1>
+            <p>
+                Identifícate con tu usuario corporativo. {# 👤 pequeño texto de ayuda #}
+            </p>
+        </div>
+        <div class="ms-3">
+            <i class="bi bi-building-lock" style="font-size: 2rem;"></i> {# 🏢 edificio con candado #}
+        </div>
+    </div>
+
+    {# 🧱 CUERPO DEL FORMULARIO #}
+    <div class="login-body">
+
+        {# 💬 MENSAJES FLASH (éxito, error, aviso) #}
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              {# category: 'success', 'danger', 'warning', 'info' #}
+              <div class="alert alert-{{ category }} d-flex align-items-center" role="alert">
+                {% if category == 'success' %}
+                  <i class="bi bi-check-circle-fill me-2"></i> {# ✅ éxito #}
+                {% elif category == 'danger' %}
+                  <i class="bi bi-exclamation-octagon-fill me-2"></i> {# ❌ error #}
+                {% elif category == 'warning' %}
+                  <i class="bi bi-exclamation-triangle-fill me-2"></i> {# ⚠️ aviso #}
+                {% else %}
+                  <i class="bi bi-info-circle-fill me-2"></i> {# ℹ️ info #}
+                {% endif %}
+                <span>{{ message }}</span> {# 📢 texto del mensaje #}
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        {# 📝 FORMULARIO DE LOGIN #}
+        <form method="post" action="{{ url_for('auth_bp.login') }}" autocomplete="on">
+            {# 👤 CAMPO USUARIO (EMAIL O NÚMERO PROFESIONAL) #}
+            <div class="mb-3">
+                <label for="login" class="form-label">
+                    <i class="bi bi-person-badge me-1"></i> {# 👤 persona con chapa #}
+                    Usuario
+                </label>
+                <div class="input-group">
+                    <span class="input-group-text">
+                        <i class="bi bi-envelope-at"></i> {# 📧 sobre con @ #}
+                    </span>
+                    <input
+                        type="text"                 {# ⌨️ texto libre #}
+                        class="form-control"
+                        id="login"
+                        name="login"               {# 🔑 auth_bp.login leerá request.form["login"] #}
+                        placeholder="email@ayuntamiento.es o nº profesional"
+                        required                    {# ❗ obligatorio #}
+                        autofocus                   {# 👀 cursor aquí al entrar #}
+                        value="{{ request.form.login or '' }}" {# 🔁 mantiene lo escrito si fallo #}
+                    >
+                </div>
+                <div class="form-text">
+                    Para policías puedes usar su número profesional.
+                </div>
+            </div>
+
+            {# 🔑 CAMPO CONTRASEÑA CON OJO PARA VER/OCULTAR #}
+            <div class="mb-3">
+                <label for="password" class="form-label">
+                    <i class="bi bi-key-fill me-1"></i> {# 🔑 llave #}
+                    Contraseña
+                </label>
+                <div class="input-group" id="password-group">
+                    <span class="input-group-text">
+                        <i class="bi bi-lock-fill"></i> {# 🔒 candado #}
+                    </span>
+                    <input
+                        type="password"            {# 🔐 se ve como puntitos #}
+                        class="form-control"
+                        id="password"
+                        name="password"
+                        placeholder="Introduce tu contraseña"
+                        required
+                    >
+                    <button
+                        class="btn btn-outline-secondary"
+                        type="button"              {# 🔘 no envía el formulario #}
+                        id="togglePassword"
+                        tabindex="-1"              {# ⌨️ no entra en tab #}
+                    >
+                        <i class="bi bi-eye-fill" id="togglePasswordIcon"></i> {# 👁️ ojo #}
+                    </button>
+                </div>
+                <div class="form-text">
+                    Nunca compartas tu contraseña. Solo el sistema puede verla cifrada.
+                </div>
+            </div>
+
+            {# 🔁 RECORDAR SESIÓN Y OLVIDÉ CONTRASEÑA #}
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="form-check">
+                    <input
+                        class="form-check-input"
+                        type="checkbox"
+                        id="remember_me"
+                        name="remember_me"
+                        value="1"
+                    >
+                    <label class="form-check-label" for="remember_me">
+                        Mantener sesión iniciada
+                    </label>
+                </div>
+
+                {# 🔐 Botón “olvidé mi contraseña” (abre modal) #}
+                <button
+                    type="button"
+                    class="btn btn-link small-link p-0"
+                    data-bs-toggle="modal"
+                    data-bs-target="#forgotPasswordModal"
+                >
+                    <i class="bi bi-question-circle me-1"></i> {# ❓ #}
+                    ¿Olvidaste tu contraseña?
+                </button>
+            </div>
+
+            {# 🚪 BOTONES DE ACCESO #}
+            <div class="d-grid gap-2 mb-2">
+              <button type="submit" name="action" value="preview" class="btn btn-outline-secondary">
+                <i class="bi bi-search"></i> {# 🔍 #}
+                Comprobar rol / datos
+              </button>
+              <button type="submit" name="action" value="login" class="btn btn-primary">
+                <i class="bi bi-box-arrow-in-right"></i> {# 🚪 flecha entrando #}
+                Entrar en el sistema
+              </button>
+            </div>
+        </form> {# 🔚 fin formulario #}
+
+        {# 🧾 PIE DE TARJETA #}
+        <div class="login-footer d-flex justify-content-between align-items-center mt-2">
+            <span>
+                <i class="bi bi-city me-1"></i> {# 🏙️ ciudad #}
+                Ayuntamiento – Área de Sistemas
+            </span>
+            <span>
+                <i class="bi bi-clock-history me-1"></i> {# ⏰ reloj #}
+                {{ (now() if now is defined else '') }}
+            </span>
+        </div>
+
+    </div> {# 🔚 .login-body #}
+</div> {# 🔚 .login-card #}
+
+{# 🔐 MODAL "OLVIDÉ MI CONTRASEÑA" #}
+<div class="modal fade" id="forgotPasswordModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="bi bi-envelope-lock me-1"></i> {# 📧🔒 #}
+          Recuperar contraseña
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      {# ✅ Ahora este action sí apunta a un endpoint existente: auth_bp.forgot_password #}
+      <form method="post" action="{{ url_for('auth_bp.forgot_password') }}">
+        <div class="modal-body">
+          <p class="small mb-3">
+            Introduce tu correo y te enviaremos instrucciones para recuperar el acceso.
+          </p>
+          <div class="mb-3">
+            <label for="email_forgot" class="form-label">Correo electrónico</label>
+            <input
+              type="email"
+              class="form-control"
+              id="email_forgot"
+              name="email_forgot"
+              placeholder="tu@correo.com"
+              required
+            >
+          </div>
+        </div>
+        <div class="modal-footer small">
+          <button type="submit" class="btn btn-primary w-100">
+            <i class="bi bi-send-fill me-1"></i> {# 📩 #}
+            Enviar instrucciones
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{# 📦 JS de Bootstrap y script para mostrar/ocultar contraseña #}
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+  // 👁️‍🗨️ Mostrar / ocultar contraseña
+  const passwordInput = document.getElementById("password");          // 🎯 campo contraseña
+  const togglePasswordBtn = document.getElementById("togglePassword"); // 🎯 botón ojo
+  const togglePasswordIcon = document.getElementById("togglePasswordIcon"); // 🎯 icono ojo
+
+  if (togglePasswordBtn && passwordInput && togglePasswordIcon) {
+    togglePasswordBtn.addEventListener("click", function (event) {
+      event.preventDefault(); // 🔒 por si acaso, evita cualquier acción rara
+      const isPassword = passwordInput.getAttribute("type") === "password";
+      // 🔀 alterna entre password ↔ text
+      passwordInput.setAttribute("type", isPassword ? "text" : "password");
+      // 🔁 cambia icono según estado
+      togglePasswordIcon.classList.toggle("bi-eye-fill", !isPassword);
+      togglePasswordIcon.classList.toggle("bi-eye-slash-fill", isPassword);
+    });
+  }
+</script>
+
+</body>
+</html>

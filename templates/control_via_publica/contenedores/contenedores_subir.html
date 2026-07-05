@@ -1,0 +1,8 @@
+<form method="post" enctype="multipart/form-data">
+  {% if error %}
+    <p style="color:red">{{ error }}</p>
+  {% endif %}
+  <label>Selecciona PDF de contenedor:</label>
+  <input type="file" name="pdf" accept="application/pdf">
+  <button type="submit">Subir</button>
+</form>

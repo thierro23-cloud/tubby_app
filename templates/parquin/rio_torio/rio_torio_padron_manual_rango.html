@@ -1,0 +1,234 @@
+{# =============================================================================
+  📄 PLANTILLA · PADRÓN MANUAL RÍO TORÍO (RANGO)
+  ----------------------------------------------------------------------------- 
+  OBJETIVO:
+    - Interfaz para generar el padrón manual por rango de fechas.
+    - Integra:
+        · base.html (layout principal).
+        · panel de gestores.
+        · módulo PARQUIN · RÍO_TORIO.
+    - Muestra mensajes flash, ayudas y atajos de navegación.
+
+  UBICACIÓN:
+    templates/parquin/rio_torio/rio_torio_padron_manual.html
+   ============================================================================= #}
+
+{% extends "base.html" %}
+
+{% block title %}Padrón manual · Río Torío{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+  {# -------------------------------------------------------------------------
+     1️⃣ MIGAS DE PAN / CONTEXTO DE NAVEGACIÓN
+     ------------------------------------------------------------------------- #}
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb mb-0">
+      <li class="breadcrumb-item">
+        <a href="{{ url_for('panel_gestores_bp.panel_gestores') }}">
+          Panel gestores
+        </a>
+      </li>
+      <li class="breadcrumb-item">
+        <a href="{{ url_for('modulo_parquin_rio_torio_bp.modulo_parquin_rio_torio') }}">
+          Parquin · Río Torío
+        </a>
+      </li>
+      <li class="breadcrumb-item active" aria-current="page">
+        Padrón manual
+      </li>
+    </ol>
+  </nav>
+
+  {# -------------------------------------------------------------------------
+     2️⃣ ENCABEZADO DE LA PÁGINA (TÍTULO + BOTÓN VOLVER)
+     ------------------------------------------------------------------------- #}
+  <div class="d-flex flex-wrap align-items-center justify-content-between mb-3">
+    <div>
+      <h1 class="h3 mb-1">Padrón manual · Río Torío</h1>
+      <p class="text-muted mb-0">
+        Genera un informe de padrón para un rango de fechas concreto,
+        independiente del padrón mensual estándar.
+      </p>
+    </div>
+    <div class="mt-2 mt-sm-0">
+      {# Botón VOLVER: regresa al padrón mensual manual #}
+      <a href="{{ url_for('btn_rio_torio_padron_manual_bp.btn_rio_torio_padron_manual') }}"
+         class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left"></i> Volver al padrón mensual
+      </a>
+    </div>
+  </div>
+
+  {# -------------------------------------------------------------------------
+     3️⃣ MENSAJES FLASH (ÉXITO, ERROR, AVISOS)
+     ------------------------------------------------------------------------- #}
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="mb-3">
+        {% for category, message in messages %}
+          {% set bs_category =
+              'success' if category == 'success' else
+              'danger'  if category == 'danger'  else
+              'warning' if category == 'warning' else
+              'info'
+          %}
+          <div class="alert alert-{{ bs_category }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert"
+                    aria-label="Cerrar"></button>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  {# -------------------------------------------------------------------------
+     4️⃣ LAYOUT PRINCIPAL: FORMULARIO (IZQUIERDA) + AYUDA (DERECHA)
+     ------------------------------------------------------------------------- #}
+  <div class="row">
+    {# =======================================================================
+       4.1️⃣ COLUMNA IZQUIERDA · FORMULARIO PRINCIPAL (RANGO)
+       ======================================================================= #}
+    <div class="col-lg-7">
+      <div class="card shadow-sm mb-3">
+        <div class="card-header bg-primary text-white py-2">
+          <div class="d-flex align-items-center justify-content-between">
+            <span>
+              <i class="bi bi-file-earmark-text"></i>
+              Generar padrón manual (rango)
+            </span>
+            <small class="text-white-50">
+              Rango de fechas
+            </small>
+          </div>
+        </div>
+
+        <div class="card-body">
+          {# -------------------------------------------------------------------
+             FORMULARIO
+             - Método: POST
+             - Acción: endpoint del padrón manual RANGO
+             ------------------------------------------------------------------- #}
+          <form method="post"
+                action="{{ url_for('btn_rio_torio_padron_manual_rango_bp.btn_rio_torio_padron_manual_rango') }}"
+                novalidate>
+
+            {{ csrf_token() if csrf_token is defined }}
+
+            <div class="row g-3 mb-2">
+              <div class="col-md-6">
+                <label for="fecha_inicio" class="form-label">
+                  Fecha inicio
+                </label>
+                <input type="date"
+                       class="form-control"
+                       id="fecha_inicio"
+                       name="fecha_inicio"
+                       required
+                       aria-describedby="fecha_inicio_help">
+                <div id="fecha_inicio_help" class="form-text">
+                  Día inicial del periodo del informe.
+                </div>
+              </div>
+
+              <div class="col-md-6">
+                <label for="fecha_fin" class="form-label">
+                  Fecha fin
+                </label>
+                <input type="date"
+                       class="form-control"
+                       id="fecha_fin"
+                       name="fecha_fin"
+                       required
+                       aria-describedby="fecha_fin_help">
+                <div id="fecha_fin_help" class="form-text">
+                  Último día del periodo del informe.
+                </div>
+              </div>
+            </div>
+
+            <div class="alert alert-info small mb-3" role="alert">
+              El informe incluirá:
+              <ul class="mb-0">
+                <li>Relación de abonados y plazas activas en el periodo.</li>
+                <li>Histórico de ocupaciones en el rango indicado.</li>
+                <li>Bajas de plazas registradas en el histórico dentro de esas fechas.</li>
+              </ul>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center">
+              <button type="submit" class="btn btn-primary">
+                <i class="bi bi-play-fill"></i>
+                Generar padrón manual (rango)
+              </button>
+              <small class="text-muted">
+                El fichero se guardará en el directorio de padrones y se mostrará un aviso al finalizar.
+              </small>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    {# =======================================================================
+       4.2️⃣ COLUMNA DERECHA · AYUDA Y ATAJOS
+       ======================================================================= #}
+    <div class="col-lg-5">
+      <div class="card shadow-sm mb-3">
+        <div class="card-header bg-light py-2">
+          <strong>Ayuda rápida</strong>
+        </div>
+        <div class="card-body small">
+          <p class="mb-2">
+            Usa el padrón manual por rango cuando necesites informes que no
+            encajan con el patrón mensual estándar (por ejemplo, quincenas,
+            trimestres o periodos específicos de auditoría).
+          </p>
+          <ul class="mb-2">
+            <li>La fecha fin no puede ser anterior a la fecha inicio.</li>
+            <li>Las bajas se toman de <code>tbl_historico_plazas</code>.</li>
+            <li>El estado de plazas se calcula sobre <code>tbl_plazas</code>.</li>
+          </ul>
+          <p class="mb-0">
+            Para el uso habitual (mes cerrado), sigue utilizando el botón de
+            <strong>padrón mensual</strong>, que calcula automáticamente el mes anterior.
+          </p>
+        </div>
+      </div>
+
+      <div class="card shadow-sm">
+        <div class="card-header bg-light py-2">
+          <strong>Atajos Río Torío</strong>
+        </div>
+        <div class="card-body small">
+          <div class="d-grid gap-2">
+            {# Padrón mensual (mes anterior, botón mensual manual) #}
+            <a class="btn btn-outline-primary btn-sm"
+               href="{{ url_for('btn_rio_torio_padron_manual_bp.btn_rio_torio_padron_manual') }}">
+              <i class="bi bi-calendar-check"></i>
+              Padrón mensual (mes anterior)
+            </a>
+
+            {# Plano de plazas #}
+            <a class="btn btn-outline-secondary btn-sm"
+               href="{{ url_for('btn_rio_torio_plano_bp.btn_rio_torio_plano') }}">
+              <i class="bi bi-grid-3x3-gap"></i>
+              Plano de plazas
+            </a>
+
+            {# Accesos #}
+            <a class="btn btn-outline-secondary btn-sm"
+               href="{{ url_for('btn_rio_torio_accesos_bp.btn_rio_torio_accesos') }}">
+              <i class="bi bi-door-open"></i>
+              Accesos
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div> {# /row #}
+</div> {# /container-fluid #}
+{% endblock %}

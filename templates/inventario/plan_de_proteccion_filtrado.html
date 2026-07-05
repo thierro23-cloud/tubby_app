@@ -1,0 +1,198 @@
+{# ============================================================================
+   1. PLANTILLA: inventario/plan_de_proteccion_filtrado.html
+   ----------------------------------------------------------------------------
+   1.1 Descripción general
+       - Vista de entrada al módulo de planes de protección filtrando por
+         edificio (inmueble).
+       - Pensada para usarse como acceso desde el panel super admin.
+
+   1.2 Variables esperadas:
+       - edificios: lista de dicts con claves:
+           · id     → Idtbl_edificios_municipales
+           · nombre → inmueble
+       - id_edificio: id del edificio seleccionado (int o None).
+       - planes: lista de dicts de planes del edificio seleccionado, con campos:
+           · Idtbl_general_plan_prevencion
+           · numero_inventario
+           · descripcion
+           · ubicacion
+           · idtbl_prioridad
+           · estado
+
+   1.3 Vistas relacionadas:
+       - btn_plan_de_proteccion_form_bp.btn_plan_de_proteccion_form_editar_bp
+       - btn_plan_de_proteccion_form_bp.editar
+       - btn_plan_de_proteccion_form_bp.nuevo
+   ============================================================================ #}
+
+{% extends "base.html" %}
+
+{# ============================================================================
+   2. BLOQUE: Título de la página
+   ========================================================================== #}
+{% block title %}
+Planes de protección · Entrada por edificio
+{% endblock %}
+
+{# ============================================================================
+   3. BLOQUE: Contenido principal
+   ========================================================================== #}
+{% block content %}
+<div class="container-fluid py-3">
+
+  {# 3.1 Cabecera con filtro por edificio #}
+  <div class="card shadow-sm border-0 mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <div>
+        <h3 class="mb-0 fw-semibold">Planes de protección · Entrada por edificio</h3>
+        <small class="text-muted">
+          Selecciona un edificio para ver y editar sus planes de protección.
+        </small>
+      </div>
+
+      <div>
+        <a href="{{ url_for('btn_plan_de_proteccion_form_bp.btn_plan_de_proteccion_listado') }}"
+           class="btn btn-outline-secondary btn-sm">
+          <i class="fas fa-table me-1"></i> Ir al listado completo
+        </a>
+      </div>
+    </div>
+
+    <div class="card-body">
+      <form method="GET"
+            action="{{ url_for('btn_plan_de_proteccion_form_bp.btn_plan_de_proteccion_form_editar_bp') }}"
+            class="row g-3 align-items-end">
+
+        <div class="col-md-6">
+          <label for="id_edificio" class="form-label">Edificio (inmueble)</label>
+          <select name="id_edificio" id="id_edificio"
+                  class="form-select form-select-sm">
+            <option value="">-- Seleccionar edificio --</option>
+            {% for e in edificios %}
+              <option value="{{ e.id }}"
+                      {% if id_edificio and id_edificio == e.id %}selected{% endif %}>
+                {{ e.nombre }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="col-md-3">
+          <button type="submit" class="btn btn-primary btn-sm w-100">
+            <i class="fas fa-search me-1"></i> Filtrar
+          </button>
+        </div>
+
+        {% if id_edificio %}
+        <div class="col-md-3">
+          <a href="{{ url_for('btn_plan_de_proteccion_form_bp.nuevo', id_edificio=id_edificio) }}"
+             class="btn btn-success btn-sm w-100">
+            <i class="fas fa-plus me-1"></i> Nuevo plan en este edificio
+          </a>
+        </div>
+        {% endif %}
+      </form>
+    </div>
+  </div>
+
+  {# 3.2 Tabla de planes del edificio seleccionado #}
+  {% if id_edificio %}
+    <div class="card excel-card shadow-sm border-0">
+      <div class="card-header d-flex justify-content-between align-items-center excel-card-header">
+        <div>
+          <h4 class="mb-0 fw-semibold">Planes del edificio seleccionado</h4>
+          <small class="text-muted">
+            {{ planes|length }} registro{{ planes|length != 1 and 's' or '' }} encontrado{{ planes|length != 1 and 's' or '' }}.
+          </small>
+        </div>
+      </div>
+
+      <div class="card-body p-0">
+        <div class="table-responsive excel-table-wrapper">
+          <table class="table table-sm align-middle mb-0 excel-table" id="tablaPlanesEdificio">
+            <thead class="excel-thead">
+              <tr>
+                <th class="text-muted text-uppercase small">ID</th>
+                <th class="text-muted text-uppercase small">Inventario</th>
+                <th class="text-muted text-uppercase small">Descripción</th>
+                <th class="text-muted text-uppercase small">Ubicación</th>
+                <th class="text-muted text-uppercase small text-center">Prioridad</th>
+                <th class="text-muted text-uppercase small">Estado</th>
+                <th class="text-muted text-uppercase small text-center">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for plan in planes %}
+              <tr>
+                <td class="text-muted">{{ plan.Idtbl_general_plan_prevencion }}</td>
+                <td class="fw-semibold">{{ plan.numero_inventario or '–' }}</td>
+                <td class="text-truncate" style="max-width: 260px;">
+                  {{ plan.descripcion or '' }}
+                </td>
+                <td class="text-muted">{{ plan.ubicacion or '–' }}</td>
+                <td class="text-center">
+                  {% if plan.idtbl_prioridad %}
+                    {% set p = plan.idtbl_prioridad %}
+                    <span class="badge rounded-pill prioridad-badge prioridad-{{ p }}">
+                      P{{ p }}
+                    </span>
+                  {% else %}
+                    <span class="badge bg-light text-muted rounded-pill">Sin priorizar</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if plan.estado %}
+                    <span class="estado-tag estado-{{ plan.estado|lower|replace(' ', '-') }}">
+                      {{ plan.estado }}
+                    </span>
+                  {% else %}
+                    <span class="estado-tag estado-desconocido">Sin estado</span>
+                  {% endif %}
+                </td>
+                <td class="text-center">
+                  <div class="btn-group btn-group-sm" role="group">
+                    <a href="{{ url_for('btn_plan_de_proteccion_form_bp.ver',
+                                        id=plan.Idtbl_general_plan_prevencion) }}"
+                       class="btn btn-outline-secondary" title="Ver detalle">
+                      <i class="fas fa-eye"></i>
+                    </a>
+                    <a href="{{ url_for('btn_plan_de_proteccion_form_bp.editar',
+                                        id=plan.Idtbl_general_plan_prevencion) }}"
+                       class="btn btn-outline-primary" title="Editar">
+                      <i class="fas fa-pen"></i>
+                    </a>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card-footer small text-muted">
+        Si no aparece ningún registro, este edificio aún no tiene planes de protección registrados.
+      </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      if (window.jQuery && $('#tablaPlanesEdificio').DataTable) {
+        $('#tablaPlanesEdificio').DataTable({
+          language: {
+            url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/es-ES.json'
+          },
+          order: [[0, 'desc']],
+          pageLength: 25
+        });
+      }
+    });
+    </script>
+  {% else %}
+    <div class="alert alert-info">
+      Selecciona un edificio y pulsa <strong>Filtrar</strong> para ver sus planes de protección.
+    </div>
+  {% endif %}
+
+</div>
+{% endblock %}

@@ -1,0 +1,541 @@
+{# ============================================================================
+  1. PLANTILLA BASE: HERENCIA Y TÍTULO
+  ========================================================================= #}
+{% extends "base.html" %}
+
+{% block title %}{{ modo | title }} vado{% endblock %}
+
+{# ============================================================================
+  2. BLOQUE PRINCIPAL DE CONTENIDO
+  ========================================================================= #}
+{% block content %}
+
+{# ============================================================================
+  3. ESTILOS ESPECÍFICOS DE ESTE FORMULARIO
+  ========================================================================= #}
+<style>
+  body {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #111827;
+    min-height: 100vh;
+  }
+
+  .card-funca {
+    border-radius: 1rem;
+    border: none;
+    background: #ffffff;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+  }
+
+  .card-funca-header {
+    padding: 1.5rem 2rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+  }
+
+  .card-funca-body {
+    padding: 2rem;
+  }
+
+  .form-label-funca {
+    font-weight: 600;
+    color: #4c1d95;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .form-control-funca,
+  .form-select-funca {
+    border-radius: 0.75rem;
+    border: 2px solid #e9d5ff;
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+  }
+
+  .form-control-funca:focus,
+  .form-select-funca:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+    outline: none;
+  }
+
+  .btn-funca-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 0.875rem 2rem;
+    border-radius: 0.75rem;
+    font-weight: 600;
+    font-size: 1.1rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+  }
+
+  .btn-funca-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+  }
+
+  .btn-funca-secondary {
+    background: #f3f4f6;
+    color: #4c1d95;
+    border: 2px solid #e9d5ff;
+    padding: 0.875rem 1.5rem;
+    border-radius: 0.75rem;
+    font-weight: 600;
+    font-size: 1.1rem;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .btn-funca-secondary:hover {
+    background: #e9d5ff;
+    transform: translateY(-2px);
+  }
+
+  .info-box {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    border: 2px solid #f59e0b;
+  }
+
+  .info-box-icon {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .required-badge {
+    background: #ef4444;
+    color: white;
+    padding: 0.15rem 0.5rem;
+    border-radius: 0.5rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    margin-left: 0.3rem;
+  }
+
+  .helper-text {
+    color: #78716c;
+    font-size: 0.875rem;
+    margin-top: 0.35rem;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+
+  .sugerencias {
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    background: #ffffff;
+    max-height: 160px;
+    overflow-y: auto;
+    font-size: 0.85rem;
+    margin-top: 4px;
+  }
+
+  .sugerencia-item {
+    padding: 6px 8px;
+    cursor: pointer;
+    border-bottom: 1px solid #eef1f7;
+  }
+
+  .sugerencia-item:last-child {
+    border-bottom: none;
+  }
+
+  .sugerencia-item:hover {
+    background: #e0ebff;
+  }
+
+  .sugerencia-nif {
+    font-weight: 600;
+  }
+
+  .sugerencia-nombre {
+    display: block;
+    color: #6b7280;
+  }
+</style>
+
+{# ============================================================================
+  4. CONTENEDOR PRINCIPAL
+  ========================================================================= #}
+<div class="container py-5">
+
+  {# 4.1 Cabecera divertida #}
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card-funca">
+        <div class="card-funca-header text-center">
+          <h2 class="mb-2">
+            <i class="bi bi-signpost-2-fill"></i>
+            {{ modo | title }} Vado
+            <i class="bi bi-signpost-2-fill"></i>
+          </h2>
+          <p class="mb-0">
+            {% if modo == "nuevo" %}
+              🎉 ¡Vamos a crear un vado nuevo!
+            {% else %}
+              ✏️ ¡Vamos a editar este vado!
+            {% endif %}
+          </p>
+        </div>
+
+        <div class="card-funca-body">
+
+          {# 4.2 Caja de información #}
+          <div class="info-box mb-4">
+            <div class="info-box-icon">
+              <i class="bi bi-lightbulb-fill"></i>
+            </div>
+            <p class="mb-1">
+              Completa los campos obligatorios marcados con
+              <span class="required-badge">OBLIGATORIO</span>.
+            </p>
+            <p class="mb-0">
+              Las calles se cargan del municipio 395 y se pueden filtrar por tipo de vía desde el frontend.
+            </p>
+          </div>
+
+          {# =========================================================================
+            5. FORMULARIO PRINCIPAL
+          ========================================================================= #}
+          <form method="post" action="{{ url_for('btn_vados_form_bp.vado_guardar') }}">
+
+            {# 5.1 Campo oculto idtbl_vados en modo editar #}
+            {% if vado %}
+              <input type="hidden" name="idtbl_vados" value="{{ vado.idtbl_vados }}">
+            {% endif %}
+
+            <div class="row g-4">
+
+              {# 5.2 Número de vado #}
+              <div class="col-md-4">
+                <label class="form-label-funca" for="numero_vado">
+                  Número de vado
+                  <span class="required-badge">OBLIGATORIO</span>
+                </label>
+                <input
+                  type="text"
+                  class="form-control-funca"
+                  id="numero_vado"
+                  name="numero_vado"
+                  value="{{ vado.numero_vado if vado else '' }}"
+                  placeholder="Ej: 1234"
+                  required
+                >
+                <div class="helper-text">
+                  <i class="bi bi-info-circle-fill"></i>
+                  Número que aparecerá en la placa del vado.
+                </div>
+              </div>
+
+              {# 5.3 Tipo de vía #}
+              <div class="col-md-4">
+                <label class="form-label-funca" for="idtbl_tipos_de_vias">
+                  Tipo de vía
+                  <span class="required-badge">OBLIGATORIO</span>
+                </label>
+                <select
+                  class="form-select-funca"
+                  id="idtbl_tipos_de_vias"
+                  name="idtbl_tipos_de_vias"
+                  required
+                >
+                  <option value="">Selecciona tipo de vía…</option>
+                  {% for tipo in tipos_de_vias %}
+                    <option
+                      value="{{ tipo.idtbl_tipos_de_vias }}"
+                      {% if vado and vado.idtbl_tipos_de_vias == tipo.idtbl_tipos_de_vias %}selected{% endif %}
+                    >
+                      {{ tipo.Tipo_Via }}
+                    </option>
+                  {% endfor %}
+                </select>
+                <div class="helper-text">
+                  <i class="bi bi-signpost"></i>
+                  Ejemplo: CALLE, AVENIDA, PLAZA…
+                </div>
+              </div>
+
+              {# 5.4 Calle #}
+              <div class="col-md-4">
+                <label class="form-label-funca" for="idtbl_calles">
+                  Calle
+                  <span class="required-badge">OBLIGATORIO</span>
+                </label>
+                <select
+                  class="form-select-funca"
+                  id="idtbl_calles"
+                  name="idtbl_calles"
+                  required
+                >
+                  <option value="">Selecciona una calle…</option>
+                  {% for calle in calles %}
+                    <option
+                      value="{{ calle.idtbl_calles }}"
+                      data-tipo-via="{{ calle.idtbl_tipos_de_vias }}"
+                      {% if vado and vado.idtbl_calles == calle.idtbl_calles %}selected{% endif %}
+                    >
+                      {{ calle.Nombre_Calle }}
+                    </option>
+                  {% endfor %}
+                </select>
+                <div class="helper-text">
+                  <i class="bi bi-geo-alt-fill"></i>
+                  Calles del municipio 395.
+                </div>
+              </div>
+
+              {# 5.5 Municipio #}
+              <div class="col-md-4">
+                <label class="form-label-funca" for="idtbl_municipios">
+                  Municipio
+                </label>
+                <select
+                  class="form-select-funca"
+                  id="idtbl_municipios"
+                  name="idtbl_municipios"
+                >
+                  {% for mun in municipios %}
+                    <option
+                      value="{{ mun.idtbl_municipios }}"
+                      {% if vado and vado.idtbl_municipios == mun.idtbl_municipios %}
+                        selected
+                      {% elif not vado and mun.idtbl_municipios == 395 %}
+                        selected
+                      {% endif %}
+                    >
+                      {{ mun.Nombre_Municipio }}
+                    </option>
+                  {% endfor %}
+                </select>
+                <div class="helper-text">
+                  <i class="bi bi-building"></i>
+                  Por defecto se selecciona el municipio 395.
+                </div>
+              </div>
+
+              {# 5.6 Proveedor / titular + filtro por NIF #}
+              <div class="col-12">
+                <label class="form-label-funca" for="idtbl_proveedores">
+                  Titular / proveedor
+                </label>
+
+                <div class="row g-2 mb-2">
+                  <div class="col-md-6">
+                    <input
+                      type="text"
+                      class="form-control-funca"
+                      id="filtro_proveedor_nif"
+                      placeholder="Filtrar por NIF/DNI (ej: 6581160D)"
+                    >
+                    <div class="helper-text">
+                      <i class="bi bi-search"></i>
+                      Escribe parte del NIF para filtrar la lista de proveedores.
+                    </div>
+                  </div>
+                </div>
+
+                <select
+                  class="form-select-funca"
+                  id="idtbl_proveedores"
+                  name="idtbl_proveedores"
+                >
+                  <option value="">Sin titular asignado…</option>
+                  {% for p in proveedores %}
+                    <option
+                      value="{{ p.idtbl_proveedores }}"
+                      data-nif="{{ p.NIF | upper }}"
+                      data-nombre="{{ p.Nombre_Razon_Social | upper }}"
+                      {% if vado and vado.idtbl_proveedores == p.idtbl_proveedores %}selected{% endif %}
+                    >
+                      {{ p.NIF }} · {{ p.Nombre_Razon_Social }}
+                    </option>
+                  {% endfor %}
+                </select>
+                <div class="helper-text">
+                  <i class="bi bi-person-badge"></i>
+                  Selecciona el titular asociado al vado.
+                </div>
+              </div>
+
+              {# 5.7 Puerta / portal #}
+              <div class="col-md-4">
+                <label class="form-label-funca" for="Puerta">
+                  Puerta / número de portal
+                </label>
+                <input
+                  type="text"
+                  class="form-control-funca"
+                  id="Puerta"
+                  name="Puerta"
+                  value="{{ vado.Puerta if vado else '' }}"
+                  placeholder="Ej: 12B"
+                >
+              </div>
+
+              {# 5.8 Descripción OT #}
+              <div class="col-md-8">
+                <label class="form-label-funca" for="Desc_OT">
+                  Descripción / notas internas (Desc_OT)
+                </label>
+                <input
+                  type="text"
+                  class="form-control-funca"
+                  id="Desc_OT"
+                  name="Desc_OT"
+                  value="{{ vado.Desc_OT if vado else '' }}"
+                  placeholder="Observaciones internas, nº expediente, etc."
+                >
+              </div>
+
+              {# 5.9 Superficie y anchura #}
+              <div class="col-md-3">
+                <label class="form-label-funca" for="superficie">
+                  Superficie (m²)
+                </label>
+                <input
+                  type="text"
+                  class="form-control-funca"
+                  id="superficie"
+                  name="superficie"
+                  value="{{ vado.superficie if vado and vado.superficie is not none else '' }}"
+                  placeholder="Ej: 10,50"
+                >
+              </div>
+
+              <div class="col-md-3">
+                <label class="form-label-funca" for="anchura">
+                  Anchura (m)
+                </label>
+                <input
+                  type="text"
+                  class="form-control-funca"
+                  id="anchura"
+                  name="anchura"
+                  value="{{ vado.anchura if vado and vado.anchura is not none else '' }}"
+                  placeholder="Ej: 3,50"
+                >
+              </div>
+
+              {# 5.10 Datos OT adicionales #}
+              <div class="col-md-3">
+                <label class="form-label-funca" for="Via_OT">
+                  Vía OT
+                </label>
+                <input
+                  type="text"
+                  class="form-control-funca"
+                  id="Via_OT"
+                  name="Via_OT"
+                  value="{{ vado.Via_OT if vado else '' }}"
+                  placeholder="Texto libre para la OT"
+                >
+              </div>
+
+              <div class="col-md-3">
+                <label class="form-label-funca" for="NIF_SP_OT">
+                  NIF SP OT
+                </label>
+                <input
+                  type="text"
+                  class="form-control-funca"
+                  id="NIF_SP_OT"
+                  name="NIF_SP_OT"
+                  value="{{ vado.NIF_SP_OT if vado else '' }}"
+                  placeholder="NIF para orden de trabajo"
+                >
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label-funca" for="Nombre_SP_OT">
+                  Nombre SP OT
+                </label>
+                <input
+                  type="text"
+                  class="form-control-funca"
+                  id="Nombre_SP_OT"
+                  name="Nombre_SP_OT"
+                  value="{{ vado.Nombre_SP_OT if vado else '' }}"
+                  placeholder="Nombre para orden de trabajo"
+                >
+              </div>
+
+            </div> {# fin .row g-4 #}
+
+            {# 5.11 Botones #}
+            <div class="mt-4 d-flex gap-3">
+              <button type="submit" class="btn-funca-primary">
+                {% if modo == "nuevo" %}
+                  Guardar vado
+                {% else %}
+                  Guardar cambios
+                {% endif %}
+              </button>
+
+              <a href="{{ url_for('btn_vados_form_bp.btn_vado_form_nuevo') }}" class="btn-funca-secondary">
+                <i class="bi bi-arrow-left-circle"></i>
+                Volver
+              </a>
+            </div>
+
+          </form>
+
+        </div> {# fin .card-funca-body #}
+      </div>   {# fin .card-funca #}
+    </div>
+  </div>
+
+</div> {# fin .container #}
+
+{# ============================================================================
+  6. SCRIPT: FILTRO POR NIF EN SELECT DE PROVEEDORES
+  ========================================================================= #}
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const filtroInput = document.getElementById('filtro_proveedor_nif');
+    const selectProv = document.getElementById('idtbl_proveedores');
+
+    if (!filtroInput || !selectProv) {
+      return;
+    }
+
+    filtroInput.addEventListener('input', () => {
+      const texto = filtroInput.value.trim().toUpperCase();
+
+      for (let i = 0; i < selectProv.options.length; i++) {
+        const opt = selectProv.options[i];
+
+        if (opt.value === "") {
+          opt.style.display = "";
+          continue;
+        }
+
+        const nif = (opt.getAttribute('data-nif') || "").toUpperCase();
+        const nombre = (opt.getAttribute('data-nombre') || "").toUpperCase();
+        const textoCompleto = nif + " " + nombre;
+
+        if (!texto || textoCompleto.indexOf(texto) !== -1) {
+          opt.style.display = "";
+        } else {
+          opt.style.display = "none";
+        }
+      }
+    });
+  });
+</script>
+
+{# ============================================================================
+  7. FIN DEL BLOQUE DE CONTENIDO
+  ========================================================================= #}
+{% endblock %}

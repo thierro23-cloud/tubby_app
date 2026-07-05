@@ -1,0 +1,203 @@
+{# =============================================================================
+🧠 PLANTILLA: contenedores_pendientes.html
+============================================================================= #
+
+# =============================================================================
+# 📌 INTRODUCCIÓN GENERAL
+# =============================================================================
+#
+# Esta plantilla representa el FRONTEND del módulo:
+#
+#   👉 contenedores_pendientes_validacion
+#
+# Su objetivo es mostrar todos los registros pendientes de validación
+# antes de ser incorporados definitivamente al sistema principal.
+#
+# -----------------------------------------------------------------------------
+# 🎯 FUNCIONALIDAD PRINCIPAL
+# -----------------------------------------------------------------------------
+#
+# ✔ Listar contenedores pendientes (desde CSV o carga previa)
+# ✔ Permitir acceso a edición individual
+# ✔ Visualización rápida en tabla interactiva (DataTables)
+#
+# -----------------------------------------------------------------------------
+# 🧠 BACKEND QUE CONTROLA ESTA PLANTILLA
+# -----------------------------------------------------------------------------
+#
+# Blueprint principal:
+#
+#   contenedores_pendientes_bp
+#
+# Ruta típica:
+#
+#   @contenedores_pendientes_bp.route("/pendientes")
+#   def listar_pendientes():
+#
+# -----------------------------------------------------------------------------
+# 📦 VARIABLES QUE RECIBE LA PLANTILLA
+# -----------------------------------------------------------------------------
+#
+# 🔹 pendientes → LISTA PRINCIPAL
+#
+#   Cada elemento "p" contiene:
+#
+#   - p.csv                → identificador CSV
+#   - p.numero_solicitud   → nº solicitud administrativa
+#   - p.nombre             → solicitante
+#   - p.archivo            → referencia para editar
+#
+# -----------------------------------------------------------------------------
+# 🔄 FLUJO REAL DE EJECUCIÓN
+# -----------------------------------------------------------------------------
+#
+# 1️⃣ Usuario entra a:
+#       /contenedores/pendientes
+#
+# 2️⃣ Flask ejecuta:
+#       listar_pendientes()
+#
+# 3️⃣ Backend:
+#       - lee datos (CSV / BD temporal)
+#       - construye lista "pendientes"
+#
+# 4️⃣ render_template("pendientes_validacion.html", pendientes=pendientes)
+#
+# 5️⃣ Jinja:
+#       - recorre pendientes
+#       - genera filas de tabla
+#
+# 6️⃣ DataTables:
+#       - añade búsqueda
+#       - añade paginación
+#       - mejora UX
+#
+# -----------------------------------------------------------------------------
+# 🔗 RELACIÓN CON OTROS MÓDULOS
+# -----------------------------------------------------------------------------
+#
+# ✔ contenedores_bp   → módulo principal
+# ✔ control_contenedores_manual_bp → alta manual
+# ✔ editar_pendiente               → validación individual
+#
+# Arquitectura:
+#
+#   panel → modulo → btn
+#
+# -----------------------------------------------------------------------------
+# 🚀 NIVEL PRODUCCIÓN
+# -----------------------------------------------------------------------------
+#
+# ✔ Separación backend/frontend
+# ✔ Tabla dinámica con DataTables
+# ✔ Escalable (muchos registros)
+# ✔ Navegación hacia edición
+#
+# ============================================================================= #}
+
+
+<div class="container-fluid mt-4">
+
+    {# =========================================================================
+    1️⃣ TÍTULO DEL PANEL
+    ========================================================================= #}
+
+    <h2>Pendientes de validación</h2>
+
+
+    {# =========================================================================
+    2️⃣ TABLA PRINCIPAL (DATATABLE)
+    ========================================================================= #}
+
+    <table id="tablaPendientes" class="table table-striped table-hover">
+
+        <thead>
+            <tr>
+                <th>CSV</th>
+                <th>Nº Solicitud</th>
+                <th>Solicitante</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+
+        <tbody>
+
+            {# ===============================================================
+            2.1 LOOP PRINCIPAL
+            =============================================================== #}
+
+            {% for p in pendientes %}
+
+                <tr>
+
+                    {# CSV identificador #}
+                    <td>{{ p.csv }}</td>
+
+                    {# Número de solicitud #}
+                    <td>{{ p.numero_solicitud }}</td>
+
+                    {# Nombre solicitante #}
+                    <td>{{ p.nombre }}</td>
+
+                    {# =======================================================
+                    ACCIONES
+                    ======================================================= #}
+                    <td>
+
+                        <a class="btn btn-primary btn-sm"
+                           href="{{ url_for(
+                                'contenedores_pendientes_bp.editar_pendiente',
+                                archivo=p.archivo
+                           ) }}">
+                            Editar
+                        </a>
+
+                    </td>
+
+                </tr>
+
+            {% endfor %}
+
+        </tbody>
+
+    </table>
+
+</div>
+
+
+{# =============================================================================
+3️⃣ LIBRERÍAS EXTERNAS (DataTables)
+============================================================================= #}
+
+<link rel="stylesheet"
+href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+
+
+{# =============================================================================
+4️⃣ INICIALIZACIÓN DE DATATABLE
+============================================================================= #}
+
+<script>
+
+$(document).ready(function() {
+
+    $('#tablaPendientes').DataTable({
+
+        pageLength: 10,         // nº filas por página
+        ordering: true,         // ordenación
+        searching: true,        // buscador
+        responsive: true,       // responsive
+
+        language: {
+            url: "//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json"
+        }
+
+    });
+
+});
+
+</script>

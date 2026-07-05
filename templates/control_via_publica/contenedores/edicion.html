@@ -1,0 +1,849 @@
+{#============================================================================
+  📄 VISTA · EDICIÓN DE CONTENEDORES (CONTROL VÍA PÚBLICA)
+  ============================================================================
+  OBJETIVO GLOBAL
+  ---------------
+  Definir una PANTALLA COMPLETA para la edición avanzada de registros
+  en tbl_control_contenedores, siguiendo la metáfora:
+
+      · La CABECERA → vista rápida + acciones globales.
+      · El CUERPO   → un "CORCHO" sobre el que pegamos "CARTULINAS"
+                      (tarjetas) editables con los datos del contenedor.
+
+  PARTES PRINCIPALES
+  ------------------
+  1) Cabecera del editor
+     - Ficha-resumen del contenedor actual (solo lectura).
+     - Botones de acción:
+          · ⬅ Volver         → a la URL de origen (url_origen).
+          · ⬅ Anterior       → contenedor anterior de la lista filtrada.
+          · Siguiente ➜      → contenedor siguiente.
+          · 💾 Guardar cambios → envía el formulario principal.
+          · 🗑 Eliminar       → elimina el contenedor actual.
+
+  2) Cuerpo del editor (corcho)
+     - Un único formulario principal (id="form-edicion").
+     - Distribución en cartulinas (.bloque) que se adaptan al espacio:
+          · 📊 Datos administrativos
+          · 👤 Proveedor / Solicitante
+          · 🧾 Contenedor / CSV
+          · 📍 Ubicación
+          · 📡 Ubicación GPS
+          · 📅 Fechas
+          · 🧱 Observaciones
+     - Todas las cartulinas son EDITABLES.
+     - Para campos de tipo FK (proveedor, dimensión, tipo vía, calle) se
+       envían:
+          · Texto humano (visible y editable).
+          · ID oculto (hidden) para la tabla.
+
+  VARIABLES ESPERADAS
+  -------------------
+  - contenedor        → dict/objeto con datos de tbl_control_contenedores.
+  - proveedor_nombre  → nombre legible del proveedor.
+  - proveedor_nif     → NIF del proveedor.
+  - tipos_de_vias     → nombre del tipo de vía.
+  - calles            → nombre de la calle.
+  - dimension         → descripción de la dimensión.
+  - posicion          → índice actual en la lista filtrada (0-based).
+  - total_resultados  → número de resultados en la lista filtrada.
+  - fecha_desde       → filtro usado (texto).
+  - fecha_hasta       → filtro usado (texto).
+  - url_origen        → URL desde la que se llegó a esta pantalla.
+  - info              → mensaje informativo (opcional).
+  - error             → mensaje de error (opcional).
+
+  NOTA
+  ----
+  - La lógica de backend (btn_contenedores_edicion_bp) debe manejar:
+        · modos: "navegar", "editar", "eliminar".
+        · redirecciones según url_origen si así se desea.
+        · llamada a la API interna /api/geocodificar_calle para
+          calcular latitud/longitud aproximadas por calle.
+  - Esta plantilla se centra en la experiencia de usuario y en que los
+    name="" de los campos coincidan con lo que recoge el backend.
+  ============================================================================
+#}
+
+{% extends "base.html" %}
+
+{% block content %}
+
+{#============================================================================
+  📄 VISTA · EDICIÓN DE CONTENEDORES (CONTROL VÍA PÚBLICA)
+  ============================================================================
+  OBJETIVO GLOBAL
+  ---------------
+  Pantalla de edición avanzada de registros en tbl_control_contenedores,
+  organizada como:
+
+    · CABECERA → ficha-resumen + acciones globales.
+    · CUERPO   → "corcho" con cartulinas editables (bloques flexibles).
+
+  En todos los campos FK (proveedor, dimensión, tipo de vía, calle) se usa:
+    · Desplegable <select> con texto legible.
+    · Value del <option> = ID real de la tabla (FK).
+  ============================================================================#}
+
+{#============================================================================
+  1️⃣ CABECERA DEL EDITOR · FICHA RESUMEN Y ACCIONES
+  ============================================================================#}
+
+{#==================== EMPIEZA 1. ESTILOS GENERALES ========================#}
+<style>
+/*--------------------------------------------------------------------------- 
+  1.1 ESTILOS DE LA CABECERA DEL EDITOR
+  --------------------------------------------------------------------------*/
+.editor-header {
+  padding: 10px 16px 6px;
+  border-bottom: 1px solid rgba(148,163,184,0.4);
+  background: linear-gradient(135deg, #e5e7eb, #f9fafb);
+  box-shadow: 0 2px 5px rgba(15,23,42,0.08);
+}
+.editor-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* Ficha-resumen */
+.editor-summary {
+  min-width: 260px;
+  max-width: 520px;
+  background: #ffffff;
+  border-radius: 10px;
+  border: 1px solid rgba(148,163,184,0.5);
+  box-shadow:
+    0 8px 18px rgba(15,23,42,0.08),
+    0 0 0 1px rgba(148,163,184,0.08);
+  padding: 8px 10px;
+}
+.editor-summary h3 {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #0f172a;
+}
+.editor-summary h3::after {
+  content: "";
+  flex: 1 1 auto;
+  height: 1px;
+  margin-left: 6px;
+  background: linear-gradient(90deg, rgba(148,163,184,0.7), transparent);
+}
+.summary-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  font-size: 11px;
+}
+.summary-item {
+  display: flex;
+  gap: 4px;
+  white-space: nowrap;
+}
+.summary-label {
+  font-weight: 600;
+  color: #4b5563;
+}
+.summary-value {
+  color: #111827;
+}
+
+/* Barra de acciones */
+.editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  justify-content: flex-end;
+}
+.tag-btn {
+  appearance: none;
+  border: none;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  background: #e5e7eb;
+  color: #111827;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 1px 2px rgba(15,23,42,0.08);
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.05s ease;
+}
+.tag-btn:hover {
+  background: #d1d5db;
+  box-shadow: 0 2px 4px rgba(15,23,42,0.12);
+  transform: translateY(-0.5px);
+}
+.tag-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(15,23,42,0.1);
+}
+.tag-btn-primary {
+  background: linear-gradient(135deg, #2563eb, #0ea5e9);
+  color: white;
+  box-shadow:
+    0 4px 10px rgba(37,99,235,0.45),
+    0 0 0 1px rgba(30,64,175,0.8);
+}
+.tag-btn-primary:hover {
+  background: linear-gradient(135deg, #1d4ed8, #0284c7);
+}
+.tag-btn-danger {
+  background: linear-gradient(135deg, #dc2626, #f97316);
+  color: white;
+  box-shadow:
+    0 4px 10px rgba(220,38,38,0.45),
+    0 0 0 1px rgba(127,29,29,0.8);
+}
+.tag-btn-danger:hover {
+  background: linear-gradient(135deg, #b91c1c, #ea580c);
+}
+.editor-actions form {
+  margin: 0;
+}
+
+/* Responsive cabecera */
+@media (max-width: 900px) {
+  .editor-header-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .editor-actions {
+    justify-content: flex-start;
+  }
+}
+
+/*--------------------------------------------------------------------------- 
+  2.1 ESTILOS DEL CORCHO Y CARTULINAS (CUERPO)
+  --------------------------------------------------------------------------*/
+.editor-body {
+  flex: 1 1 auto;
+  padding: 10px 16px 12px;
+  box-sizing: border-box;
+  background: radial-gradient(circle at top left, #e0f2fe, #f9fafb 55%);
+  overflow: auto;
+}
+.corcho-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-content: flex-start;
+  align-items: flex-start;
+}
+.bloque {
+  border-radius: 10px;
+  border: 1px solid rgba(148,163,184,0.4);
+  box-shadow:
+    0 10px 25px rgba(15,23,42,0.06),
+    0 0 0 1px rgba(148,163,184,0.08);
+  padding: 8px 10px;
+  color: #0f172a;
+  position: relative;
+  background: #ffffff;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    background 0.2s ease,
+    transform 0.08s ease,
+    filter 0.12s ease;
+  flex: 1 1 320px;
+  max-width: 480px;
+}
+.bloque--admin      { background: linear-gradient(135deg, #eef2ff, #ffffff); }
+.bloque--prov       { background: linear-gradient(135deg, #ecfeff, #ffffff); }
+.bloque--contenedor { background: linear-gradient(135deg, #f5f3ff, #ffffff); }
+.bloque--ubicacion  { background: linear-gradient(135deg, #e0f2fe, #ffffff); }
+.bloque--gps        { background: linear-gradient(135deg, #fefce8, #ffffff); }
+.bloque--fechas     { background: linear-gradient(135deg, #f1f5f9, #ffffff); }
+.bloque--obs        { background: linear-gradient(135deg, #fdf2f8, #ffffff); }
+.bloque:hover {
+  border-color: rgba(59,130,246,0.7);
+  box-shadow:
+    0 12px 30px rgba(15,23,42,0.12),
+    0 0 0 1px rgba(59,130,246,0.35);
+  filter: brightness(1.02);
+  transform: translateY(-1px);
+}
+.bloque:focus-within {
+  border-color: #0ea5e9;
+  box-shadow:
+    0 14px 36px rgba(15,23,42,0.16),
+    0 0 0 1px rgba(14,165,233,0.6);
+  filter: brightness(1.03);
+  transform: translateY(-1px);
+}
+.bloque h4 {
+  margin: 0 0 4px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .02em;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #0f172a;
+}
+.bloque h4::after {
+  content: "";
+  flex: 1 1 auto;
+  height: 1px;
+  margin-left: 6px;
+  background: linear-gradient(90deg, rgba(148,163,184,0.7), transparent);
+}
+label {
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  margin-bottom: 2px;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+input, select, textarea {
+  width: 100%;
+  margin-bottom: 5px;
+  padding: 5px 7px;
+  font-size: 11px;
+  box-sizing: border-box;
+  border-radius: 6px;
+  border: 1px solid rgba(148,163,184,0.7);
+  background: #f9fafb;
+  color: #0f172a;
+  outline: none;
+  transition: border-color .15s ease, box-shadow .15s ease,
+              background .15s ease, transform .05s ease;
+}
+input:hover, select:hover, textarea:hover {
+  border-color: rgba(55,65,81,0.7);
+}
+input:focus, select:focus, textarea:focus {
+  border-color: #0ea5e9;
+  box-shadow: 0 0 0 1px rgba(14,165,233,0.35);
+  background: #ffffff;
+  transform: translateY(-0.5px);
+}
+.row {
+  display: flex;
+  gap: 6px;
+}
+.row .campo {
+  flex: 1;
+}
+textarea {
+  resize: vertical;
+  min-height: 40px;
+  max-height: 70px;
+}
+@media (max-height: 700px) {
+  .bloque {
+    padding: 6px 8px;
+    margin-bottom: 4px;
+  }
+}
+</style>
+{#===================== TERMINA 1. ESTILOS GENERALES =======================#}
+
+{#==================== EMPIEZA 2. CABECERA DEL EDITOR ======================#}
+<div class="editor-header">
+  <div class="editor-header-row">
+
+    {#---------------- 2.1 FICHA RESUMEN DEL CONTENEDOR --------------------#}
+    <section class="editor-summary">
+      <h3>🗂 Contenedor {{ contenedor.idtbl_control_contenedores if contenedor }}</h3>
+
+      <div class="summary-row">
+        <div class="summary-item">
+          <span class="summary-label">Expediente:</span>
+          <span class="summary-value">
+            {{ contenedor.numero_expediente or "—" }}
+          </span>
+        </div>
+
+        <div class="summary-item">
+          <span class="summary-label">Solicitud:</span>
+          <span class="summary-value">
+            {{ contenedor.numero_solicitud or "—" }}
+          </span>
+        </div>
+
+        <div class="summary-item">
+          <span class="summary-label">Solicitud ret.:</span>
+          <span class="summary-value">
+            {{ contenedor.n_solicitud_retirada or "—" }}
+          </span>
+        </div>
+      </div>
+
+      <div class="summary-row" style="margin-top:4px;">
+        <div class="summary-item">
+          <span class="summary-label">Proveedor:</span>
+          <span class="summary-value">
+            {{ proveedor_nombre or "—" }}
+          </span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">CSV inst.:</span>
+          <span class="summary-value">
+            {{ contenedor.csv or "—" }}
+          </span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">CSV ret.:</span>
+          <span class="summary-value">
+            {{ contenedor.csv_retirada or "—" }}
+          </span>
+        </div>
+      </div>
+
+      <div class="summary-row" style="margin-top:4px;">
+        <div class="summary-item">
+          <span class="summary-label">Dirección:</span>
+          <span class="summary-value">
+            {{ contenedor.tipo_via_nombre or "" }} {{ contenedor.calle_nombre or "" }}
+            {% if contenedor.numero_portal %} {{ contenedor.numero_portal }}{% endif %}
+          </span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">Estado:</span>
+          <span class="summary-value">
+            {% if contenedor.fecha_retirada %}
+              Retirado
+            {% else %}
+              Instalado
+            {% endif %}
+          </span>
+        </div>
+      </div>
+    </section>
+    {#-------------- TERMINA 2.1 FICHA RESUMEN DEL CONTENEDOR --------------#}
+
+    {#---------------- 2.2 BARRA DE ACCIONES -------------------------------#}
+    <div class="editor-actions">
+
+      {# Volver #}
+      {% if url_origen %}
+        <form method="GET" action="{{ url_origen }}">
+          <button type="submit" class="tag-btn">
+            ⬅ Volver
+          </button>
+        </form>
+      {% else %}
+        <button type="button" class="tag-btn" disabled>
+          ⬅ Volver
+        </button>
+      {% endif %}
+
+      {# Anterior #}
+      <form method="POST">
+        <input type="hidden" name="modo" value="navegar">
+        <input type="hidden" name="nav" value="anterior">
+        <input type="hidden" name="posicion_actual" value="{{ posicion }}">
+        <input type="hidden" name="fecha_desde" value="{{ fecha_desde }}">
+        <input type="hidden" name="fecha_hasta" value="{{ fecha_hasta }}">
+        <button type="submit" class="tag-btn">
+          ⬅ Anterior
+        </button>
+      </form>
+
+      {# Siguiente #}
+      <form method="POST">
+        <input type="hidden" name="modo" value="navegar">
+        <input type="hidden" name="nav" value="siguiente">
+        <input type="hidden" name="posicion_actual" value="{{ posicion }}">
+        <input type="hidden" name="fecha_desde" value="{{ fecha_desde }}">
+        <input type="hidden" name="fecha_hasta" value="{{ fecha_hasta }}">
+        <button type="submit" class="tag-btn">
+          Siguiente ➜
+        </button>
+      </form>
+
+      {# Guardar #}
+      <button type="submit"
+              form="form-edicion"
+              class="tag-btn tag-btn-primary">
+        💾 Guardar cambios
+      </button>
+
+      {# Eliminar #}
+      <form method="POST" onsubmit="return confirm('¿Eliminar este contenedor?');">
+        <input type="hidden" name="modo" value="eliminar">
+        <input type="hidden" name="idtbl_control_contenedores"
+               value="{{ contenedor.idtbl_control_contenedores if contenedor }}">
+        <input type="hidden" name="fecha_desde" value="{{ fecha_desde }}">
+        <input type="hidden" name="fecha_hasta" value="{{ fecha_hasta }}">
+        <button type="submit" class="tag-btn tag-btn-danger">
+          🗑 Eliminar
+        </button>
+      </form>
+
+    </div>
+    {#---------------- TERMINA 2.2 BARRA DE ACCIONES -----------------------#}
+
+  </div>
+</div>
+{#===================== TERMINA 2. CABECERA DEL EDITOR =====================#}
+
+{#============================================================================
+  3️⃣ CUERPO DEL EDITOR · CORCHO Y CARTULINAS (FORMULARIO PRINCIPAL)
+  ============================================================================#}
+
+{#==================== EMPIEZA 3. FORMULARIO PRINCIPAL =====================#}
+<div class="editor-body">
+
+  <form method="POST" id="form-edicion" class="corcho-form">
+    <input type="hidden" name="modo" value="editar">
+    <input type="hidden" name="posicion_actual" value="{{ posicion }}">
+    <input type="hidden" name="idtbl_control_contenedores"
+           value="{{ contenedor.idtbl_control_contenedores if contenedor }}">
+    <input type="hidden" name="url_origen"
+           value="{{ url_origen or '' }}">
+    <input type="hidden" name="fecha_desde" value="{{ fecha_desde }}">
+    <input type="hidden" name="fecha_hasta" value="{{ fecha_hasta }}">
+
+    {#---------------- 3.1 CARTULINA · DATOS ADMINISTRATIVOS ---------------#}
+    <section class="bloque bloque--admin">
+      <h4>📊 Datos administrativos</h4>
+
+      <div class="row">
+        <div class="campo">
+          <label for="numero_expediente">Nº expediente</label>
+          <input id="numero_expediente" name="numero_expediente"
+                 value="{{ contenedor.numero_expediente if contenedor }}">
+        </div>
+
+        <div class="campo">
+          <label for="anio_expediente">Año expediente</label>
+          <input id="anio_expediente" name="anio_expediente" type="number"
+                 min="2000" max="2100"
+                 value="{{ contenedor.anio_expediente if contenedor }}">
+        </div>
+      </div>
+
+      <label for="numero_solicitud">Nº solicitud</label>
+      <input id="numero_solicitud" name="numero_solicitud"
+             value="{{ contenedor.numero_solicitud if contenedor }}">
+
+      <label for="n_solicitud_retirada">Nº solicitud retirada</label>
+      <input id="n_solicitud_retirada" name="n_solicitud_retirada"
+             value="{{ contenedor.n_solicitud_retirada if contenedor }}">
+    </section>
+    {#------------ TERMINA 3.1 CARTULINA · DATOS ADMINISTRATIVOS -----------#}
+
+    {#---------------- 3.2 CARTULINA · PROVEEDOR / SOLICITANTE -------------#}
+<section class="bloque bloque--prov">
+  <h4>👤 Proveedor / Solicitante</h4>
+
+  {# Proveedor: mantiene siempre el ID actual, aunque no esté en la lista #}
+  <label for="idtbl_proveedores">Proveedor</label>
+  <select id="idtbl_proveedores" name="idtbl_proveedores">
+    {# Si no hay proveedor en el contenedor, muestro opción vacía #}
+    {% if not contenedor.idtbl_proveedores %}
+      <option value="">-- Selecciona proveedor --</option>
+    {% endif %}
+
+    {# Opción con el proveedor actual, por si no está en la lista filtrada #}
+    {% if contenedor.idtbl_proveedores %}
+      <option value="{{ contenedor.idtbl_proveedores }}" selected>
+        {{ proveedor_nombre or 'Proveedor actual (ID ' ~ contenedor.idtbl_proveedores ~ ')' }}
+      </option>
+    {% endif %}
+
+    {# Resto de proveedores (coloca_contenedores = 1) #}
+    {% for prov in proveedores %}
+      {# Evito duplicar la opción actual #}
+      {% if prov.idtbl_proveedores != contenedor.idtbl_proveedores %}
+        <option value="{{ prov.idtbl_proveedores }}">
+          {{ prov.nombre }} ({{ prov.nif }})
+        </option>
+      {% endif %}
+    {% endfor %}
+  </select>
+
+  <small style="font-size:10px; color:#9ca3af; display:block; margin-bottom:4px;">
+    ID proveedor actual: {{ contenedor.idtbl_proveedores if contenedor }}
+  </small>
+
+  {# Datos del solicitante #}
+  <label for="nombre_solicitante">Nombre solicitante</label>
+  <input id="nombre_solicitante"
+         name="nombre_solicitante"
+         value="{{ contenedor.nombre_solicitante if contenedor }}">
+
+  <div class="row">
+    <div class="campo">
+      <label for="nif">NIF solicitante</label>
+      <input id="nif"
+             name="nif"
+             value="{{ contenedor.nif if contenedor }}">
+    </div>
+    <div class="campo">
+      <label for="telefono">Teléfono</label>
+      <input id="telefono"
+             name="telefono"
+             value="{{ contenedor.telefono if contenedor }}">
+    </div>
+  </div>
+</section>
+{#------------ TERMINA 3.2 CARTULINA · PROVEEDOR / SOLICITANTE ---------#}
+
+    {#---------------- 3.3 CARTULINA · CONTENEDOR / CSV --------------------#}
+<<section class="bloque bloque--contenedor">
+  <h4>🧾 Contenedor / CSV</h4>
+
+  <label for="idtbl_dimensiones">Dimensión</label>
+  <select id="idtbl_dimensiones" name="idtbl_dimensiones">
+    <option value="">
+      -- Selecciona dimensión --
+    </option>
+
+    {% for dim in dimensiones %}
+      <option value="{{ dim.idtbl_dimensiones }}"
+              {% if contenedor and contenedor.idtbl_dimensiones == dim.idtbl_dimensiones %}selected{% endif %}>
+        {{ dim.descripcion }}
+      </option>
+    {% endfor %}
+  </select>
+
+  <small style="font-size:10px; color:#9ca3af; display:block; margin-bottom:4px;">
+    Dimensión actual:
+    {% if contenedor and contenedor.idtbl_dimensiones %}
+      {{ dimension or 'ID ' ~ contenedor.idtbl_dimensiones }}
+    {% else %}
+      — 
+    {% endif %}
+  </small>
+
+  <label for="csv">CSV instalación</label>
+  <input id="csv" name="csv"
+         value="{{ contenedor.csv if contenedor }}">
+
+  <label for="csv_retirada">CSV retirada</label>
+  <input id="csv_retirada" name="csv_retirada"
+         value="{{ contenedor.csv_retirada if contenedor }}">
+</section>
+{#------------ TERMINA 3.3 CARTULINA · CONTENEDOR / CSV ----------------#}
+
+    {#---------------- 3.4 CARTULINA · UBICACIÓN ---------------------------#}
+<section class="bloque bloque--ubicacion">
+  <h4>📍 Ubicación</h4>
+
+  <label for="idtbl_tipos_de_vias">Tipo de vía</label>
+  <select id="idtbl_tipos_de_vias" name="idtbl_tipos_de_vias">
+    {% if not contenedor.idtbl_tipos_de_vias %}
+      <option value="">-- Selecciona tipo de vía --</option>
+    {% endif %}
+
+    {% if contenedor.idtbl_tipos_de_vias %}
+      <option value="{{ contenedor.idtbl_tipos_de_vias }}" selected>
+        {{ contenedor.tipo_via_nombre or 'Tipo vía actual (ID ' ~ contenedor.idtbl_tipos_de_vias ~ ')' }}
+      </option>
+    {% endif %}
+
+    {% for tv in tipos_de_vias %}
+      {% if tv.idtbl_tipos_de_vias != contenedor.idtbl_tipos_de_vias %}
+        <option value="{{ tv.idtbl_tipos_de_vias }}">
+          {{ tv.nombre }}
+        </option>
+      {% endif %}
+    {% endfor %}
+  </select>
+  <small style="font-size:10px; color:#9ca3af; display:block; margin-bottom:4px;">
+    ID tipo vía actual: {{ contenedor.idtbl_tipos_de_vias if contenedor }}
+  </small>
+  <label for="idtbl_calles">Calle</label>
+  <select id="idtbl_calles" name="idtbl_calles">
+    {% if not contenedor.idtbl_calles %}
+      <option value="">-- Selecciona calle --</option>
+    {% endif %}
+
+    {% if contenedor.idtbl_calles %}
+      <option value="{{ contenedor.idtbl_calles }}" selected>
+        {{ contenedor.calle_nombre or 'Calle actual (ID ' ~ contenedor.idtbl_calles ~ ')' }}
+      </option>
+    {% endif %}
+
+    {% for c in calles %}
+      {% if c.idtbl_calles != contenedor.idtbl_calles %}
+        <option value="{{ c.idtbl_calles }}">
+          {{ c.nombre }}
+        </option>
+      {% endif %}
+    {% endfor %}
+  </select>
+  <small style="font-size:10px; color:#9ca3af; display:block; margin-bottom:4px;">
+    ID calle actual: {{ contenedor.idtbl_calles if contenedor }}
+  </small>
+
+  <label for="numero_portal">Nº portal</label>
+  <input id="numero_portal" name="numero_portal"
+         value="{{ contenedor.numero_portal if contenedor }}">
+</section>
+{#------------ TERMINA 3.4 CARTULINA · UBICACIÓN -----------------------#}
+    {#---------------- 3.5 CARTULINA · UBICACIÓN GPS -----------------------#}
+    <section class="bloque bloque--gps">
+      <h4>📡 Ubicación GPS</h4>
+
+      <button type="button"
+              class="tag-btn"
+              style="margin-bottom:6px;"
+              onclick="geocodificarCalleDesdeEditor()">
+        📍 Calcular ubicación aproximada
+      </button>
+
+      <div class="row">
+        <div class="campo">
+          <label for="latitud">Latitud</label>
+          <input id="latitud" name="latitud"
+                 value="{{ contenedor.latitud if contenedor }}">
+        </div>
+        <div class="campo">
+          <label for="longitud">Longitud</label>
+          <input id="longitud" name="longitud"
+                 value="{{ contenedor.longitud if contenedor }}">
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="campo">
+          <label for="precision_gps">Precisión</label>
+          <input id="precision_gps" name="precision_gps"
+                 value="{{ contenedor.precision_gps if contenedor }}">
+        </div>
+        <div class="campo">
+          <label for="gps_nivel_calidad">Nivel calidad</label>
+          <input id="gps_nivel_calidad" name="gps_nivel_calidad"
+                 value="{{ contenedor.gps_nivel_calidad if contenedor }}">
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="campo">
+          <label for="gps_precision_ok">Precisión OK</label>
+          <input id="gps_precision_ok" name="gps_precision_ok"
+                 type="checkbox"
+                 {% if contenedor.gps_precision_ok in ('1','S','true','True') %}checked{% endif %}>
+        </div>
+        <div class="campo">
+          <label for="gps_origen">Origen GPS</label>
+          <input id="gps_origen" name="gps_origen"
+                 value="{{ contenedor.gps_origen if contenedor }}">
+        </div>
+      </div>
+    </section>
+    {#------------ TERMINA 3.5 CARTULINA · UBICACIÓN GPS -------------------#}
+
+    {#---------------- 3.6 CARTULINA · FECHAS ------------------------------#}
+    <section class="bloque bloque--fechas">
+      <h4>📅 Fechas</h4>
+
+      <label for="fecha_colocacion">Colocación</label>
+      <input id="fecha_colocacion"
+             type="date"
+             name="fecha_colocacion"
+             value="{{ contenedor.fecha_colocacion if contenedor and contenedor.fecha_colocacion }}">
+
+      <label for="fecha_retirada">Retirada</label>
+      <input id="fecha_retirada"
+             type="date"
+             name="fecha_retirada"
+             value="{{ contenedor.fecha_retirada if contenedor and contenedor.fecha_retirada }}">
+
+      <label for="fecha_instalacion">Instalación</label>
+      <input id="fecha_instalacion"
+             type="date"
+             name="fecha_instalacion"
+             value="{{ contenedor.fecha_instalacion if contenedor and contenedor.fecha_instalacion }}">
+
+      <label for="fecha_firma_inicial">Firma inicial (PDF)</label>
+      <input id="fecha_firma_inicial"
+             type="datetime-local"
+             name="fecha_firma_inicial"
+             value="{% if contenedor and contenedor.fecha_firma_inicial %}
+                      {{ contenedor.fecha_firma_inicial.strftime('%Y-%m-%dT%H:%M') }}
+                    {% else %}{% endif %}">
+
+      <label>Fecha subida instalación</label>
+      <input type="text"
+             value="{{ contenedor.fecha_subida_instalacion or '—' if contenedor }}"
+             readonly>
+
+      <label>Fecha subida retirada</label>
+      <input type="text"
+             value="{{ contenedor.fecha_subida_retirada or '—' if contenedor }}"
+             readonly>
+    </section>
+    {#------------ TERMINA 3.6 CARTULINA · FECHAS --------------------------#}
+
+    {#---------------- 3.7 CARTULINA · OBSERVACIONES -----------------------#}
+    <section class="bloque bloque--obs">
+      <h4>🧱 Observaciones</h4>
+
+      <label for="observaciones">Observaciones</label>
+      <textarea id="observaciones" name="observaciones" rows="2">{{ contenedor.observaciones if contenedor }}</textarea>
+    </section>
+    {#------------ TERMINA 3.7 CARTULINA · OBSERVACIONES -------------------#}
+
+  </form>
+</div>
+{#===================== TERMINA 3. FORMULARIO PRINCIPAL ====================#}
+
+{#============================================================================
+  4️⃣ SCRIPT · GEOCODIFICACIÓN DESDE LA PANTALLA DE EDICIÓN
+  ============================================================================#}
+
+{#==================== EMPIEZA 4. SCRIPT GEOLOCALIZACIÓN ===================#}
+<script>
+function geocodificarCalleDesdeEditor() {
+  const idtbl_calles = document.getElementById('idtbl_calles').value;
+  const idtbl_tipos_de_vias = document.getElementById('idtbl_tipos_de_vias').value;
+
+  if (!idtbl_calles || !idtbl_tipos_de_vias) {
+    alert('Faltan datos de calle para geocodificar (tipo de vía o calle).');
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append('idtbl_calles', idtbl_calles);
+  formData.append('idtbl_tipos_de_vias', idtbl_tipos_de_vias);
+  formData.append('idtbl_municipios', 395);  // Ávila, ajusta si procede
+  formData.append('municipio_nombre', 'Ávila');  // ajusta si procede
+  formData.append('pais_nombre', 'España');
+
+  fetch('{{ url_for("btn_contenedores_edicion_bp.api_geocodificar_calle") }}', {
+    method: 'POST',
+    body: formData,
+  })
+    .then(resp => resp.json())
+    .then(data => {
+      if (data.error) {
+        alert(data.error);
+      } else {
+        document.getElementById('latitud').value = data.latitud;
+        document.getElementById('longitud').value = data.longitud;
+        if (data.precision_nivel !== undefined && data.precision_nivel !== null) {
+          document.getElementById('gps_nivel_calidad').value = data.precision_nivel;
+        }
+        document.getElementById('gps_origen').value = data.fuente || 'geoapify';
+      }
+    })
+    .catch(err => {
+      alert('Error al geocodificar: ' + err);
+    });
+}
+</script>
+{#===================== TERMINA 4. SCRIPT GEOLOCALIZACIÓN ==================#}
+
+{% endblock %}

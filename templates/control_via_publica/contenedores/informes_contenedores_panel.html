@@ -1,0 +1,441 @@
+{# =============================================================================
+   🌐 PLANTILLA: templates/control_obras/informes_contenedores_panel.html
+   =============================================================================
+
+   PANEL HTML DE INFORMES DE CONTENEDORES
+
+   Este template representa un panel de control administrativo desde el que
+   se supervisa el estado de los contenedores instalados en vía pública.
+
+   La plantilla está diseñada para ser:
+
+   ✔ fácil de mantener
+   ✔ fácil de entender para futuros desarrolladores
+   ✔ compatible con Bootstrap
+   ✔ alineada con el backend Flask
+
+   -----------------------------------------------------------------------------
+   📑 ÍNDICE DE LA PLANTILLA
+   -----------------------------------------------------------------------------
+
+   1️⃣ HERENCIA DE PLANTILLA BASE
+   2️⃣ BLOQUE <title> DEL NAVEGADOR
+   3️⃣ BLOQUE PRINCIPAL DE CONTENIDO
+
+        3.1 CABECERA DEL PANEL
+        3.2 BOTONERA DE NAVEGACIÓN DEL SISTEMA
+        3.3 KPI PRINCIPAL: CONTENEDORES ACTIVOS
+        3.4 TARJETA: RESUMEN DE ACTIVOS POR PROVEEDOR
+        3.5 TARJETA: CONFIGURACIÓN DE ENVÍO FUTURO DE INFORMES
+
+   -----------------------------------------------------------------------------
+   NOTA SOBRE LOS COMENTARIOS
+   -----------------------------------------------------------------------------
+
+   Se utilizan comentarios Jinja2:
+
+       {# comentario #}
+
+   para documentar el código sin que aparezcan en el HTML final.
+
+   ============================================================================= #}
+
+
+
+{# =============================================================================
+   1️⃣ HERENCIA DE PLANTILLA BASE
+   =============================================================================
+
+   Este template extiende de base.html.
+
+   base.html contiene normalmente:
+
+   - cabecera del sitio
+   - menú lateral
+   - pie de página
+   - estilos comunes
+
+   Aquí solo definimos los bloques que queremos rellenar.
+
+   ============================================================================= #}
+
+{% extends "base.html" %}
+
+
+
+{# =============================================================================
+   2️⃣ BLOQUE TITLE DEL NAVEGADOR
+   =============================================================================
+
+   Este bloque se inserta dentro del <title> del HTML principal.
+
+   ============================================================================= #}
+
+{% block title %}
+Panel informes contenedores
+{% endblock %}
+
+
+
+{# =============================================================================
+   3️⃣ BLOQUE PRINCIPAL DE CONTENIDO
+   =============================================================================
+
+   Todo lo que está dentro de este bloque se renderiza en la zona central
+   definida en base.html.
+
+   ============================================================================= #}
+
+{% block content %}
+
+
+
+{# =============================================================================
+   3.1 CONTENEDOR PRINCIPAL BOOTSTRAP
+   =============================================================================
+
+   container -> añade márgenes laterales automáticos
+   mt-4      -> margen superior
+
+   ============================================================================= #}
+
+<div class="container mt-4">
+
+
+
+{# =============================================================================
+   3.2 CABECERA DEL PANEL
+   =============================================================================
+
+   Contiene:
+
+   - título principal
+   - subtítulo explicativo
+   - barra de navegación rápida del sistema
+
+   ============================================================================= #}
+
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+
+    {# -------------------------------------------------------------------------
+       3.2.1 TÍTULO DEL PANEL
+       ------------------------------------------------------------------------- #}
+
+    <div>
+
+        <h1 class="h4 mb-1">
+            📊 Panel de informes de contenedores
+        </h1>
+
+        <p class="text-secondary mb-0 small">
+            Panel de control previo a la automatización del envío de informes.
+        </p>
+
+    </div>
+
+
+
+    {# -------------------------------------------------------------------------
+       3.2.2 BOTONERA DE NAVEGACIÓN
+       -------------------------------------------------------------------------
+
+       Permite moverse rápidamente entre las principales vistas del sistema.
+
+       Rutas utilizadas:
+
+       mapa_contenedores_bp.mapa_contenedores
+       control_contenedores_listado_bp.listado_pendientes
+       control_contenedores_listado_bp.listado_instalados
+       control_contenedores_listado_bp.listado_por_proveedor
+
+       ------------------------------------------------------------------------- #}
+
+    <div class="d-flex flex-wrap gap-2 justify-content-md-end">
+
+        {# Mapa de contenedores #}
+        <a href="{{ url_for('mapa_contenedores_bp.mapa_contenedores') }}"
+           class="btn btn-outline-primary btn-sm">
+            🗺️ Mapa
+        </a>
+
+        {# Listado de pendientes #}
+        <a href="{{ url_for('control_contenedores_listado_bp.listado_pendientes') }}"
+           class="btn btn-outline-secondary btn-sm">
+            ⏳ Pendientes
+        </a>
+
+        {# Listado de instalados #}
+        <a href="{{ url_for('control_contenedores_listado_bp.listado_instalados') }}"
+           class="btn btn-outline-secondary btn-sm">
+            📦 Instalados
+        </a>
+
+        {# Listado agrupado por proveedor #}
+        <a href="{{ url_for('control_contenedores_listado_bp.listado_por_proveedor') }}"
+           class="btn btn-outline-secondary btn-sm">
+            🏢 Por proveedor
+        </a>
+
+    </div>
+
+</div>
+
+
+
+{# =============================================================================
+   3.3 KPI PRINCIPAL: CONTENEDORES ACTIVOS
+   =============================================================================
+
+   KPI = indicador clave del sistema.
+
+   "Activos" significa:
+
+   contenedores sin fecha_retirada
+
+   Variable usada:
+
+       total_activos
+
+   ============================================================================= #}
+
+<div class="row g-3 mb-4">
+
+    <div class="col-md-4">
+
+        <div class="card border-0 shadow-sm rounded-4">
+
+            <div class="card-body">
+
+                <div class="small text-secondary mb-2">
+                    📦 Contenedores activos
+                </div>
+
+                <div class="display-6 fw-bold">
+                    {{ total_activos }}
+                </div>
+
+                <div class="small text-muted mt-2">
+                    Se consideran activos los contenedores sin fecha de retirada.
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+{# =============================================================================
+   3.4 TARJETA: RESUMEN DE ACTIVOS POR PROVEEDOR
+   =============================================================================
+
+   Muestra cuántos contenedores activos tiene cada proveedor.
+
+   Variable utilizada:
+
+       resumen_proveedores
+
+   Cada elemento contiene:
+
+       nombre_proveedor
+       total_activos
+
+   ============================================================================= #}
+
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+
+<div class="card-body">
+
+<h2 class="h6 fw-bold mb-3">
+🏢 Activos por proveedor
+</h2>
+
+
+
+{% if resumen_proveedores %}
+
+<div class="table-responsive">
+
+<table class="table table-sm table-hover align-middle mb-0">
+
+<thead class="table-light">
+
+<tr>
+<th>Proveedor</th>
+<th class="text-end">Activos</th>
+</tr>
+
+</thead>
+
+<tbody>
+
+{% for fila in resumen_proveedores %}
+
+<tr>
+
+<td>
+{{ fila.nombre_proveedor }}
+</td>
+
+<td class="text-end fw-semibold">
+{{ fila.total_activos }}
+</td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+</div>
+
+{% else %}
+
+<div class="alert alert-light mb-0">
+No hay datos de contenedores activos.
+</div>
+
+{% endif %}
+
+</div>
+
+</div>
+
+
+
+{# =============================================================================
+   3.5 TARJETA: CONFIGURACIÓN DE ENVÍO FUTURO
+   =============================================================================
+
+   Esta sección NO envía correos todavía.
+
+   Solo permite marcar qué proveedores recibirán en el futuro el informe
+   automático de contenedores pendientes.
+
+   Variables usadas:
+
+       proveedores_email
+
+   Cada proveedor contiene:
+
+       Idtbl_proveedores
+       nombre_razon_social
+       correo_electronico_admin
+       recibir_informe_pendientes
+
+   ============================================================================= #}
+
+<div class="card border-0 shadow-sm rounded-4">
+
+<div class="card-body">
+
+<div class="mb-3">
+
+<h2 class="h6 fw-bold mb-1">
+📬 Configuración de envío futuro
+</h2>
+
+<p class="text-secondary small mb-0">
+Este panel permite definir qué proveedores recibirán automáticamente
+el informe cuando se active el envío automático.
+</p>
+
+</div>
+
+
+
+<form method="post"
+action="{{ url_for('informes_contenedores_bp.actualizar_checking_envio') }}">
+
+
+
+<div class="table-responsive">
+
+<table class="table table-sm table-hover align-middle">
+
+<thead class="table-light">
+
+<tr>
+<th>Proveedor</th>
+<th>Email admin</th>
+<th class="text-center">Enviar en automático</th>
+</tr>
+
+</thead>
+
+
+
+<tbody>
+
+{% for prov in proveedores_email %}
+
+<tr>
+
+<td>
+{{ prov.nombre_razon_social }}
+</td>
+
+<td>
+
+{% if prov.correo_electronico_admin %}
+{{ prov.correo_electronico_admin }}
+{% else %}
+<span class="text-danger">Sin email</span>
+{% endif %}
+
+</td>
+
+
+
+<td class="text-center">
+
+<input
+class="form-check-input"
+type="checkbox"
+name="recibir_{{ prov.Idtbl_proveedores }}"
+value="1"
+{% if prov.recibir_informe_pendientes %}checked{% endif %}
+>
+
+</td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+</div>
+
+
+
+<div class="mt-3">
+
+<button class="btn btn-primary" type="submit">
+💾 Guardar configuración
+</button>
+
+</div>
+
+
+
+</form>
+
+</div>
+
+</div>
+
+
+
+</div>
+
+
+
+{% endblock %}

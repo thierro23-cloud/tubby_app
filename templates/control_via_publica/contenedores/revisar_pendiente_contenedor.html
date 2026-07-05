@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+{% block title %}Revisar pendiente{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+
+  <div class="mb-4">
+    <h1 class="h4 mb-2">🛠️ Revisar contenedor pendiente</h1>
+    <p class="text-secondary mb-0">
+      Completa o corrige los datos extraídos antes de guardar definitivamente.
+    </p>
+  </div>
+
+  <div class="alert alert-warning">
+    <strong>Motivo:</strong> {{ pendiente.motivo }}
+  </div>
+
+  <div class="card border-0 shadow-sm rounded-4">
+    <div class="card-body p-4">
+
+      <form method="post">
+        <div class="row g-3">
+
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">ID proveedor</label>
+            <input class="form-control" name="idtbl_proveedores" value="{{ datos.idtbl_proveedores or '' }}">
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Número expediente</label>
+            <input class="form-control" name="numero_expediente" value="{{ datos.numero_expediente or '' }}">
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Número solicitud</label>
+            <input class="form-control" name="numero_solicitud" value="{{ datos.numero_solicitud or '' }}">
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label fw-semibold">Fecha colocación</label>
+            <input type="date" class="form-control" name="fecha_colocacion" value="{{ datos.fecha_colocacion or '' }}">
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label fw-semibold">Fecha retirada</label>
+            <input type="date" class="form-control" name="fecha_retirada" value="{{ datos.fecha_retirada or '' }}">
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label fw-semibold">Fecha instalación</label>
+            <input type="date" class="form-control" name="fecha_colocacion" value="{{ datos.fecha_colocacion or '' }}">
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label fw-semibold">Fecha firma inicial</label>
+            <input type="date" class="form-control" name="fecha_firma_inicial" value="{{ datos.fecha_firma_inicial or '' }}">
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">ID dimensión</label>
+            <input class="form-control" name="idtbl_dimensiones" value="{{ datos.idtbl_dimensiones or '' }}">
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">ID tipo vía</label>
+            <input class="form-control" name="idtbl_tipos_de_vias" value="{{ datos.idtbl_tipos_de_vias or '' }}">
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">ID calle</label>
+            <input class="form-control" name="idtbl_calles" value="{{ datos.idtbl_calles or '' }}">
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">CSV</label>
+            <input class="form-control" name="csv" value="{{ datos.csv or '' }}">
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">CSV retirada</label>
+            <input class="form-control" name="csv_retirada" value="{{ datos.csv_retirada or '' }}">
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">ID gestor</label>
+            <input class="form-control" name="idtbl_gestores" value="{{ datos.idtbl_gestores or '' }}">
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Solicitante</label>
+            <input class="form-control" name="nombre_solicitante" value="{{ datos.nombre_solicitante or '' }}">
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">NIF</label>
+            <input class="form-control" name="nif" value="{{ datos.nif or '' }}">
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Teléfono</label>
+            <input class="form-control" name="telefono" value="{{ datos.telefono or '' }}">
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label fw-semibold">Latitud</label>
+            <input class="form-control" name="latitud" value="{{ datos.latitud or '' }}">
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label fw-semibold">Longitud</label>
+            <input class="form-control" name="longitud" value="{{ datos.longitud or '' }}">
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label fw-semibold">Precisión GPS</label>
+            <input class="form-control" name="precision_gps" value="{{ datos.precision_gps or '' }}">
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label fw-semibold">GPS OK</label>
+            <select class="form-select" name="gps_precision_ok">
+              <option value="1" {% if datos.gps_precision_ok %}selected{% endif %}>Sí</option>
+              <option value="0" {% if not datos.gps_precision_ok %}selected{% endif %}>No</option>
+            </select>
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Nivel calidad GPS</label>
+            <input class="form-control" name="gps_nivel_calidad" value="{{ datos.gps_nivel_calidad or '' }}">
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Origen GPS</label>
+            <input class="form-control" name="gps_origen" value="{{ datos.gps_origen or '' }}">
+          </div>
+
+          <div class="col-12">
+            <label class="form-label fw-semibold">Observaciones</label>
+            <textarea class="form-control" rows="4" name="observaciones">{{ datos.observaciones or '' }}</textarea>
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Fecha subida instalación</label>
+            <input class="form-control" name="fecha_subida_instalacion" value="{{ datos.fecha_subida_instalacion or '' }}">
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Fecha subida retirada</label>
+            <input class="form-control" name="fecha_subida_retirada" value="{{ datos.fecha_subida_retirada or '' }}">
+          </div>
+
+        </div>
+
+        <div class="mt-4 d-flex flex-wrap gap-2">
+          <button type="submit" name="accion" value="guardar" class="btn btn-primary">
+            💾 Guardar y eliminar PDF
+          </button>
+
+          <button type="submit" name="accion" value="revision" class="btn btn-outline-warning">
+            📂 Enviar a revisión
+          </button>
+
+          <a href="{{ url_for('control_contenedores_bp.pendientes_validacion_contenedores') }}"
+             class="btn btn-outline-secondary">
+            Cancelar
+          </a>
+        </div>
+      </form>
+
+    </div>
+  </div>
+
+</div>
+{% endblock %}

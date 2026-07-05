@@ -1,0 +1,17 @@
+{% extends "dashboard/base_dashboard.html" %}
+
+{% block title %}Panel {{ rol_nombre }}{% endblock %}
+
+{% block role_content %}
+<h2>Bienvenido {{ rol_nombre }}</h2>
+<div class="tarjetas">
+    {% for tarjeta in tarjetas %}
+        <div class="tarjeta">{{ tarjeta }}</div>
+    {% endfor %}
+</div>
+<div class="botones">
+    {% for boton in botones %}
+        <button>{{ boton }}</button>
+    {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Validación Contenedor</title>
+
+<style>
+/* =============================================================================
+🎯 1️⃣ CONFIGURACIÓN GLOBAL (NO TOCAR)
+- Evita scroll general
+- Define pantalla completa
+============================================================================= */
+html, body {
+    height: 100%;
+    margin: 0;
+    overflow: hidden; /* 🔥 clave para no tener scroll */
+    font-family: Arial, sans-serif;
+}
+
+
+/* =============================================================================
+📦 2️⃣ CONTENEDOR PRINCIPAL (LAYOUT)
+- Divide la pantalla en 2 columnas
+============================================================================= */
+.layout {
+    display: flex;
+    height: 100vh;
+    width: 100vw;
+}
+
+
+/* =============================================================================
+📄 3️⃣ ZONA PDF (SOLO VISUAL)
+- Aquí NO hay lógica de formulario
+- Solo muestra el PDF
+============================================================================= */
+.pdf-container {
+    width: 50%;
+    height: 100%;
+    background: #1e1e1e;
+    border-right: 3px solid #2c2c2c;
+}
+
+/* iframe del PDF */
+.pdf-container iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
+
+/* =============================================================================
+🧾 4️⃣ ZONA FORMULARIO (INTERACCIÓN)
+- Aquí está TODA la lógica de validación
+- Scroll SOLO aquí (si hace falta)
+============================================================================= */
+.form-container {
+    width: 50%;
+    height: 100%;
+    overflow-y: auto; /* 👈 solo scroll aquí */
+    padding: 20px;
+    background: #f4f6f8;
+}
+
+
+/* =============================================================================
+🧠 5️⃣ ESTILO DEL FORMULARIO
+============================================================================= */
+h2 {
+    margin-bottom: 15px;
+}
+
+/* grupo de campos */
+.campo {
+    margin-bottom: 12px;
+}
+
+/* etiquetas */
+label {
+    font-size: 13px;
+    font-weight: bold;
+    display: block;
+    margin-bottom: 4px;
+}
+
+/* inputs */
+input, select {
+    width: 100%;
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+}
+
+
+/* =============================================================================
+🎯 6️⃣ BOTONES
+============================================================================= */
+.botones {
+    margin-top: 20px;
+    display: flex;
+    gap: 10px;
+}
+
+button {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.btn-guardar { background: #28a745; color: white; }
+.btn-prev    { background: #6c757d; color: white; }
+.btn-next    { background: #007bff; color: white; }
+
+</style>
+</head>
+
+
+<body>
+
+<div class="layout">
+
+    <!-- =========================================================================
+    📄 BLOQUE PDF (VISUALIZACIÓN)
+    ========================================================================= -->
+    <div class="pdf-container">
+
+        <!-- 🔥 SOLO MUESTRA EL PDF -->
+        <!-- NO TOCAR lógica -->
+        <iframe
+    src="{{ url_for('contenedor_pendientes_validacion_bp.serve_pdf',
+                    filename=pendiente.ruta_pdf.replace('\\','/').split('/')[-1]) }}">
+</iframe>
+
+    </div>
+
+
+
+    <!-- =========================================================================
+    🧾 BLOQUE FORMULARIO (VALIDACIÓN)
+    ========================================================================= -->
+    <div class="form-container">
+
+        <h2>Validación Contenedor</h2>
+
+        <!-- 🔥 FORMULARIO REAL -->
+        <form method="POST"
+              action="{{ url_for('contenedor_pendientes_validacion_bp.guardar_validacion',
+                                 id=id_pendiente) }}">
+
+            <!-- =========================================================
+            📌 PROVEEDOR
+            ========================================================== -->
+            <div class="campo">
+                <label>Proveedor</label>
+                <select name="idtbl_proveedores">
+                    <option value="">-- Seleccionar --</option>
+
+                    {% for p in proveedores %}
+                        <option value="{{ p.idtbl_proveedores }}">
+                            {{ p.nombre_razon_social }}
+                        </option>
+                    {% endfor %}
+
+                </select>
+            </div>
+
+
+            <!-- =========================================================
+            📌 EXPEDIENTE
+            ========================================================== -->
+            <div class="campo">
+                <label>Número de expediente</label>
+                <input type="text"
+                       name="numero_expediente"
+                       value="{{ datos.numero_expediente }}">
+            </div>
+
+
+            <!-- =========================================================
+            📌 LATITUD
+            ========================================================== -->
+            <div class="campo">
+                <label>Latitud</label>
+                <input type="text"
+                       name="latitud"
+                       value="{{ datos.latitud }}">
+            </div>
+
+
+            <!-- =========================================================
+            📌 LONGITUD
+            ========================================================== -->
+            <div class="campo">
+                <label>Longitud</label>
+                <input type="text"
+                       name="longitud"
+                       value="{{ datos.longitud }}">
+            </div>
+
+
+            <!-- =========================================================
+            🎯 BOTONES DE ACCIÓN
+            ========================================================== -->
+            <div class="botones">
+
+                <!-- 💾 GUARDAR -->
+                <button type="submit" class="btn-guardar">
+                    Guardar
+                </button>
+
+                <!-- ⬅ ANTERIOR -->
+                <a href="{{ url_for('contenedor_pendientes_validacion_bp.listar_pendientes',
+                                    i=indice-1) }}">
+                    <button type="button" class="btn-prev">⬅</button>
+                </a>
+
+                <!-- ➡ SIGUIENTE -->
+                <a href="{{ url_for('contenedor_pendientes_validacion_bp.listar_pendientes',
+                                    i=indice+1) }}">
+                    <button type="button" class="btn-next">➡</button>
+                </a>
+
+            </div>
+<!-- =========================================================
+📌 CSV (Código Seguro de Verificación)
+========================================================= -->
+<div class="campo">
+    <label>CSV</label>
+    <input type="text"
+           name="csv"
+           value="{{ datos.csv or pendiente.csv or '' }}">
+</div>
+
+
+<!-- =========================================================
+📌 FECHA COLOCACIÓN
+========================================================= -->
+<div class="campo">
+    <label>Fecha colocación</label>
+    <input type="date"
+           name="fecha_colocacion"
+           value="{{ datos.fecha_colocacion }}">
+</div>
+
+
+<!-- =========================================================
+📌 FECHA RETIRADA
+========================================================= -->
+<div class="campo">
+    <label>Fecha retirada</label>
+    <input type="date"
+           name="fecha_retirada"
+           value="{{ datos.fecha_retirada }}">
+</div>
+
+
+<!-- =========================================================
+📌 TIPO DE VÍA
+========================================================= -->
+<div class="campo">
+    <label>Tipo de vía</label>
+    <select name="idtbl_tipos_de_vias" id="tipo_via">
+
+        <option value="">-- Seleccionar --</option>
+
+        {% for t in tipos_vias %}
+            <option value="{{ t.idtbl_tipos_de_vias }}"
+                {% if datos.idtbl_tipos_de_vias == t.idtbl_tipos_de_vias %}
+                    selected
+                {% endif %}
+            >
+                {{ t.tipos_de_vias }}
+            </option>
+        {% endfor %}
+
+    </select>
+</div>
+
+
+<!-- =========================================================
+📌 CALLE (DINÁMICA POR TIPO)
+========================================================= -->
+<div class="campo">
+    <label>Calle</label>
+    <select name="idtbl_calles" id="calle">
+
+        <option value="">-- Seleccionar --</option>
+
+        {% for c in calles %}
+            <option value="{{ c.idtbl_calles }}"
+                {% if datos.idtbl_calles == c.idtbl_calles %}
+                    selected
+                {% endif %}
+            >
+                {{ c.calles }}
+            </option>
+        {% endfor %}
+
+    </select>
+</div>
+
+
+<!-- =========================================================
+📌 DIMENSIÓN
+========================================================= -->
+<div class="campo">
+    <label>Dimensión</label>
+    <select name="idtbl_dimensiones">
+
+        <option value="">-- Seleccionar --</option>
+
+        {% for d in dimensiones %}
+            <option value="{{ d.idtbl_dimensiones }}"
+                {% if datos.idtbl_dimensiones == d.idtbl_dimensiones %}
+                    selected
+                {% endif %}
+            >
+                {{ d.descripcion }}
+            </option>
+        {% endfor %}
+
+    </select>
+</div>
+        </form>
+<script>
+document.getElementById("tipo_via").addEventListener("change", function() {
+
+    const idTipo = this.value;
+
+    fetch(`/contenedores_validacion/calles_por_tipo/${idTipo}`)
+        .then(res => res.json())
+        .then(data => {
+
+            const selectCalle = document.getElementById("calle");
+            selectCalle.innerHTML = '<option value="">-- Seleccionar --</option>';
+
+            data.forEach(calle => {
+                const option = document.createElement("option");
+                option.value = calle.idtbl_calles;
+                option.textContent = calle.calles;
+                selectCalle.appendChild(option);
+            });
+
+        });
+
+});
+</script>
+    </div>
+
+</div>
+
+</body>
+</html>

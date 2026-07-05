@@ -1,0 +1,256 @@
+{% extends "base.html" %}
+
+{% block title %}Editar Vado{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+    <!-- =================================================== -->
+    <!-- 🧾 CABECERA                                         -->
+    <!-- =================================================== -->
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center mb-4 gap-3">
+        <div>
+            <h1 class="mb-1 fw-bold">✏️ Editar Vado</h1>
+            <p class="text-muted mb-0">
+                Modificación de los datos estructurales del expediente. El titular y la placa se gestionan mediante acciones específicas.
+            </p>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2">
+            <a href="{{ url_for('control_vados_bp.detalle_vado', idtbl_vados=vado.idtbl_vados) }}" class="btn btn-outline-secondary">
+                ← Volver al detalle
+            </a>
+        </div>
+    </div>
+
+    <!-- =================================================== -->
+    <!-- 💬 MENSAJES FLASH                                   -->
+    <!-- =================================================== -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="mb-4">
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <!-- =================================================== -->
+    <!-- 🧱 TARJETA PRINCIPAL DEL FORMULARIO                 -->
+    <!-- =================================================== -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-0 pt-4 pb-0">
+            <h5 class="fw-semibold mb-1">🧾 Formulario de edición</h5>
+            <p class="text-muted small mb-0">
+                La calle determina automáticamente el tipo de vía y el municipio queda fijado a Ávila.
+            </p>
+        </div>
+
+        <div class="card-body pt-4">
+            <form method="POST">
+
+                <!-- ======================================= -->
+                <!-- 📋 BLOQUE: DATOS IDENTIFICATIVOS        -->
+                <!-- ======================================= -->
+                <div class="row g-4 mb-1">
+
+                    <div class="col-12 col-md-4">
+                        <label class="form-label fw-semibold">🆔 ID Vado</label>
+                        <input
+                            type="text"
+                            class="form-control"
+                            value="{{ vado.idtbl_vados }}"
+                            disabled
+                        >
+                    </div>
+
+                    <div class="col-12 col-md-4">
+                        <label class="form-label fw-semibold">🚗 Nº de vado</label>
+                        <input
+                            type="text"
+                            class="form-control"
+                            value="{{ vado.n_vado or '' }}"
+                            disabled
+                        >
+                        <div class="form-text">
+                            El número de vado solo puede modificarse desde la acción específica de cambio de placa.
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-md-4">
+                        <label class="form-label fw-semibold">🌍 Municipio</label>
+                        <input
+                            type="text"
+                            class="form-control"
+                            value="Ávila"
+                            disabled
+                        >
+                    </div>
+                </div>
+
+                <hr class="my-4">
+
+                <!-- ======================================= -->
+                <!-- 🏠 BLOQUE: UBICACIÓN                    -->
+                <!-- ======================================= -->
+                <div class="row g-4 mb-1">
+
+                    <div class="col-12 col-lg-8">
+                        <label for="idtbl_calles" class="form-label fw-semibold">🏠 Calle</label>
+                        <select class="form-select" id="idtbl_calles" name="idtbl_calles" required>
+                            <option value="">-- Seleccionar calle de Ávila --</option>
+                            {% for calle in calles_avila %}
+                                <option
+                                    value="{{ calle.idtbl_calles }}"
+                                    {% if vado.idtbl_calles == calle.idtbl_calles %}selected{% endif %}
+                                >
+                                    {{ calle.calle_texto }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">
+                            Al elegir la calle, el sistema recupera automáticamente su tipo de vía.
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-lg-4">
+                        <label class="form-label fw-semibold">🛣️ Tipo de vía actual</label>
+                        <input
+                            type="text"
+                            class="form-control"
+                            value="{{ vado.tipo_via_nombre or '—' }}"
+                            disabled
+                        >
+                        <div class="form-text">
+                            Este dato se actualiza en base a la calle seleccionada al guardar.
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="my-4">
+
+                <!-- ======================================= -->
+                <!-- 👤 BLOQUE: TITULAR ACTUAL               -->
+                <!-- ======================================= -->
+                <div class="row g-4 mb-1">
+
+                    <div class="col-12 col-lg-8">
+                        <label class="form-label fw-semibold">👤 Titular actual</label>
+                        <input
+                            type="text"
+                            class="form-control"
+                            value="{{ vado.titular_nombre or '—' }}{% if vado.titular_nif %} — {{ vado.titular_nif }}{% endif %}"
+                            disabled
+                        >
+                        <div class="form-text">
+                            El titular solo puede modificarse desde la acción específica de cambio de titular.
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-lg-4">
+                        <label class="form-label fw-semibold">🪪 NIF titular</label>
+                        <input
+                            type="text"
+                            class="form-control"
+                            value="{{ vado.titular_nif or '—' }}"
+                            disabled
+                        >
+                    </div>
+                </div>
+
+                <hr class="my-4">
+
+                <!-- ======================================= -->
+                <!-- 📅 BLOQUE: FECHAS Y GESTIÓN             -->
+                <!-- ======================================= -->
+                <div class="row g-4">
+
+                    <div class="col-12 col-md-4">
+                        <label for="fecha_inicio" class="form-label fw-semibold">📅 Fecha de inicio</label>
+                        <input
+                            type="date"
+                            class="form-control"
+                            id="fecha_inicio"
+                            name="fecha_inicio"
+                            value="{{ vado.fecha_inicio.strftime('%Y-%m-%d') if vado.fecha_inicio and vado.fecha_inicio.strftime else vado.fecha_inicio }}"
+                            required
+                        >
+                    </div>
+
+                    <div class="col-12 col-md-4">
+                        <label for="fecha_fin" class="form-label fw-semibold">📅 Fecha de fin</label>
+                        <input
+                            type="date"
+                            class="form-control"
+                            id="fecha_fin"
+                            name="fecha_fin"
+                            value="{{ vado.fecha_fin.strftime('%Y-%m-%d') if vado.fecha_fin and vado.fecha_fin.strftime else (vado.fecha_fin or '') }}"
+                        >
+                        <div class="form-text">
+                            Déjalo vacío si el vado sigue activo.
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-md-4">
+                        <label for="idtbl_gestores" class="form-label fw-semibold">🧑‍💼 ID Gestor</label>
+                        <input
+                            type="number"
+                            class="form-control"
+                            id="idtbl_gestores"
+                            name="idtbl_gestores"
+                            value="{{ vado.idtbl_gestores or '' }}"
+                            placeholder="ID del gestor"
+                        >
+                    </div>
+                </div>
+
+                <hr class="my-4">
+
+                <!-- ======================================= -->
+                <!-- 🔘 BOTONERA FINAL                        -->
+                <!-- ======================================= -->
+                <div class="d-flex flex-wrap gap-2">
+                    <button type="submit" class="btn btn-primary px-4">
+                        💾 Guardar cambios
+                    </button>
+
+                    <a href="{{ url_for('control_vados_bp.detalle_vado', idtbl_vados=vado.idtbl_vados) }}" class="btn btn-outline-secondary px-4">
+                        Cancelar
+                    </a>
+
+                    <a href="{{ url_for('control_vados_bp.cambio_numero_vado', idtbl_vados=vado.idtbl_vados) }}" class="btn btn-outline-dark px-4">
+                        🔄 Cambio de placa
+                    </a>
+
+                    <a href="{{ url_for('control_vados_bp.cambio_titular_vado', idtbl_vados=vado.idtbl_vados) }}" class="btn btn-outline-info px-4">
+                        👤 Cambio de titular
+                    </a>
+                </div>
+
+            </form>
+        </div>
+    </div>
+
+    <!-- =================================================== -->
+    <!-- ℹ️ TARJETA INFORMATIVA                               -->
+    <!-- =================================================== -->
+    <div class="mt-4">
+        <div class="card border-0 bg-light shadow-sm">
+            <div class="card-body">
+                <h6 class="fw-semibold mb-2">ℹ️ Criterio de integridad del módulo</h6>
+                <p class="mb-1 text-muted">
+                    La edición del expediente no permite alterar directamente ni el titular ni la numeración del vado para asegurar la trazabilidad completa de cada cambio.
+                </p>
+                <p class="mb-0 text-muted">
+                    Cualquier cambio de titular o de placa debe realizarse desde su acción específica, quedando automáticamente registrado en el histórico correspondiente.
+                </p>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

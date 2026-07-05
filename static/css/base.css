@@ -1,0 +1,24 @@
+/* ============================================================
+   1️⃣ BASE.CSS
+   ============================================================
+
+   Estilos globales de la aplicación.
+
+   Define:
+   - tipografía
+   - colores base
+   - fondo del sistema
+
+   ============================================================ */
+
+body {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont,
+                 "Segoe UI", Arial, sans-serif;
+
+    background-color: #f4f4f9;
+
+    margin: 0;
+    padding: 0;
+
+    color: #333;
+}

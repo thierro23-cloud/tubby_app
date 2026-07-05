@@ -1,0 +1,509 @@
+{# =============================================================================
+   🌈 ADMIN AUTO · SELECTOR DE TABLAS (PLANTILLA AUTÓNOMA)
+   Archivo: templates/admin_auto/tablas_admin_auto.html
+
+   Contexto Jinja:
+     - tablas_por_esquema: dict
+         {
+           "inventario": ["tbl_bienes", "tbl_descripcion", ...],
+           "bd_tbl_comunes": ["tbl_barrios", "tbl_calles", ...],
+           ...
+         }
+============================================================================= #}
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Admin automático · Selector de tablas</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- Bootstrap 5 (CDN) -->
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+    integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+    crossorigin="anonymous"
+  >
+
+  <!-- Fuente suave y moderna -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap"
+    rel="stylesheet"
+  >
+
+  <style>
+    :root {
+      --bg-main: #f1f5f9;           /* gris muy claro */
+      --bg-card: #ffffff;           /* blanco */
+      --bg-card-alt: #f8fafc;       /* blanco azulado */
+      --border-soft: #e2e8f0;       /* borde suave */
+      --text-main: #0f172a;         /* gris azulado oscuro */
+      --text-soft: #64748b;         /* gris medio */
+      --accent: #2563eb;            /* azul principal */
+      --accent-soft: #e0edff;       /* azul muy claro */
+      --accent-strong: #1d4ed8;     /* azul un poco más fuerte */
+      --pill-green-bg: #dcfce7;
+      --pill-green-text: #166534;
+      --pill-yellow-bg: #fef9c3;
+      --pill-yellow-text: #854d0e;
+      --pill-blue-bg: #dbeafe;
+      --pill-blue-text: #1e40af;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, #e0f2fe 0, #f9fafb 40%, #f1f5f9 100%);
+      color: var(--text-main);
+    }
+
+    /* Contenedor principal tipo “app” centrada */
+    .app-shell {
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 2.5rem 1.25rem;
+    }
+
+    .app-container {
+      width: 100%;
+      max-width: 1100px;
+    }
+
+    /* Tarjeta principal superior (título + descripción + buscador) */
+    .card-tablas {
+      border: 1px solid var(--border-soft);
+      border-radius: 1rem;
+      background: linear-gradient(145deg, #ffffff 0%, #f8fafc 50%, #ffffff 100%);
+      box-shadow:
+        0 22px 45px rgba(15, 23, 42, 0.08),
+        0 1px 3px rgba(148, 163, 184, 0.3);
+      color: var(--text-main);
+      overflow: hidden;
+    }
+
+    .card-tablas-header {
+      padding: 1.15rem 1.5rem;
+      border-bottom: 1px solid #e5e7eb;
+      background: linear-gradient(135deg, #eff6ff 0%, #f9fafb 45%, #eff6ff 100%);
+    }
+
+    .card-tablas-header h1 {
+      font-size: 1.45rem;
+      font-weight: 600;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .card-tablas-header h1 span.emoji {
+      font-size: 1.55rem;
+    }
+
+    .card-tablas-header small {
+      display: block;
+      margin-top: 0.15rem;
+      color: var(--text-soft);
+    }
+
+    .card-tablas-body {
+      padding: 1.25rem 1.5rem 1.2rem 1.5rem;
+      background: rgba(255, 255, 255, 0.9);
+    }
+
+    /* Badge de super_admin */
+    .badge-schema {
+      background: var(--pill-blue-bg);
+      color: var(--pill-blue-text);
+      border-radius: 999px;
+      padding: 0.3rem 0.9rem;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .badge-schema span.dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: #22c55e;
+      box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.18);
+    }
+
+    /* Resumen bajo el título */
+    .intro-text {
+      font-size: 0.92rem;
+      color: var(--text-soft);
+      margin-bottom: 0.4rem;
+    }
+
+    .intro-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      font-size: 0.78rem;
+      padding: 0.2rem 0.55rem;
+      border-radius: 999px;
+      background: var(--pill-green-bg);
+      color: var(--pill-green-text);
+      font-weight: 500;
+    }
+
+    .intro-pill span.icon {
+      font-size: 0.9rem;
+    }
+
+    /* Input de búsqueda */
+    .search-input {
+      background-color: #f9fafb;
+      border: 1px solid #d1d5db;
+      color: var(--text-main);
+      border-radius: 999px;
+      padding-inline: 0.9rem;
+      font-size: 0.9rem;
+    }
+
+    .search-input::placeholder {
+      color: #9ca3af;
+    }
+
+    .search-input:focus {
+      background-color: #ffffff;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
+    }
+
+    .search-icon {
+      border-radius: 999px;
+      background: transparent;
+      border: 1px solid transparent;
+      color: #94a3b8;
+    }
+
+    /* Acordeón de esquemas */
+    .accordion-wrapper {
+      margin-top: 1.75rem;
+    }
+
+    .accordion-item {
+      background-color: transparent;
+      border-radius: 0.85rem;
+      border: 1px solid var(--border-soft);
+      overflow: hidden;
+      margin-bottom: 0.6rem;
+      background: var(--bg-card);
+      box-shadow: 0 10px 20px rgba(15, 23, 42, 0.04);
+    }
+
+    .accordion-button {
+      background-color: #f9fafb;
+      color: var(--text-main);
+      font-weight: 500;
+      padding: 0.7rem 1.1rem;
+    }
+
+    .accordion-button:not(.collapsed) {
+      background: linear-gradient(135deg, #eff6ff 0%, #e0f2fe 40%, #eff6ff 100%);
+      color: var(--accent-strong);
+      box-shadow: inset 0 -1px 0 rgba(148, 163, 184, 0.3);
+    }
+
+    .accordion-button:focus {
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25);
+    }
+
+    .accordion-body {
+      background: var(--bg-card-alt);
+      padding: 0.6rem 0.9rem 0.7rem 0.9rem;
+    }
+
+    /* Cabecera de esquema */
+    .schema-title {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .icon-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 1.9rem;
+      height: 1.9rem;
+      border-radius: 999px;
+      background: #dbeafe;
+      color: #1e40af;
+      font-size: 1rem;
+      flex-shrink: 0;
+    }
+
+    .schema-name {
+      font-size: 1rem;
+    }
+
+    .pill-count {
+      font-size: 0.8rem;
+      color: var(--text-soft);
+    }
+
+    /* Fila de tabla */
+    .tabla-link {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.4rem 0.6rem;
+      border-radius: 0.55rem;
+      color: var(--text-main);
+      text-decoration: none;
+      transition: background-color 0.12s ease, transform 0.06s ease;
+    }
+
+    .tabla-link:hover {
+      background-color: #e5f0ff;
+      transform: translateX(2px);
+      text-decoration: none;
+    }
+
+    .tabla-link small {
+      color: var(--text-soft);
+      font-size: 0.78rem;
+    }
+
+    .btn-soft-outline {
+      border-radius: 999px;
+      border: 1px solid #cbd5f5;
+      background: #ffffff;
+      color: var(--text-main);
+      font-size: 0.78rem;
+      padding-inline: 0.75rem;
+    }
+
+    .btn-soft-outline:hover {
+      background: #e5edff;
+      border-color: #a5b4fc;
+      color: #1e293b;
+    }
+
+    .btn-soft-primary {
+      border-radius: 999px;
+      border: 1px solid transparent;
+      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+      color: #ffffff;
+      font-size: 0.78rem;
+      padding-inline: 0.9rem;
+      box-shadow: 0 8px 18px rgba(37, 99, 235, 0.25);
+    }
+
+    .btn-soft-primary:hover {
+      background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+      color: #ffffff;
+    }
+
+    .footer-note {
+      margin-top: 1.5rem;
+      font-size: 0.8rem;
+      color: var(--text-soft);
+      text-align: center;
+    }
+
+    code {
+      font-size: 0.85em;
+      color: #db2777;
+      background: #fef2f2;
+      border-radius: 4px;
+      padding: 0.05rem 0.25rem;
+    }
+
+    @media (max-width: 768px) {
+      .card-tablas-header {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 0.6rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="app-shell">
+  <div class="app-container">
+
+    <!-- CABECERA SUPERIOR -->
+    <div class="card-tablas mb-4">
+      <div class="card-tablas-header d-flex justify-content-between align-items-center">
+        <div>
+          <h1>
+            <span class="emoji">⚙️</span>
+            <span>Admin automático de tablas</span>
+          </h1>
+          <small>
+            Selecciona un esquema y una tabla, y decide si quieres listar o trabajar con ella.
+          </small>
+        </div>
+        <div class="text-end">
+          <div class="badge-schema">
+            <span class="dot"></span>
+            Solo rol: super_admin
+          </div>
+        </div>
+      </div>
+      <div class="card-tablas-body">
+        <div class="row align-items-center gy-2">
+          <div class="col-md-8">
+            <p class="intro-text mb-1">
+              Accede a cualquier tabla de los esquemas permitidos usando el motor de admin automático
+              o tu propio flujo de trabajo.
+            </p>
+            <div class="intro-pill">
+              <span class="icon">💡</span>
+              <span>
+                ESQUEMAS_PERMITIDOS gestionados desde backend
+              </span>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="input-group input-group-sm">
+              <span class="input-group-text search-icon">
+                🔍
+              </span>
+              <input id="search-tables"
+                     type="text"
+                     class="form-control search-input"
+                     placeholder="Filtrar por nombre de tabla...">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ACORDEÓN DE ESQUEMAS Y TABLAS -->
+    <div class="accordion-wrapper">
+      <div class="accordion" id="accordionEsquemas">
+
+        {% for schema, tablas in tablas_por_esquema.items() %}
+          {% set esquema_id = 'schema-' ~ loop.index %}
+
+          <div class="accordion-item" data-schema="{{ schema }}">
+            <h2 class="accordion-header" id="heading-{{ esquema_id }}">
+              <button class="accordion-button collapsed" type="button"
+                      data-bs-toggle="collapse"
+                      data-bs-target="#collapse-{{ esquema_id }}"
+                      aria-expanded="false"
+                      aria-controls="collapse-{{ esquema_id }}">
+                <div class="schema-title">
+                  <span class="icon-pill">🗃️</span>
+                  <span class="schema-name">{{ schema }}</span>
+                  <span class="pill-count ms-1">
+                    · {{ tablas|length }} tablas
+                  </span>
+                </div>
+              </button>
+            </h2>
+            <div id="collapse-{{ esquema_id }}"
+                 class="accordion-collapse collapse"
+                 aria-labelledby="heading-{{ esquema_id }}"
+                 data-bs-parent="#accordionEsquemas">
+              <div class="accordion-body">
+
+                {% if tablas %}
+                  <ul class="list-unstyled mb-0 schema-list" data-schema="{{ schema }}">
+                    {% for tabla in tablas %}
+                      <li class="mb-1">
+                        <div class="tabla-link" data-table="{{ tabla|lower }}">
+                          <div class="me-2">
+                            <strong>{{ tabla }}</strong><br>
+                            <small>{{ schema }}.{{ tabla }}</small>
+                          </div>
+                          <div class="d-flex gap-2">
+                            <!-- Opción 1: LISTAR (listado dinámico) -->
+                            <a href="{{ url_for('tablas_admin_auto_bp.tablas_admin_auto_listado',
+                                                schema=schema, tabla=tabla) }}"
+                               class="btn btn-soft-outline btn-sm"
+                               title="Ver listado dinámico">
+                              📋 Listar
+                            </a>
+
+                            <!-- Opción 2: TRABAJAR (flujo propio con esta tabla) -->
+                            <a href="{{ url_for('btn_tablas_admin_auto_bp.admin_auto_detalle',
+                                                schema=schema, tabla=tabla) }}"
+                               class="btn btn-soft-primary btn-sm"
+                               title="Elegir esta tabla para trabajar con ella">
+                              🛠️ Trabajar
+                            </a>
+                          </div>
+                        </div>
+                      </li>
+                    {% endfor %}
+                  </ul>
+                {% else %}
+                  <p class="text-muted mb-0">No se han encontrado tablas en este esquema.</p>
+                {% endif %}
+
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+
+      </div>
+    </div>
+
+    <div class="footer-note">
+      Motor de admin automático de tablas · Puedes ajustar estilos directamente en esta plantilla.
+    </div>
+
+  </div>
+</div>
+
+<!-- Bootstrap JS (para el acordeón) -->
+<script
+  src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+  integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+  crossorigin="anonymous"
+></script>
+
+<!-- Script de filtrado por nombre de tabla -->
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const input = document.getElementById("search-tables");
+    if (!input) return;
+
+    input.addEventListener("input", function () {
+      const q = this.value.trim().toLowerCase();
+      const schemaLists = document.querySelectorAll(".schema-list");
+
+      schemaLists.forEach(function (ul) {
+        let visibleCount = 0;
+
+        ul.querySelectorAll("li").forEach(function (li) {
+          const row = li.querySelector(".tabla-link");
+          const tableName = row ? row.getAttribute("data-table") : "";
+          const matches = tableName.includes(q);
+
+          li.style.display = matches ? "" : "none";
+          if (matches) visibleCount++;
+        });
+
+        const accordionItem = ul.closest(".accordion-item");
+        if (accordionItem) {
+          accordionItem.style.display = (visibleCount === 0 && q !== "") ? "none" : "";
+        }
+      });
+    });
+  });
+</script>
+
+</body>
+</html>

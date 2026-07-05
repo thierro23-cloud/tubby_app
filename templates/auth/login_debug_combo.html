@@ -1,0 +1,51 @@
+<form method="post">
+  <div class="row g-3">
+    <div class="col-md-6">
+      <label for="identificador_sel" class="form-label">
+        Identificador (tbl_login.identificador)
+      </label>
+      <select id="identificador_sel" name="identificador_sel" class="form-select">
+        <option value="">-- elige identificador --</option>
+        {% for ident in identificadores %}
+          <option value="{{ ident }}">{{ ident }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="col-md-6">
+      <label for="password_sel" class="form-label">
+        Password hash (tbl_login.password_hash)
+      </label>
+      <select id="password_sel" name="password_sel" class="form-select">
+        <option value="">-- elige password_hash --</option>
+        {% for ph in passwords %}
+          <option value="{{ ph }}">{{ ph }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+
+  <div class="mt-3 d-grid">
+    <button type="submit" class="btn btn-primary">
+      Comprobar en BD
+    </button>
+  </div>
+</form>
+
+{% if error %}
+  <div class="alert alert-danger mt-3">{{ error }}</div>
+{% endif %}
+
+{% if resultado %}
+  <div class="alert alert-success mt-3">
+    <ul class="mb-0">
+      <li><strong>idtbl_login:</strong> {{ resultado.idtbl_login }}</li>
+      <li><strong>idtbl_gestores:</strong> {{ resultado.idtbl_gestores }}</li>
+      <li><strong>identificador:</strong> {{ resultado.identificador }}</li>
+      <li><strong>email:</strong> {{ resultado.email }}</li>
+      <li><strong>password_hash:</strong> {{ resultado.password_hash }}</li>
+      <li><strong>idtbl_roles:</strong> {{ resultado.idtbl_roles }}</li>
+      <li><strong>rol_nombre:</strong> {{ resultado.rol_nombre or 'NULL' }}</li>
+    </ul>
+  </div>
+{% endif %}

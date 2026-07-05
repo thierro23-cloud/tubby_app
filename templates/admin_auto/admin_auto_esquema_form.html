@@ -1,0 +1,304 @@
+{# =============================================================================
+   🧩 ADMIN AUTO · FORMULARIO DE ESQUEMA
+   Archivo: templates/admin_auto/admin_auto_esquema_form.html
+   =============================================================================
+   ✅ Recibe:
+      - schema: str
+      - tabla: str
+      - columnas: lista de dicts con {COLUMN_NAME, DATA_TYPE, COLUMN_TYPE}
+      - tipos_permitidos: lista de tipos Válidos
+   =============================================================================
+#}
+
+{% extends "base.html" %}
+
+{% block title %}Cambiar esquema de {{ tabla }}{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid py-3">
+
+  <!-- =================================================================== -->
+  <!-- A. CABECERA                                                          -->
+  <!-- =================================================================== -->
+
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>
+      Cambiar esquema en tabla:
+      <strong>{{ tabla }}</strong>
+      <small class="text-muted">({{ schema }})</small>
+    </h2>
+
+    <a href="{{ url_for('btn_tablas_admin_auto_bp.admin_auto_detalle', schema=schema, tabla=tabla) }}"
+       class="btn btn-outline-secondary btn-sm">
+      ← Volver al detalle
+    </a>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- B. FORMULARIO DE ACCIONES                                            -->
+  <!-- =================================================================== -->
+
+  <form
+    method="post"
+    action="{{ url_for('btn_tablas_admin_auto_bp.admin_auto_esquema_form', schema=schema, tabla=tabla) }}"
+    class="card"
+  >
+    <div class="card-body">
+
+      <input type="hidden" name="schema" value="{{ schema }}">
+      <input type="hidden" name="tabla" value="{{ tabla }}">
+
+      <!-- ================================================================= -->
+      <!-- 1) Selección de acción                                           -->
+      <!-- ================================================================= -->
+
+      <div class="mb-3">
+        <label class="form-label">Tipo de acción:</label>
+        <div class="">
+          <div class="form-check">
+            <input
+              class="form-check-input"
+              type="radio"
+              name="accion"
+              id="accion_add_column"
+              value="add_column"
+              required
+            >
+            <label class="form-check-label" for="accion_add_column">
+              ➕ Añadir columna
+            </label>
+          </div>
+
+          <div class="form-check">
+            <input
+              class="form-check-input"
+              type="radio"
+              name="accion"
+              id="accion_change_type"
+              value="change_type"
+            >
+            <label class="form-check-label" for="accion_change_type">
+              ✏️ Cambiar tipo de columna
+            </label>
+          </div>
+
+          <div class="form-check">
+            <input
+              class="form-check-input"
+              type="radio"
+              name="accion"
+              id="accion_drop_column"
+              value="drop_column"
+            >
+            <label class="form-check-label" for="accion_drop_column">
+              🗑️ Eliminar columna
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================================================================= -->
+      <!-- 2) Formulario para ADD COLUMN                                    -->
+      <!-- ================================================================= -->
+
+      <div id="form_add_column" class="mb-3">
+        <h5>Añadir columna</h5>
+
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label for="nombre_columna_add" class="form-label">Nombre de la nueva columna</label>
+            <input
+              type="text"
+              name="nombre_columna"
+              id="nombre_columna_add"
+              class="form-control form-control-sm"
+              required
+            >
+          </div>
+
+          <div class="col-md-6 mb-3">
+            <label for="tipo_columna_add" class="form-label">Tipo de columna</label>
+            <select
+              name="tipo_columna"
+              id="tipo_columna_add"
+              class="form-select form-select-sm"
+              required
+            >
+              {% for tipo in tipos_permitidos %}
+                <option value="{{ tipo }}">{{ tipo }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="col-md-6 mb-3">
+            <label class="form-label">
+              Permitir NULL
+            </label>
+            <div class="">
+              <input
+                type="checkbox"
+                name="permitir_null"
+                id="permitir_null_add"
+                value="1"
+                checked
+              >
+              <label for="permitir_null_add">Sí, permitir NULL</label>
+            </div>
+          </div>
+
+          <div class="col-md-6 mb-3">
+            <label for="valor_defecto_add" class="form-label">Valor por defecto (opcional)</label>
+            <input
+              type="text"
+              name="valor_defecto"
+              id="valor_defecto_add"
+              class="form-control form-control-sm"
+              placeholder="Ej: 0, 'N', NOW()"
+            >
+          </div>
+
+          <div class="col-md-12 mb-3">
+            <label for="posicion_add" class="form-label">Posición de la columna</label>
+            <select
+              name="posicion"
+              id="posicion_add"
+              class="form-select form-select-sm"
+            >
+              <option value="final">Final (por defecto)</option>
+              {% for col in columnas %}
+                <option value="{{ col.COLUMN_NAME }}">
+                  Después de {{ col.COLUMN_NAME }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================================================================= -->
+      <!-- 3) Formulario para CHANGE TYPE                                   -->
+      <!-- ================================================================= -->
+
+      <div id="form_change_type" class="mb-3" style="display:none;">
+        <h5>Cambiar tipo de columna</h5>
+
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label for="columna_objetivo_change" class="form-label">Columna a modificar</label>
+            <select
+              name="columna_objetivo"
+              id="columna_objetivo_change"
+              class="form-select form-select-sm"
+              required
+            >
+              {% for col in columnas %}
+                <option value="{{ col.COLUMN_NAME }}">
+                  {{ col.COLUMN_NAME }} (actual: {{ col.DATA_TYPE }})
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="col-md-6 mb-3">
+            <label for="tipo_columna_change" class="form-label">Tipo nuevo</label>
+            <select
+              name="tipo_columna"
+              id="tipo_columna_change"
+              class="form-select form-select-sm"
+              required
+            >
+              {% for tipo in tipos_permitidos %}
+                <option value="{{ tipo }}">{{ tipo }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================================================================= -->
+      <!-- 4) Formulario para DROP COLUMN                                   -->
+      <!-- ================================================================= -->
+
+      <div id="form_drop_column" class="mb-3" style="display:none;">
+        <h5>Eliminar columna</h5>
+
+        <div class="row">
+          <div class="col-md-12 mb-3">
+            <label for="columna_objetivo_drop" class="form-label">Columna a eliminar</label>
+            <select
+              name="columna_objetivo"
+              id="columna_objetivo_drop"
+              class="form-select form-select-sm"
+              required
+            >
+              {% for col in columnas %}
+                <option value="{{ col.COLUMN_NAME }}">
+                  {{ col.COLUMN_NAME }} ({{ col.DATA_TYPE }})
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================================================================= -->
+      <!-- 5) Botones                                                         -->
+      <!-- ================================================================= -->
+
+      <div class="d-flex justify-content-end gap-2">
+        <a href="{{ url_for('btn_tablas_admin_auto_bp.admin_auto_detalle', schema=schema, tabla=tabla) }}"
+           class="btn btn-outline-secondary btn-sm">
+          Cancelar
+        </a>
+
+        <button type="submit" class="btn btn-primary btn-sm">
+          Continuar → Confirmar
+        </button>
+      </div>
+
+    </div>
+  </form>
+
+</div>
+
+<!-- =================================================================== -->
+<!-- JS: Mostrar/Formulario según acción seleccionada                   -->
+<!-- =================================================================== -->
+
+<script>
+  (function () {
+    const accionAdd = document.getElementById("accion_add_column");
+    const accionChange = document.getElementById("accion_change_type");
+    const accionDrop = document.getElementById("accion_drop_column");
+
+    const formAdd = document.getElementById("form_add_column");
+    const formChange = document.getElementById("form_change_type");
+    const formDrop = document.getElementById("form_drop_column");
+
+    function mostrarFormulario() {
+      if (accionAdd.checked) {
+        formAdd.style.display = "";
+        formChange.style.display = "none";
+        formDrop.style.display = "none";
+      } else if (accionChange.checked) {
+        formAdd.style.display = "none";
+        formChange.style.display = "";
+        formDrop.style.display = "none";
+      } else if (accionDrop.checked) {
+        formAdd.style.display = "none";
+        formChange.style.display = "none";
+        formDrop.style.display = "";
+      }
+    }
+
+    accionAdd.addEventListener("change", mostrarFormulario);
+    accionChange.addEventListener("change", mostrarFormulario);
+    accionDrop.addEventListener("change", mostrarFormulario);
+
+    // Inicial estado
+    mostrarFormulario();
+  })();
+</script>
+
+{% endblock %}

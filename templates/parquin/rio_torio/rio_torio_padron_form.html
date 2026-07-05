@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}Padrón Rio Torío{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <h1 class="h4 mb-3">Generar padrón mensual – Río Torío</h1>
+  <p class="text-muted mb-3">
+    Elige el mes y año para el que quieres generar el padrón de parking.
+  </p>
+
+  <form method="POST">
+    <div class="row g-3 align-items-end">
+      <div class="col-auto">
+        <label for="mes" class="form-label">Mes</label>
+        <select class="form-select" id="mes" name="mes" required>
+          {% for i in range(1, 13) %}
+            <option value="{{ i }}"
+                    {% if mes_defecto == i %}selected{% endif %}>
+              {{ meses[i]|capitalize }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-auto">
+        <label for="anio" class="form-label">Año</label>
+        <input type="number" class="form-control" id="anio" name="anio"
+               value="{{ anio_defecto }}" required>
+      </div>
+      <div class="col-auto">
+        <button type="submit" class="btn btn-primary mt-2">
+          Generar padrón
+        </button>
+      </div>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,77 @@
+{# 📒 AUDITORÍAS DE ACCESOS - PLANTILLA
+   ========================================================
+
+   Objetivo:
+     - Mostrar todas las auditorías de accesos en una tabla HTML.
+     - Formatear fechas y horas si están disponibles.
+     - Mostrar mensaje claro si no hay registros.
+
+   Campos utilizados:
+     - idtbl_auditorias, idtbl_gestores, fecha, hora_entrada, hora_salida,
+     - ip, metodo, resultado, observaciones.
+
+   Notas:
+     - Se asume que `registros` es una lista de diccionarios con datetime.date/time.
+     - El uso de `strftime` en Jinja es válido siempre que el objeto no sea `None`.
+     - No hay meta‑refresh ni JS que fuerce reload; si lo ves en el log,
+       revisa scripts externos o AJAX que puedan estar llamando esta ruta.
+
+#}
+
+<h2 class="mb-3">📋 Auditorías de Accesos</h2>
+
+{% if registros %}
+    <div class="table-responsive">
+        <table class="table table-striped table-sm">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Gestor</th>
+                    <th>Fecha</th>
+                    <th>Hora entrada</th>
+                    <th>Hora salida</th>
+                    <th>IP</th>
+                    <th>Método</th>
+                    <th>Resultado</th>
+                    <th>Observaciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {# Iterar todos los registros de auditorías #}
+                {% for r in registros %}
+                <tr>
+                    {# ID de auditoría #}
+                    <td>{{ r.idtbl_auditorias }}</td>
+                    {# ID del gestor asociado #}
+                    <td>{{ r.idtbl_gestores }}</td>
+                    {# Fecha (formato dd/mm/YYYY) si existe #}
+                    <td>
+                        {{ r.fecha.strftime('%d/%m/%Y') if r.fecha }}
+                    </td>
+                    {# Hora entrada (formato HH:MM:SS) si existe #}
+                    <td>
+                        {{ r.hora_entrada.strftime('%H:%M:%S') if r.hora_entrada }}
+                    </td>
+                    {# Hora salida (formato HH:MM:SS) si existe #}
+                    <td>
+                        {{ r.hora_salida.strftime('%H:%M:%S') if r.hora_salida }}
+                    </td>
+                    {# IP desde la que se realizó el acceso #}
+                    <td>{{ r.ip }}</td>
+                    {# Método utilizado (GET, POST, etc.) #}
+                    <td>{{ r.metodo }}</td>
+                    {# Resultado de la operación (éxito, fallo, etc.) #}
+                    <td>{{ r.resultado }}</td>
+                    {# Observaciones opcionales, si no hay: cadena vacía #}
+                    <td>{{ r.observaciones|default('', true) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% else %}
+    {# Mensaje cuando no hay registros en la tabla #}
+    <p class="text-muted">
+        No se encontraron registros de auditoría.
+    </p>
+{% endif %}

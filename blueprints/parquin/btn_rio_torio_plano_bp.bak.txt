@@ -1,0 +1,175 @@
+# =============================================================================
+# 🗺️ 0️⃣ INICIO · BOTÓN INDEPENDIENTE · PLANO RIO_TORIO
+# =============================================================================
+# 🎯 OBJETIVO
+# -----------------------------------------------------------------------------
+# Definir un BOTÓN independiente del módulo PARQUIN · RIO_TORIO:
+#
+#   /parquin/rio_torio/plano
+#
+# que:
+#   - Dibuja el mapa del parquin Rio Torío (plazas libres/ocupadas) por fila.
+#   - Usa la plantilla:
+#         templates/parquin/rio_torio_plano.html
+#   - Se integra con el SUPER ADMIN:
+#       · Vista:     btn_rio_torio_plano
+#       · Blueprint: btn_rio_torio_plano_bp
+#       · Módulo:    modulo_parquin_rio_torio_bp
+#
+# CONVENCIÓN PARA SUPER ADMIN:
+#   - Blueprint del módulo:
+#       modulo_parquin_rio_torio_bp
+#   - Blueprints de botones asociados:
+#       btn_rio_torio_*_bp
+#   - Vista (botón) empieza por "btn_":
+#       btn_rio_torio_plano
+# =============================================================================
+# 🛑 FIN INTRODUCCIÓN
+# =============================================================================
+
+
+# =============================================================================
+# 1️⃣ IMPORTACIONES
+# =============================================================================
+
+from __future__ import annotations
+
+from flask import (
+    Blueprint,
+    render_template,
+    request,
+    flash,
+    redirect,
+    url_for,
+    session,
+)
+
+from services.helpers import rol_required
+from db import get_connection
+
+
+# =============================================================================
+# 2️⃣ BLUEPRINT DEL BOTÓN PLANO RIO_TORIO
+# =============================================================================
+# NOMBRE DEL BLUEPRINT:
+#   - "btn_rio_torio_plano_bp"
+#
+# URL_PREFIX:
+#   - "/parquin/rio_torio"
+#
+# RUTA COMPLETA DEL BOTÓN:
+#   - /parquin/rio_torio/plano
+#
+# SUPER ADMIN:
+#   - Detectará este botón porque:
+#       · el blueprint empieza por "btn_rio_torio_"
+#       · la vista empieza por "btn_"
+# =============================================================================
+
+btn_rio_torio_plano_bp = Blueprint(
+    "btn_rio_torio_plano_bp",
+    __name__,
+    url_prefix="/parquin/rio_torio",
+)
+
+
+# =============================================================================
+# 3️⃣ VISTA DEL BOTÓN · PLANO RIO_TORIO
+# =============================================================================
+# Convención:
+#   - Nombre:   btn_rio_torio_plano
+#   - Endpoint: "btn_rio_torio_plano_bp.btn_rio_torio_plano"
+#   - Ruta:     /parquin/rio_torio/plano
+# =============================================================================
+
+@btn_rio_torio_plano_bp.route("/plano", methods=["GET"])
+@rol_required("gestor", "super_admin")
+def btn_rio_torio_plano_bp():
+    """
+    3.1️⃣ BOTÓN · Plano del parquin Rio Torío.
+
+    Muestra una FILA del parquin con el estado de sus plazas (libre/ocupada)
+    y permite navegar entre filas mediante:
+      - Selector de filas (1, 2, 3, ...).
+      - Flechas anterior/siguiente.
+
+    DATOS QUE PREPARA Y ENVÍA AL TEMPLATE:
+      - fila               → número de fila actual (int).
+      - filas_disponibles  → lista de todas las filas existentes (ordenadas).
+      - plazas             → plazas de la fila actual.
+      - total              → número total de plazas en la fila actual.
+      - libres             → número de plazas libres en la fila actual.
+      - ocupadas           → número de plazas ocupadas en la fila actual.
+    """
+
+    # 3.1.1️⃣ Seguridad extra basada en sesión (coherente con el resto del proyecto)
+    if not session.get("user_id"):
+        flash("Debes iniciar sesión", "danger")
+        return redirect(url_for("auth_bp.login"))
+
+    # 3.1.2️⃣ Fila a visualizar (1, 2, 3, ...). Se recibe como querystring ?fila=
+    fila = request.args.get("fila", 1, type=int)
+
+    conn = get_connection("parquin_camiones")
+    cursor = conn.cursor(dictionary=True)
+
+    # 3.2️⃣ Obtener todas las filas disponibles (para el selector y las flechas)
+    cursor.execute(
+        """
+        SELECT DISTINCT fila
+        FROM tbl_plazas
+        WHERE fila IS NOT NULL
+        ORDER BY fila
+        """
+    )
+    filas_rows = cursor.fetchall()
+    filas_disponibles = [row["fila"] for row in filas_rows] or [fila]
+
+    # Si la fila pedida no existe, forzamos a la primera disponible
+    if fila not in filas_disponibles:
+        fila = filas_disponibles[0]
+
+    # 3.3️⃣ Obtener plazas de la fila seleccionada
+    cursor.execute(
+        """
+        SELECT 
+            pl.idtbl_plazas        AS idtbl_plazas,
+            pl.codigo_plazas       AS codigo_plazas,
+            pl.fila                AS fila,
+            pl.idtbl_usuarios      AS idtbl_usuarios,
+            CASE 
+                WHEN pl.idtbl_usuarios IS NULL THEN 'libre' 
+                ELSE 'ocupada' 
+            END                    AS estado,
+            COALESCE(p.Nombre_Razon_Social, '') AS texto_asignacion
+        FROM tbl_plazas pl
+        LEFT JOIN tbl_usuarios u
+               ON pl.idtbl_usuarios = u.idtbl_usuarios
+        LEFT JOIN bd_tbl_comunes.tbl_proveedores p
+               ON u.idtbl_proveedores = p.Idtbl_proveedores
+        WHERE pl.fila = %s
+        ORDER BY pl.codigo_plazas
+        """,
+        (fila,),
+    )
+    plazas = cursor.fetchall()
+
+    # 3.4️⃣ Estadísticas de la fila (total / libres / ocupadas)
+    total = len(plazas)
+    libres = sum(1 for p in plazas if p["estado"] == "libre")
+    ocupadas = sum(1 for p in plazas if p["estado"] == "ocupada")
+
+    cursor.close()
+    conn.close()
+
+    # 3.5️⃣ Renderizar plantilla específica de Rio Torío, alineando nombres
+    #      con lo que espera rio_torio_plano.html.
+    return render_template(
+        "parquin/rio_torio/rio_torio_plano.html",
+        fila=fila,
+        filas_disponibles=filas_disponibles,
+        plazas=plazas,
+        total=total,
+        libres=libres,
+        ocupadas=ocupadas,
+    )

@@ -1,0 +1,537 @@
+{# ============================================================================
+   1. PLANTILLA: inventario/plan_de_proteccion.html
+   ----------------------------------------------------------------------------
+   1.1 Descripción general
+       - Plantilla principal para gestionar el ciclo completo de los planes
+         de protección (listado tipo Excel + ficha/formulario con fotos).
+
+   1.2 Modos de funcionamiento (variable "modo"):
+       - "lista":
+           Muestra una tabla tipo Excel con todos los planes.
+           Variables esperadas:
+             - planes: lista de dicts con campos de tbl_plan_de_proteccion
+               y un campo derivado descripcion_corta.
+       - "formulario":
+           Muestra un formulario en pestañas para crear/editar una pieza.
+           Variables esperadas:
+             - form: instancia de PlanProteccionForm (WTForms).
+             - plan: dict con los datos del plan (solo en edición).
+             - foto_url, plano_url: URLs de imágenes (pueden ser None).
+       - "ver":
+           Muestra el detalle de la pieza en modo solo lectura, apoyado
+           en la columna derecha (fotos).
+
+   1.3 Dependencias visuales
+       - Bootstrap 5 (ya presente en base.html).
+       - FontAwesome para iconos (si ya lo usas).
+       - CSS: static/css/inventario_plan_proteccion.css
+   ============================================================================ #}
+
+{% extends "base.html" %}
+
+{# ============================================================================
+   2. BLOQUE: Título de la página (pestaña del navegador)
+   ========================================================================== #}
+{% block title %}
+    {% if modo == 'lista' %}
+        Planes de Protección
+    {% elif plan %}
+        Editar Plan de Protección
+    {% else %}
+        Nuevo Plan de Protección
+    {% endif %}
+{% endblock %}
+
+{# ============================================================================
+   3. BLOQUE: Contenido principal
+   ========================================================================== #}
+{% block content %}
+<div class="container-fluid py-3">
+
+    {# =======================================================================
+       3.1 MODO "LISTA" → Tabla tipo Excel para exportar
+       -----------------------------------------------------------------------
+       - Tabla compacta, con cabecera pegajosa y estilo "Excel".
+       - Botón "Exportar Excel" preparado para apuntar a una ruta de exportación.
+       ======================================================================= #}
+    {% if modo == 'lista' %}
+
+    <div class="card excel-card shadow-sm border-0 mb-4">
+      <div class="card-header d-flex justify-content-between align-items-center excel-card-header">
+        <div>
+          <h3 class="mb-0 fw-semibold">Inventario · Planes de protección</h3>
+          <small class="text-muted">Vista tipo Excel · Datos listos para exportar</small>
+        </div>
+
+        <div class="d-flex gap-2">
+          <a href="{{ url_for('btn_plan_de_proteccion_form_bp.nuevo') }}" class="btn btn-primary btn-sm">
+            <i class="fas fa-plus me-1"></i> Nuevo plan
+          </a>
+          <button class="btn btn-outline-primary btn-sm" id="btnExportExcel">
+            <i class="fas fa-file-excel me-1"></i> Exportar Excel
+          </button>
+        </div>
+      </div>
+
+      <div class="card-body p-0">
+        <div class="table-responsive excel-table-wrapper">
+          <table class="table table-sm align-middle mb-0 excel-table" id="tablaPlanesProteccion">
+            <thead class="excel-thead">
+              <tr>
+                <th class="text-muted text-uppercase small">ID</th>
+                <th class="text-muted text-uppercase small">Inventario</th>
+                <th class="text-muted text-uppercase small">Descripción</th>
+                <th class="text-muted text-uppercase small">Edificio</th>
+                <th class="text-muted text-uppercase small">Ubicación</th>
+                <th class="text-muted text-uppercase small text-center">Prioridad</th>
+                <th class="text-muted text-uppercase small">Estado</th>
+                <th class="text-muted text-uppercase small text-center">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for plan in planes %}
+              <tr>
+                <td class="text-muted">{{ plan.Idtbl_general_plan_prevencion }}</td>
+                <td class="fw-semibold">{{ plan.numero_inventario|default('–') }}</td>
+                <td class="text-truncate" style="max-width: 260px;">
+                  {{ plan.descripcion_corta }}
+                </td>
+                {# De momento mostramos ubicación como "Edificio" hasta que hagas join real #}
+                <td>{{ plan.ubicacion|default('–') }}</td>
+                <td class="text-muted">{{ plan.ubicacion|default('–') }}</td>
+                <td class="text-center">
+                  {% if plan.idtbl_prioridad %}
+                    {% set p = plan.idtbl_prioridad %}
+                    <span class="badge rounded-pill prioridad-badge prioridad-{{ p }}">
+                      P{{ p }}
+                    </span>
+                  {% else %}
+                    <span class="badge bg-light text-muted rounded-pill">Sin priorizar</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if plan.estado %}
+                    <span class="estado-tag estado-{{ plan.estado|lower|replace(' ', '-') }}">
+                      {{ plan.estado }}
+                    </span>
+                  {% else %}
+                    <span class="estado-tag estado-desconocido">Sin estado</span>
+                  {% endif %}
+                </td>
+                <td class="text-center">
+                  <div class="btn-group btn-group-sm" role="group">
+                    <a href="{{ url_for('btn_plan_de_proteccion_form_bp.ver',
+                                        id=plan.Idtbl_general_plan_prevencion) }}"
+                       class="btn btn-outline-secondary" title="Ver detalle">
+                      <i class="fas fa-eye"></i>
+                    </a>
+                    <a href="{{ url_for('btn_plan_de_proteccion_form_bp.editar',
+                                        id=plan.Idtbl_general_plan_prevencion) }}"
+                       class="btn btn-outline-primary" title="Editar">
+                      <i class="fas fa-pen"></i>
+                    </a>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card-footer d-flex justify-content-between align-items-center small text-muted">
+        <div>
+          <i class="fas fa-circle me-1 text-success"></i> 
+          {{ planes|length }} registros cargados
+        </div>
+        <div>
+          <i class="fas fa-info-circle me-1"></i>
+          Usa el botón “Exportar Excel” para generar un XLSX con estas columnas.
+        </div>
+      </div>
+    </div>
+
+    <script>
+    // 3.1.1 Inicialización de DataTables y botón Exportar
+    document.addEventListener('DOMContentLoaded', function () {
+      if (window.jQuery && $('#tablaPlanesProteccion').DataTable) {
+        $('#tablaPlanesProteccion').DataTable({
+          language: {
+            url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/es-ES.json'
+          },
+          order: [[0, 'desc']],
+          pageLength: 25
+        });
+      }
+
+      const btnExport = document.getElementById('btnExportExcel');
+      if (btnExport) {
+        btnExport.addEventListener('click', function () {
+          // Ajusta la ruta "exportar_excel" cuando la implementes en la blueprint
+          window.location.href = "{{ url_for('btn_plan_de_proteccion_form_bp.exportar_excel') }}";
+        });
+      }
+    });
+    </script>
+
+    {% else %}
+    {# =======================================================================
+       3.2 MODO "FORMULARIO" / "VER" → Ficha profesional con fotos
+       -----------------------------------------------------------------------
+       - Columna izquierda: ficha con pestañas (formulario o lectura).
+       - Columna derecha: tarjetas de foto principal y plano.
+       ======================================================================= #}
+
+    <div class="row g-4">
+
+      {# -------------------------------------------------------------------
+         3.2.1 Columna izquierda: ficha / formulario
+         ------------------------------------------------------------------- #}
+      <div class="col-lg-8">
+        <div class="card piece-card border-0 shadow-sm mb-4">
+          <div class="card-header piece-card-header d-flex justify-content-between align-items-center">
+            <div>
+              <h3 class="mb-0 fw-semibold">
+                {% if modo == 'ver' %}
+                  Ficha de pieza
+                {% elif plan %}
+                  Editar pieza
+                {% else %}
+                  Nueva pieza
+                {% endif %}
+              </h3>
+              {% if plan %}
+              <small class="text-muted">
+                ID {{ plan.Idtbl_general_plan_prevencion }} · Nº inventario
+                <span class="fw-semibold">{{ plan.numero_inventario|default('–') }}</span>
+              </small>
+              {% endif %}
+            </div>
+
+            {% if plan %}
+            <div class="text-end d-none d-md-block">
+              <div class="small text-muted mb-1">Estado</div>
+              <span class="estado-tag estado-{{ plan.estado|lower|replace(' ', '-') }}">
+                {{ plan.estado|default('Sin estado') }}
+              </span>
+            </div>
+            {% endif %}
+          </div>
+
+          <div class="card-body">
+            {% if modo == 'formulario' and form %}
+            <form method="POST" id="formPlanProteccion">
+              {{ form.hidden_tag() }}
+
+              {# 3.2.1.1 Pestañas del formulario #}
+              <ul class="nav nav-tabs nav-tabs-soft" id="pieceTabs" role="tablist">
+                <li class="nav-item">
+                  <a class="nav-link active" id="tab-general" data-bs-toggle="tab"
+                     href="#tabPaneGeneral" role="tab">
+                    <i class="fas fa-info-circle me-1"></i> General
+                  </a>
+                </li>
+                <li class="nav-item">
+                  <a class="nav-link" id="tab-ubicacion" data-bs-toggle="tab"
+                     href="#tabPaneUbicacion" role="tab">
+                    <i class="fas fa-map-marker-alt me-1"></i> Ubicación
+                  </a>
+                </li>
+                <li class="nav-item">
+                  <a class="nav-link" id="tab-caracteristicas" data-bs-toggle="tab"
+                     href="#tabPaneCaracteristicas" role="tab">
+                    <i class="fas fa-cube me-1"></i> Características
+                  </a>
+                </li>
+                <li class="nav-item">
+                  <a class="nav-link" id="tab-inspeccion" data-bs-toggle="tab"
+                     href="#tabPaneInspeccion" role="tab">
+                    <i class="fas fa-clipboard-check me-1"></i> Inspección
+                  </a>
+                </li>
+                <li class="nav-item">
+                  <a class="nav-link" id="tab-evacuacion" data-bs-toggle="tab"
+                     href="#tabPaneEvacuacion" role="tab">
+                    <i class="fas fa-truck-moving me-1"></i> Evacuación
+                  </a>
+                </li>
+              </ul>
+
+              {# 3.2.1.2 Contenido de las pestañas #}
+              <div class="tab-content mt-3" id="pieceTabsContent">
+
+                {# 3.2.1.2.1 Pestaña General #}
+                <div class="tab-pane fade show active" id="tabPaneGeneral" role="tabpanel">
+                  <div class="row g-3">
+                    <div class="col-md-6">
+                      <label class="form-label">{{ form.numero_inventario.label }}</label>
+                      {{ form.numero_inventario(class="form-control form-control-soft") }}
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label">{{ form.idtbl_edificio.label }}</label>
+                      {{ form.idtbl_edificio(class="form-control form-control-soft") }}
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label">{{ form.Idtbl_ref_edificio.label }}</label>
+                      {{ form.Idtbl_ref_edificio(class="form-control form-control-soft") }}
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label">{{ form.idtbl_piezas_coleccion.label }}</label>
+                      {{ form.idtbl_piezas_coleccion(class="form-control form-control-soft") }}
+                    </div>
+                    <div class="col-12">
+                      <label class="form-label">{{ form.descripcion.label }}</label>
+                      {{ form.descripcion(class="form-control form-control-soft", rows=4) }}
+                    </div>
+                  </div>
+                </div>
+
+                {# 3.2.1.2.2 Pestaña Ubicación #}
+                <div class="tab-pane fade" id="tabPaneUbicacion" role="tabpanel">
+                  <div class="row g-3">
+                    <div class="col-12">
+                      <label class="form-label">{{ form.ubicacion.label }}</label>
+                      {{ form.ubicacion(class="form-control form-control-soft") }}
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label">{{ form.idtbl_lugar_de_deposito.label }}</label>
+                      {{ form.idtbl_lugar_de_deposito(class="form-control form-control-soft") }}
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label">{{ form.idtbl_ruta_evacuacion.label }}</label>
+                      {{ form.idtbl_ruta_evacuacion(class="form-control form-control-soft") }}
+                    </div>
+                  </div>
+                </div>
+
+                {# 3.2.1.2.3 Pestaña Características #}
+                <div class="tab-pane fade" id="tabPaneCaracteristicas" role="tabpanel">
+                  <div class="row g-3">
+                    <div class="col-md-4">
+                      <label class="form-label">{{ form.dimensiones.label }}</label>
+                      {{ form.dimensiones(class="form-control form-control-soft",
+                                          placeholder="Alto x Ancho x Fondo") }}
+                    </div>
+                    <div class="col-md-4">
+                      <label class="form-label">{{ form.dimensiones2.label }}</label>
+                      {{ form.dimensiones2(class="form-control form-control-soft") }}
+                    </div>
+                    <div class="col-md-4">
+                      <label class="form-label">{{ form.peso_aproximado.label }}</label>
+                      {{ form.peso_aproximado(class="form-control form-control-soft",
+                                              placeholder="0.00") }}
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label">{{ form.idtbl_materia_tecnica.label }}</label>
+                      {{ form.idtbl_materia_tecnica(class="form-control form-control-soft") }}
+                    </div>
+                    <div class="col-md-3">
+                      <label class="form-label">{{ form.numero_de_piezas.label }}</label>
+                      {{ form.numero_de_piezas(class="form-control form-control-soft") }}
+                    </div>
+                    <div class="col-md-3">
+                      <label class="form-label">{{ form.idtbl_prioridad.label }}</label>
+                      {{ form.idtbl_prioridad(class="form-control form-control-soft") }}
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label">{{ form.estado.label }}</label>
+                      {{ form.estado(class="form-control form-control-soft") }}
+                    </div>
+                  </div>
+                </div>
+
+                {# 3.2.1.2.4 Pestaña Inspección #}
+                <div class="tab-pane fade" id="tabPaneInspeccion" role="tabpanel">
+                  <div class="row g-3">
+                    <div class="col-md-6">
+                      <label class="form-label">{{ form.fecha_de_inspeccion.label }}</label>
+                      {{ form.fecha_de_inspeccion(class="form-control form-control-soft", type="date") }}
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label">{{ form.proxima_fecha_inspeccion_recomendada.label }}</label>
+                      {{ form.proxima_fecha_inspeccion_recomendada(class="form-control form-control-soft", type="date") }}
+                    </div>
+                    <div class="col-md-12">
+                      <label class="form-label">{{ form.estado_de_conservacion.label }}</label>
+                      {{ form.estado_de_conservacion(class="form-control form-control-soft") }}
+                    </div>
+                    <div class="col-12">
+                      <label class="form-label">{{ form.observaciones.label }}</label>
+                      {{ form.observaciones(class="form-control form-control-soft", rows=4) }}
+                    </div>
+                  </div>
+                </div>
+
+                {# 3.2.1.2.5 Pestaña Evacuación #}
+                <div class="tab-pane fade" id="tabPaneEvacuacion" role="tabpanel">
+                  <div class="row g-3">
+                    <div class="col-md-4">
+                      <label class="form-label">{{ form.numero_personas_necesarias.label }}</label>
+                      {{ form.numero_personas_necesarias(class="form-control form-control-soft") }}
+                    </div>
+                    <div class="col-md-4">
+                      <label class="form-label">{{ form.idtbl_material_nesario.label }}</label>
+                      {{ form.idtbl_material_nesario(class="form-control form-control-soft") }}
+                    </div>
+                    <div class="col-md-4">
+                      <label class="form-label">{{ form.idtbl_material_necesario_para_su_proteccion.label }}</label>
+                      {{ form.idtbl_material_necesario_para_su_proteccion(class="form-control form-control-soft") }}
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label">{{ form.responsable_de_evacuacion.label }}</label>
+                      {{ form.responsable_de_evacuacion(class="form-control form-control-soft") }}
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label">{{ form.responsable_del_deposito.label }}</label>
+                      {{ form.responsable_del_deposito(class="form-control form-control-soft") }}
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label">{{ form.vehiculo_empleado.label }}</label>
+                      {{ form.vehiculo_empleado(class="form-control form-control-soft") }}
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label">{{ form.conductor.label }}</label>
+                      {{ form.conductor(class="form-control form-control-soft") }}
+                    </div>
+                  </div>
+                </div>
+
+              </div> <!-- /tab-content -->
+
+              {# 3.2.1.3 Botones de acción #}
+              <div class="d-flex flex-wrap justify-content-between align-items-center mt-4 gap-2">
+                <div class="btn-group">
+                  <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save me-1"></i> Guardar cambios
+                  </button>
+                  <a href="{{ url_for('btn_plan_de_proteccion_form_bp.btn_plan_de_proteccion_listado') }}"
+                     class="btn btn-outline-secondary">
+                    <i class="fas fa-times me-1"></i> Cancelar
+                  </a>
+                </div>
+
+                {% if plan %}
+                <button type="button" class="btn btn-outline-danger"
+                        onclick="confirmarEliminar()">
+                  <i class="fas fa-trash me-1"></i> Eliminar pieza
+                </button>
+                {% endif %}
+              </div>
+            </form>
+
+            {% else %}
+            {# 3.2.1.4 Modo ver sin formulario #}
+            <p class="text-muted mb-0">
+              Vista de solo lectura. Completa aquí una representación detallada si lo necesitas.
+            </p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      {# -------------------------------------------------------------------
+         3.2.2 Columna derecha: fotos y plano
+         ------------------------------------------------------------------- #}
+      <div class="col-lg-4">
+
+        {# 3.2.2.1 Tarjeta de foto principal #}
+        <div class="card border-0 shadow-sm mb-3 media-card">
+          <div class="card-header media-card-header">
+            <h5 class="mb-0">
+              <i class="fas fa-image me-2"></i> Foto principal
+            </h5>
+          </div>
+          <div class="card-body text-center">
+            {% if foto_url %}
+            <div class="media-frame mb-2">
+              <img src="{{ foto_url }}" class="img-fluid" alt="Foto pieza"
+                   onclick="abrirModal('{{ foto_url }}', 'Foto principal')">
+            </div>
+            <div class="small text-muted">
+              Clic en la imagen para ampliar
+            </div>
+            {% else %}
+            <div class="media-placeholder">
+              <i class="fas fa-image fa-2x mb-2"></i>
+              <p class="mb-0">Sin foto asociada</p>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+
+        {# 3.2.2.2 Tarjeta de plano de situación #}
+        <div class="card border-0 shadow-sm media-card">
+          <div class="card-header media-card-header">
+            <h5 class="mb-0">
+              <i class="fas fa-map me-2"></i> Plano de situación
+            </h5>
+          </div>
+          <div class="card-body text-center">
+            {% if plano_url %}
+            <div class="media-frame mb-2">
+              <img src="{{ plano_url }}" class="img-fluid" alt="Plano"
+                   onclick="abrirModal('{{ plano_url }}', 'Plano de situación')">
+            </div>
+            <div class="small text-muted">
+              Clic en la imagen para ampliar
+            </div>
+            {% else %}
+            <div class="media-placeholder">
+              <i class="fas fa-map fa-2x mb-2"></i>
+              <p class="mb-0">Sin plano asociado</p>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>  {# /row #}
+
+    {# 3.2.3 Modal para ver imagen ampliada (foto/plano) #}
+    <div class="modal fade" id="modalImagen" tabindex="-1" role="dialog">
+      <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="modalImagenTitulo">Imagen</h5>
+            <button type="button" class="btn-close"
+                    data-bs-dismiss="modal" aria-label="Cerrar">
+            </button>
+          </div>
+          <div class="modal-body text-center">
+            <img id="modalImagenSrc" src="" class="img-fluid" alt="">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# 3.2.4 Formulario oculto para eliminar (solo si hay plan) #}
+    {% if plan %}
+    <form id="formEliminar"
+          action="{{ url_for('btn_plan_de_proteccion_form_bp.eliminar',
+                             id=plan.Idtbl_general_plan_prevencion) }}"
+          method="POST" style="display: none;">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    </form>
+    {% endif %}
+
+    {# 3.2.5 Scripts JS específicos (modal imagen y confirmación eliminar) #}
+    <script>
+    function abrirModal(url, titulo) {
+      document.getElementById('modalImagenSrc').src = url;
+      document.getElementById('modalImagenTitulo').textContent = titulo;
+      var modal = new bootstrap.Modal(document.getElementById('modalImagen'));
+      modal.show();
+    }
+
+    {% if plan %}
+    function confirmarEliminar() {
+      if (confirm('¿Está seguro que desea eliminar este plan de protección?')) {
+        document.getElementById('formEliminar').submit();
+      }
+    }
+    {% endif %}
+    </script>
+
+    {% endif %} {# fin if modo == 'lista' #}
+
+</div> <!-- /container-fluid -->
+{% endblock %}

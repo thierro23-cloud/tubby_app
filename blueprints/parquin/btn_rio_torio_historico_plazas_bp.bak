@@ -1,0 +1,476 @@
+"""
+Río Torío · Histórico de plazas
+================================
+
+Módulo para gestionar el histórico de ocupación de plazas del parking de camiones
+de Río Torío.
+
+Funcionalidad:
+- Listado global del histórico.
+- Detalle por plaza.
+- Alta y edición de registros.
+- Validación de coherencia de intervalos.
+- Restricción de acceso a super_admin.
+
+Author: Tino Hierro
+Date: 2026-06-24
+"""
+
+from __future__ import annotations
+
+from datetime import date
+from typing import Any
+
+from flask import (
+    Blueprint,
+    render_template,
+    current_app,
+    request,
+    redirect,
+    url_for,
+)
+
+from db import ejecutar_query
+from services.helpers import rol_required
+
+
+btn_rio_torio_historico_plazas_bp = Blueprint(
+    "btn_rio_torio_historico_plazas_bp",
+    __name__,
+    url_prefix="/parquin/rio_torio/historico_plazas",
+)
+
+
+SQL_HISTORICO_PLAZAS = """
+    SELECT
+        h.idtbl_historico_plazas,
+        h.idtbl_plazas,
+        pz.codigo_plazas        AS codigo_plaza,
+        h.idtbl_proveedores,
+        pr.Nombre_Razon_Social  AS proveedor,
+        h.fecha_inicio,
+        h.fecha_fin,
+        h.exp_solicitud_fin,
+        h.forma_pago,
+        h.observaciones,
+        h.idtbl_usuarios,
+        h.exp_solicitud_inicio,
+        h.exp_solicitud_cambio
+    FROM tbl_historico_plazas AS h
+    LEFT JOIN tbl_plazas AS pz
+           ON pz.idtbl_plazas = h.idtbl_plazas
+    LEFT JOIN bd_tbl_comunes.tbl_proveedores AS pr
+           ON pr.Idtbl_proveedores = h.idtbl_proveedores
+    ORDER BY h.idtbl_historico_plazas DESC
+"""
+
+
+def _parse_fecha(fecha_str: str | None) -> date | None:
+    """
+    Convierte una fecha ISO `YYYY-MM-DD` en un objeto `date`.
+
+    Args:
+        fecha_str (str | None): Fecha en formato ISO o None.
+
+    Returns:
+        date | None: Fecha convertida o None si la entrada está vacía.
+    """
+    if not fecha_str:
+        return None
+    return date.fromisoformat(fecha_str)
+
+
+def _validar_intervalo_fechas(
+    fecha_inicio: date | None,
+    fecha_fin: date | None,
+) -> None:
+    """
+    Valida la coherencia básica entre fecha_inicio y fecha_fin.
+
+    Args:
+        fecha_inicio (date | None): Fecha de inicio del intervalo.
+        fecha_fin (date | None): Fecha de fin del intervalo.
+
+    Raises:
+        ValueError: Si falta fecha_inicio o si fecha_inicio > fecha_fin.
+    """
+    if not fecha_inicio:
+        raise ValueError("La fecha de inicio es obligatoria.")
+
+    if fecha_fin and fecha_inicio > fecha_fin:
+        raise ValueError("La fecha de inicio no puede ser posterior a la fecha de fin.")
+
+
+def _intervalos_se_solapan(
+    inicio1: date,
+    fin1: date | None,
+    inicio2: date,
+    fin2: date | None,
+) -> bool:
+    """
+    Comprueba si dos intervalos de fechas se solapan.
+
+    Args:
+        inicio1 (date): Inicio del primer intervalo.
+        fin1 (date | None): Fin del primer intervalo.
+        inicio2 (date): Inicio del segundo intervalo.
+        fin2 (date | None): Fin del segundo intervalo.
+
+    Returns:
+        bool: True si los intervalos se solapan, False en caso contrario.
+    """
+    fin1_real = fin1 or date.max
+    fin2_real = fin2 or date.max
+    return inicio1 <= fin2_real and inicio2 <= fin1_real
+
+
+def _validar_historico_plaza(
+    *,
+    id_historico: int | None,
+    id_plaza: int,
+    id_proveedor: int,
+    fecha_inicio: date,
+    fecha_fin: date | None,
+    forma_pago: str | None,
+) -> None:
+    """
+    Valida que el histórico de una plaza sea coherente antes de guardar.
+
+    Reglas:
+    - la forma de pago es obligatoria;
+    - la fecha de inicio es obligatoria;
+    - no puede haber fecha_inicio posterior a fecha_fin;
+    - no puede haber solapamientos para la misma plaza;
+    - no puede haber más de un intervalo abierto por plaza;
+    - si cambia la forma de pago, debe tratarse como un nuevo intervalo.
+
+    Args:
+        id_historico (int | None): ID del registro en edición o None si es alta.
+        id_plaza (int): ID de la plaza.
+        id_proveedor (int): ID del proveedor.
+        fecha_inicio (date): Fecha de inicio del intervalo.
+        fecha_fin (date | None): Fecha de fin del intervalo.
+        forma_pago (str | None): Forma de pago.
+
+    Raises:
+        ValueError: Si alguna regla de coherencia se incumple.
+    """
+    if not forma_pago:
+        raise ValueError("La forma de pago es obligatoria.")
+
+    _validar_intervalo_fechas(fecha_inicio, fecha_fin)
+
+    filas: list[dict[str, Any]] = ejecutar_query(
+        """
+        SELECT
+            idtbl_historico_plazas,
+            idtbl_plazas,
+            idtbl_proveedores,
+            fecha_inicio,
+            fecha_fin,
+            forma_pago
+        FROM tbl_historico_plazas
+        WHERE idtbl_plazas = %s
+        """,
+        params=(id_plaza,),
+        nombre_bd="parquin_camiones",
+    )
+
+    hay_abierto_distinto = False
+
+    for fila in filas:
+        id_hist_existente = fila["idtbl_historico_plazas"]
+
+        if id_historico and id_hist_existente == id_historico:
+            continue
+
+        fi_exist = fila["fecha_inicio"]
+        ff_exist = fila["fecha_fin"]
+        forma_pago_exist = fila.get("forma_pago")
+        id_prov_exist = fila["idtbl_proveedores"]
+
+        if ff_exist is None and fecha_fin is None:
+            hay_abierto_distinto = True
+
+        if _intervalos_se_solapan(fecha_inicio, fecha_fin, fi_exist, ff_exist):
+            raise ValueError(
+                "El periodo indicado se solapa con otro periodo ya registrado para esta plaza."
+            )
+
+        if (
+            ff_exist is None
+            and fecha_fin is None
+            and id_prov_exist == id_proveedor
+            and forma_pago_exist != forma_pago
+        ):
+            raise ValueError(
+                "Ya existe un intervalo abierto para esta plaza y proveedor con otra forma de pago."
+            )
+
+    if hay_abierto_distinto:
+        raise ValueError(
+            "Ya existe otra fila abierta (sin fecha de fin) para esta plaza."
+        )
+
+
+@btn_rio_torio_historico_plazas_bp.route("/", methods=["GET"])
+@rol_required("super_admin")
+def btn_rio_torio_historico_plazas():
+    """
+    Muestra el listado global del histórico de plazas.
+
+    Returns:
+        str: Render del template del listado global.
+    """
+    error = None
+
+    try:
+        filas = ejecutar_query(SQL_HISTORICO_PLAZAS, params=(), nombre_bd="parquin_camiones")
+    except Exception as e:
+        current_app.logger.exception("Error al obtener histórico de plazas (Río Torío)")
+        filas = []
+        error = f"Error al consultar el histórico de plazas: {e}"
+
+    try:
+        plazas = ejecutar_query(
+            """
+            SELECT
+                idtbl_plazas AS id,
+                codigo_plazas AS codigo_plaza
+            FROM tbl_plazas
+            ORDER BY codigo_plazas
+            """,
+            params=(),
+            nombre_bd="parquin_camiones",
+        )
+    except Exception as e:
+        current_app.logger.exception("Error al cargar catálogo de plazas (Río Torío)")
+        plazas = []
+        error = (error or "") + f" Error al cargar plazas: {e}"
+
+    try:
+        proveedores = ejecutar_query(
+            """
+            SELECT
+                Idtbl_proveedores AS id,
+                NIF AS nif,
+                Nombre_Razon_Social AS nombre
+            FROM tbl_proveedores
+            ORDER BY Nombre_Razon_Social
+            """,
+            params=(),
+            nombre_bd="bd_tbl_comunes",
+        )
+    except Exception as e:
+        current_app.logger.exception("Error al cargar proveedores (Río Torío)")
+        proveedores = []
+        error = (error or "") + f" Error al cargar proveedores: {e}"
+
+    return render_template(
+        "parquin/rio_torio/rio_torio_historico_plazas.html",
+        error=error,
+        filas=filas,
+        plazas=plazas,
+        proveedores=proveedores,
+    )
+
+
+@btn_rio_torio_historico_plazas_bp.route(
+    "/plaza/<int:id_plaza>",
+    methods=["GET", "POST"],
+)
+@rol_required("super_admin")
+def rio_torio_historico_plazas(id_plaza: int) -> str:
+    """
+    Muestra y edita el histórico de una plaza concreta.
+
+    Args:
+        id_plaza (int): ID de la plaza recibida por URL.
+
+    Returns:
+        str: Render del template de detalle por plaza.
+    """
+    error: str | None = None
+
+    if request.method == "POST":
+        try:
+            accion = request.form.get("accion")
+            id_historico_str = request.form.get("idtbl_historico_plazas")
+            id_plaza_form = request.form.get("idtbl_plazas")
+            id_proveedor = request.form.get("idtbl_proveedores")
+            fecha_inicio_str = request.form.get("fecha_inicio")
+            fecha_fin_str = request.form.get("fecha_fin") or None
+            exp_fin = request.form.get("exp_solicitud_fin") or None
+            forma_pago = request.form.get("forma_pago") or None
+            observaciones = request.form.get("observaciones") or None
+            exp_inicio = request.form.get("exp_solicitud_inicio") or None
+            exp_cambio = request.form.get("exp_solicitud_cambio") or None
+            id_usuario = request.form.get("idtbl_usuarios") or None
+
+            id_plaza_final = int(id_plaza_form) if id_plaza_form else id_plaza
+            id_proveedor_int = int(id_proveedor) if id_proveedor else None
+            id_historico_int = int(id_historico_str) if id_historico_str else None
+            id_usuario_int = int(id_usuario) if id_usuario else None
+
+            if not id_proveedor_int:
+                raise ValueError("Debes seleccionar un proveedor antes de guardar el histórico.")
+
+            fecha_inicio = _parse_fecha(fecha_inicio_str)
+            fecha_fin = _parse_fecha(fecha_fin_str)
+
+            _validar_historico_plaza(
+                id_historico=id_historico_int,
+                id_plaza=id_plaza_final,
+                id_proveedor=id_proveedor_int,
+                fecha_inicio=fecha_inicio,
+                fecha_fin=fecha_fin,
+                forma_pago=forma_pago,
+            )
+
+            if accion == "editar" and id_historico_int:
+                ejecutar_query(
+                    """
+                    UPDATE tbl_historico_plazas
+                    SET
+                        idtbl_plazas = %s,
+                        idtbl_proveedores = %s,
+                        fecha_inicio = %s,
+                        fecha_fin = %s,
+                        exp_solicitud_fin = %s,
+                        forma_pago = %s,
+                        observaciones = %s,
+                        idtbl_usuarios = %s,
+                        exp_solicitud_inicio = %s,
+                        exp_solicitud_cambio = %s
+                    WHERE idtbl_historico_plazas = %s
+                    """,
+                    params=(
+                        id_plaza_final,
+                        id_proveedor_int,
+                        fecha_inicio_str,
+                        fecha_fin_str,
+                        exp_fin,
+                        forma_pago,
+                        observaciones,
+                        id_usuario_int,
+                        exp_inicio,
+                        exp_cambio,
+                        id_historico_int,
+                    ),
+                    nombre_bd="parquin_camiones",
+                )
+            else:
+                ejecutar_query(
+                    """
+                    INSERT INTO tbl_historico_plazas
+                        (idtbl_plazas, idtbl_proveedores, fecha_inicio, fecha_fin,
+                         exp_solicitud_fin, forma_pago, observaciones, idtbl_usuarios,
+                         exp_solicitud_inicio, exp_solicitud_cambio)
+                    VALUES
+                        (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    """,
+                    params=(
+                        id_plaza_final,
+                        id_proveedor_int,
+                        fecha_inicio_str,
+                        fecha_fin_str,
+                        exp_fin,
+                        forma_pago,
+                        observaciones,
+                        id_usuario_int,
+                        exp_inicio,
+                        exp_cambio,
+                    ),
+                    nombre_bd="parquin_camiones",
+                )
+
+            return redirect(
+    url_for(
+        "btn_rio_torio_historico_plazas_bp.rio_torio_historico_plazas",
+        id_plaza=id_plaza_final,
+    )
+)
+
+        except Exception as e:
+            current_app.logger.exception("Error al guardar histórico de la plaza (Río Torío)")
+            error = f"Error al guardar histórico de la plaza: {e}"
+
+    try:
+        proveedores = ejecutar_query(
+            """
+            SELECT
+                Idtbl_proveedores AS id,
+                NIF AS nif,
+                Nombre_Razon_Social AS nombre
+            FROM tbl_proveedores
+            ORDER BY Nombre_Razon_Social
+            """,
+            params=(),
+            nombre_bd="bd_tbl_comunes",
+        )
+    except Exception as e:
+        current_app.logger.exception("Error al cargar proveedores para detalle (Río Torío)")
+        proveedores = []
+        error = (error or "") + f" Error al cargar proveedores: {e}"
+
+    try:
+        plazas = ejecutar_query(
+            """
+            SELECT
+                idtbl_plazas AS id,
+                codigo_plazas AS nombre
+            FROM tbl_plazas
+            ORDER BY codigo_plazas
+            """,
+            params=(),
+            nombre_bd="parquin_camiones",
+        )
+    except Exception as e:
+        current_app.logger.exception("Error al cargar plazas para detalle (Río Torío)")
+        plazas = []
+        error = (error or "") + f" Error al cargar plazas: {e}"
+
+    try:
+        filas = ejecutar_query(
+            """
+            SELECT
+                h.idtbl_historico_plazas,
+                h.idtbl_plazas,
+                pz.codigo_plazas AS codigo_plaza,
+                h.idtbl_proveedores,
+                pr.Nombre_Razon_Social AS proveedor,
+                h.fecha_inicio,
+                h.fecha_fin,
+                h.exp_solicitud_fin,
+                h.forma_pago,
+                h.observaciones,
+                h.idtbl_usuarios,
+                h.exp_solicitud_inicio,
+                h.exp_solicitud_cambio
+            FROM tbl_historico_plazas AS h
+            LEFT JOIN tbl_plazas AS pz
+                   ON pz.idtbl_plazas = h.idtbl_plazas
+            LEFT JOIN bd_tbl_comunes.tbl_proveedores AS pr
+                   ON pr.Idtbl_proveedores = h.idtbl_proveedores
+            WHERE h.idtbl_plazas = %s
+            ORDER BY h.fecha_inicio DESC, h.idtbl_historico_plazas DESC
+            """,
+            params=(id_plaza,),
+            nombre_bd="parquin_camiones",
+        )
+    except Exception as e:
+        current_app.logger.exception("Error al obtener histórico de la plaza (Río Torío)")
+        filas = []
+        error = (error or "") + f" Error al consultar histórico de la plaza: {e}"
+
+    codigo_plaza = filas[0]["codigo_plaza"] if filas else None
+
+    return render_template(
+        "parquin/rio_torio/rio_torio_historico_plaza.html",
+        error=error,
+        filas=filas,
+        proveedores=proveedores,
+        plazas=plazas,
+        id_plaza=id_plaza,
+        codigo_plaza=codigo_plaza,
+    )

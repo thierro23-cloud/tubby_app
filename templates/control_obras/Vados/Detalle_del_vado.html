@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+
+{% block title %}Detalle de Vado{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center mb-4 gap-3">
+        <div>
+            <h1 class="mb-1 fw-bold">🔍 Detalle de Vado</h1>
+            <p class="text-muted mb-0">
+                Consulta completa del expediente actual del vado.
+            </p>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2">
+            <a href="{{ url_for('control_vados_bp.control_vados') }}" class="btn btn-outline-secondary">
+                ← Volver al listado
+            </a>
+            <a href="{{ url_for('control_vados_bp.editar_vado', idtbl_vados=vado.idtbl_vados) }}" class="btn btn-warning">
+                ✏️ Editar
+            </a>
+        </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="mb-4">
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <div class="row g-4">
+
+        <div class="col-12 col-xl-8">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white border-0 pt-4 pb-0">
+                    <h5 class="fw-semibold mb-1">📄 Datos del expediente</h5>
+                    <p class="text-muted small mb-0">Información principal del vado actualmente vigente.</p>
+                </div>
+
+                <div class="card-body pt-4">
+                    <div class="row g-4">
+
+                        <div class="col-md-4">
+                            <div class="text-muted small">🆔 ID Vado</div>
+                            <div class="fw-semibold">{{ vado.idtbl_vados }}</div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <div class="text-muted small">🚗 Nº de vado</div>
+                            <div class="fw-semibold">{{ vado.n_vado or '—' }}</div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <div class="text-muted small">🌍 Municipio</div>
+                            <div class="fw-semibold">{{ vado.municipio_nombre or 'Ávila' }}</div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <div class="text-muted small">🛣️ Tipo de vía</div>
+                            <div class="fw-semibold">{{ vado.tipo_via_nombre or '—' }}</div>
+                        </div>
+
+                        <div class="col-md-8">
+                            <div class="text-muted small">🏠 Calle</div>
+                            <div class="fw-semibold">{{ vado.calle_nombre or '—' }}</div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="text-muted small">📅 Fecha de inicio</div>
+                            <div class="fw-semibold">{{ vado.fecha_inicio or '—' }}</div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="text-muted small">📅 Fecha de fin</div>
+                            <div class="fw-semibold">{{ vado.fecha_fin or '—' }}</div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="text-muted small">🔄 Fecha de cambio</div>
+                            <div class="fw-semibold">{{ vado.fecha_cambio or '—' }}</div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="text-muted small">🧑‍💼 Gestor</div>
+                            <div class="fw-semibold">{{ vado.gestor_nombre or '—' }}</div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="text-muted small">🧾 ID vado anterior</div>
+                            <div class="fw-semibold">{{ vado.idtbl_vado_anterior or '—' }}</div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="text-muted small">👤 Propietario anterior (legacy)</div>
+                            <div class="fw-semibold">{{ vado.idetbl_propietario_anterior or '—' }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-xl-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white border-0 pt-4 pb-0">
+                    <h5 class="fw-semibold mb-1">👤 Titular actual</h5>
+                    <p class="text-muted small mb-0">Información asociada al proveedor titular del vado.</p>
+                </div>
+
+                <div class="card-body pt-4">
+                    <div class="mb-3">
+                        <div class="text-muted small">Nombre</div>
+                        <div class="fw-semibold">{{ vado.titular_nombre or '—' }}</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="text-muted small">NIF</div>
+                        <div class="fw-semibold">{{ vado.titular_nif or '—' }}</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="text-muted small">Teléfono</div>
+                        <div class="fw-semibold">{{ vado.titular_telefono or '—' }}</div>
+                    </div>
+
+                    <div class="mb-0">
+                        <div class="text-muted small">Email</div>
+                        <div class="fw-semibold">{{ vado.titular_email or '—' }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0 pt-4 pb-0">
+                    <h5 class="fw-semibold mb-1">⚙️ Acciones disponibles</h5>
+                    <p class="text-muted small mb-0">Operaciones específicas sobre el expediente.</p>
+                </div>
+
+                <div class="card-body pt-4">
+                    <div class="d-flex flex-wrap gap-2">
+                        <a href="{{ url_for('control_vados_bp.editar_vado', idtbl_vados=vado.idtbl_vados) }}" class="btn btn-outline-warning">
+                            ✏️ Editar expediente
+                        </a>
+
+                        <a href="{{ url_for('control_vados_bp.cambio_numero_vado', idtbl_vados=vado.idtbl_vados) }}" class="btn btn-outline-dark">
+                            🔄 Cambio de placa
+                        </a>
+
+                        <a href="{{ url_for('control_vados_bp.cambio_titular_vado', idtbl_vados=vado.idtbl_vados) }}" class="btn btn-outline-info">
+                            👤 Cambio de titular
+                        </a>
+
+                        <a href="{{ url_for('control_vados_bp.historico_numeros_vado', idtbl_vados=vado.idtbl_vados) }}" class="btn btn-outline-secondary">
+                            🕘 Histórico números
+                        </a>
+
+                        <a href="{{ url_for('control_vados_bp.historico_titulares_vado', idtbl_vados=vado.idtbl_vados) }}" class="btn btn-outline-success">
+                            🕘 Histórico titulares
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

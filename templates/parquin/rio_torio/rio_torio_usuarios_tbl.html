@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Usuarios vs Proveedores · Río Torío</title>
+
+  {# =============================================================================
+     0️⃣ METADATOS Y CONTEXTO · rio_torio_usuarios_tbl.html
+     =============================================================================
+     UBICACIÓN:
+     ----------
+     - templates/parquin/rio_torio/rio_torio_usuarios_tbl.html
+
+     SE RENDERIZA DESDE:
+     --------------------
+     - Blueprint:
+         btn_rio_torio_usuarios_tbl_bp
+     - Vista:
+         btn_rio_torio_usuarios_tbl_bp.btn_rio_torio_usuarios_tbl
+
+     CONTEXTO ESPERADO:
+     ------------------
+     - usuarios_tbl:
+         Lista de dicts con campos:
+           · idtbl_usuarios
+           · idtbl_proveedores
+           · numero_cuenta
+           · activo_baja
+           · fecha_inicio
+           · fecha_baja
+           · rol
+
+     - proveedores_parquin:
+         Lista de dicts con campos:
+           · Idtbl_proveedores
+           · Nombre_Razon_Social
+           · NIF   (NIF del proveedor)
+
+     OBJETIVO VISUAL:
+     ----------------
+     - Mostrar dos tablas paralelas:
+         1) Usuarios (tbl_usuarios)
+         2) Proveedores con parquin activado (tbl_proveedores)
+     - Facilitar el análisis comparativo por:
+         · nombre_razon_social
+         · NIF
+         · IDs y claves.
+     ============================================================================= #}
+
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      margin: 0;
+      padding: 1.5rem;
+      background-color: #f5f5f5;
+    }
+
+    h1 {
+      margin-top: 0;
+      font-size: 1.6rem;
+    }
+
+    .contenedor {
+      background: #ffffff;
+      border-radius: 8px;
+      padding: 1.5rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+    }
+
+    .subtitulo {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+
+    .layout-paralelo {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-top: 1rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+
+    th, td {
+      border: 1px solid #ddd;
+      padding: 0.4rem 0.6rem;
+    }
+
+    th {
+      background-color: #f0f0f0;
+      text-align: left;
+    }
+
+    tr:nth-child(even) {
+      background-color: #fafafa;
+    }
+
+    .badge-activo {
+      display: inline-block;
+      padding: 0.1rem 0.3rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #ffffff;
+      background-color: #2e7d32;
+    }
+
+    .badge-baja {
+      display: inline-block;
+      padding: 0.1rem 0.3rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #ffffff;
+      background-color: #c62828;
+    }
+
+    .resumen {
+      font-size: 0.9rem;
+      color: #555;
+      margin-top: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+<div class="contenedor">
+  {# =============================================================================
+     1️⃣ CABECERA PRINCIPAL
+     ============================================================================= #}
+  <h1>Usuarios / Proveedores · Río Torío (TBL)</h1>
+
+  <p class="resumen">
+    Usuarios TBL: {{ usuarios_tbl|length }} · Proveedores con parquin activado: {{ proveedores_parquin|length }}
+  </p>
+
+  {# =============================================================================
+     2️⃣ TABLAS PARALELAS
+     =============================================================================
+     - Columna izquierda: usuarios_tbl (tbl_usuarios).
+     - Columna derecha: proveedores_parquin (tbl_proveedores).
+     ============================================================================= #}
+  <div class="layout-paralelo">
+
+    {# 2.1️⃣ Tabla izquierda · Usuarios TBL #}
+    <div>
+      <div class="subtitulo">Usuarios (tbl_usuarios)</div>
+
+      {% if usuarios_tbl %}
+        <table>
+          <thead>
+            <tr>
+              <th>ID usuario</th>
+              <th>ID proveedor</th>
+              <th>Nº cuenta</th>
+              <th>Activo</th>
+              <th>Fecha inicio</th>
+              <th>Fecha baja</th>
+              <th>Rol</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for u in usuarios_tbl %}
+              <tr>
+                <td>{{ u.idtbl_usuarios }}</td>
+                <td>{{ u.idtbl_proveedores }}</td>
+                <td>{{ u.numero_cuenta }}</td>
+                <td>
+                  {% if u.activo_baja == 1 %}
+                    <span class="badge-activo">Sí</span>
+                  {% else %}
+                    <span class="badge-baja">No</span>
+                  {% endif %}
+                </td>
+                <td>{{ u.fecha_inicio or '—' }}</td>
+                <td>{{ u.fecha_baja or '—' }}</td>
+                <td>{{ u.rol or '—' }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <p class="resumen">No se han encontrado usuarios en tbl_usuarios.</p>
+      {% endif %}
+    </div>
+
+   {# 2.2️⃣ Tabla derecha · Proveedores con parquin #}
+<div>
+  <div class="subtitulo">Proveedores con parquin (tbl_proveedores)</div>
+
+  {% if proveedores_parquin %}
+    <table>
+      <thead>
+        <tr>
+          <th>ID proveedor</th>
+          <th>Nombre / Razón social</th>
+          <th>NIF</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in proveedores_parquin %}
+          <tr>
+            <td>{{ p.Idtbl_proveedores }}</td>
+            <td>{{ p.Nombre_Razon_Social }}</td>
+            <td>{{ p.NIF }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="resumen">No se han encontrado proveedores con parquin.</p>
+  {% endif %}
+</div>
+
+  </div>
+</div>
+</body>
+</html>

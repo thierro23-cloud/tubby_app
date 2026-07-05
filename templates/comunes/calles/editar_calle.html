@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+
+    {# ============================================================
+       PLANTILLA: comunes/calles/editar_calle.html
+       ============================================================
+       DESCRIPCIÓN:
+         Esta plantilla forma parte del módulo de blueprints que
+         gestionan el CRUD de calles en el sistema:
+
+           • Buscador/listado de calles:
+               - Blueprint: btn_ubicacion_calles_buscador_bp
+               - Rutas: /comunes/calles/buscador, /comunes/calles/api/calles
+
+           • Edición de calles (este blueprint):
+               - Blueprint: btn_ubicacion_calles_editar_bp
+               - Rutas:
+                   · GET  /comunes/calles/editar/<idtbl_calles>
+                        → muestra este formulario
+                   · POST /comunes/calles/editar/<idtbl_calles>
+                        → actualiza la calle
+
+         Esta vista concreta permite editar una calle existente
+         (registro de tbl_calles) y sus relaciones:
+
+           - tbl_municipios       → select de municipio
+           - tbl_tipos_de_vias    → select de tipo de vía
+           - tbl_barrios          → select de barrio
+           - tbl_calles           → campos:
+               · calles
+               · Codigopostal
+               · Barrio (texto)
+               · idtbl_municipios
+               · idtbl_tipos_de_vias
+               · idtbl_barrios
+
+         CONTEXTO ESPERADO (variables que pasa el blueprint):
+           - calle:
+               dict con los campos de tbl_calles, por ejemplo:
+                 calle.idtbl_calles
+                 calle.idtbl_municipios
+                 calle.idtbl_tipos_de_vias
+                 calle.calles
+                 calle.Codigopostal
+                 calle.Barrio
+                 calle.idtbl_barrios
+
+           - municipios_list:
+               lista de dicts:
+                 { "id": <int>, "nombre": <str> }
+
+           - tipos_de_vias_list:
+               lista de dicts:
+                 { "id": <int>, "nombre": <str> }
+
+           - barrios_list:
+               lista de dicts:
+                 { "id": <int>, "nombre": <str> }
+
+         IMPORTANTE:
+           La función obtener_calle_por_id en el blueprint debe
+           devolver SOLO una fila (dict), no una lista, para que
+           Jinja interprete correctamente:
+             calle.idtbl_calles, calle.calles, etc.
+       ============================================================ #}
+
+    <title>Editar calle {{ calle.idtbl_calles }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+<div class="container py-4">
+    <h3 class="mb-3">Editar calle (ID {{ calle.idtbl_calles }})</h3>
+
+    {# ============================================================
+       BLOQUE: Mensajes flash (opcional)
+       ------------------------------------------------------------
+       Si la aplicación utiliza flash messages, se mostrarán aquí.
+       Ejemplo de uso en el servidor:
+         flash("Calle actualizada correctamente", "success")
+       ============================================================ #}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    {# ============================================================
+       FORMULARIO DE EDICIÓN
+       ------------------------------------------------------------
+       - method="post"
+       - action → endpoint POST del blueprint de edición:
+           btn_ubicacion_calles_editar_bp.btn_ubicacion_calles_editar_update
+       - Ruta real:
+           POST /comunes/calles/editar/<idtbl_calles>
+       ============================================================ #}
+    <form method="post"
+          action="{{ url_for('btn_ubicacion_calles_editar_bp.btn_ubicacion_calles_editar_update',
+                            idtbl_calles=calle.idtbl_calles) }}">
+
+        {# ========================================================
+           CAMPO: Municipio
+           --------------------------------------------------------
+           - name="idtbl_municipios"
+           - Se rellena con municipios_list (id, nombre)
+           - Marca como selected el municipio actual de la calle.
+           ======================================================== #}
+        <div class="mb-3">
+            <label class="form-label">Municipio</label>
+            <select name="idtbl_municipios" class="form-select" required>
+                <option value="">-- Selecciona municipio --</option>
+                {% for m in municipios_list %}
+                    <option value="{{ m.id }}"
+                            {% if m.id == calle.idtbl_municipios %}selected{% endif %}>
+                        {{ m.nombre }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        {# ========================================================
+           CAMPO: Tipo de vía
+           --------------------------------------------------------
+           - name="idtbl_tipos_de_vias"
+           - Se rellena con tipos_de_vias_list (id, nombre)
+           - Marca como selected el tipo de vía actual de la calle.
+           - La tabla de referencia es tbl_tipos_de_vias:
+               idtbl_tipos_de_vias, tipos_de_vias
+           ======================================================== #}
+        <div class="mb-3">
+            <label class="form-label">Tipo de vía</label>
+            <select name="idtbl_tipos_de_vias" class="form-select" required>
+                <option value="">-- Selecciona tipo de vía --</option>
+                {% for t in tipos_de_vias_list %}
+                    <option value="{{ t.id }}"
+                            {% if t.id == calle.idtbl_tipos_de_vias %}selected{% endif %}>
+                        {{ t.nombre }}
+                    </option>
+                {% endfor %}
+            </select>
+            <div class="form-text">Ejemplos: CALLE, AVENIDA, PLAZA, CTRA...</div>
+        </div>
+
+        {# ========================================================
+           CAMPO: Nombre de la calle
+           --------------------------------------------------------
+           - name="calles"
+           - Campo obligatorio.
+           - Mapea a tbl_calles.calles.
+           ======================================================== #}
+        <div class="mb-3">
+            <label class="form-label">Nombre de la calle</label>
+            <input type="text"
+                   class="form-control"
+                   name="calles"
+                   value="{{ calle.calles }}"
+                   required>
+        </div>
+
+        {# ========================================================
+           CAMPO: Código postal
+           --------------------------------------------------------
+           - name="Codigopostal"
+           - Campo opcional.
+           - Mapea a tbl_calles.Codigopostal.
+           ======================================================== #}
+        <div class="mb-3">
+            <label class="form-label">Código postal</label>
+            <input type="text"
+                   class="form-control"
+                   name="Codigopostal"
+                   value="{{ calle.Codigopostal or '' }}">
+        </div>
+
+        {# ========================================================
+           CAMPO: Barrio (texto libre)
+           --------------------------------------------------------
+           - name="Barrio"
+           - Campo opcional.
+           - Mapea a tbl_calles.Barrio (texto).
+           ======================================================== #}
+        <div class="mb-3">
+            <label class="form-label">Barrio (texto)</label>
+            <input type="text"
+                   class="form-control"
+                   name="Barrio"
+                   value="{{ calle.Barrio or '' }}">
+        </div>
+
+        {# ========================================================
+           CAMPO: Barrio (catálogo)
+           --------------------------------------------------------
+           - name="idtbl_barrios"
+           - Se rellena con barrios_list (id, nombre).
+           - Marca como selected el barrio actual (idtbl_barrios).
+           - Si no se selecciona nada, se deja sin barrio asignado.
+           ======================================================== #}
+        <div class="mb-3">
+            <label class="form-label">Barrio (catálogo)</label>
+            <select name="idtbl_barrios" class="form-select">
+                <option value="">-- Sin barrio asignado --</option>
+                {% for b in barrios_list %}
+                    <option value="{{ b.id }}"
+                            {% if b.id == calle.idtbl_barrios %}selected{% endif %}>
+                        {{ b.nombre }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        {# ========================================================
+           BOTONES DE ACCIÓN
+           --------------------------------------------------------
+           - Guardar cambios → envía el formulario al endpoint POST.
+           - Volver al buscador → redirige al blueprint del buscador
+             (btn_ubicacion_calles_buscador_bp).
+           ======================================================== #}
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-success">Guardar cambios</button>
+            <a href="{{ url_for('btn_ubicacion_calles_buscador_bp.btn_ubicacion_calles_buscador') }}"
+               class="btn btn-secondary">
+                Volver al buscador
+            </a>
+        </div>
+    </form>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,144 @@
+/* =====================================================
+   🔹 Estilos globales
+   ===================================================== */
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f9;
+    margin: 0;
+    padding: 0;
+    color: #333;
+}
+
+header {
+    background-color: #1f2937; /* gris oscuro */
+    color: white;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+header h1 {
+    margin: 0;
+    font-size: 1.8rem;
+}
+
+header nav a {
+    color: white;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+header nav a:hover {
+    text-decoration: underline;
+}
+
+main {
+    padding: 20px;
+}
+
+/* =====================================================
+   🔹 Tarjetas
+   ===================================================== */
+.tarjetas {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+
+.tarjeta {
+    background-color: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    padding: 20px;
+    flex: 1 1 200px;
+    text-align: center;
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: #1f2937;
+    transition: transform 0.2s, box-shadow 0.2s;
+    cursor: default;
+}
+
+.tarjeta:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+}
+.tarjeta {
+    flex: 1 1 300px; /* tarjetas más grandes */
+    padding: 30px;
+    font-size: 1.2rem;
+}
+.tarjeta h3 {
+    margin-top: 15px;
+    font-size: 1.3rem;
+}
+.tarjeta p {
+    margin: 10px 0 15px 0;
+    font-size: 1rem;
+}
+.tarjeta button {
+    padding: 12px 25px;
+    font-size: 1.05rem;
+}
+
+/* =====================================================
+   🔹 Botones
+   ===================================================== */
+.botones {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+button {
+    background-color: #2563eb; /* azul principal */
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 20px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.2s;
+}
+
+button:hover {
+    background-color: #1d4ed8; /* azul más oscuro */
+    transform: translateY(-2px);
+}
+
+button:active {
+    transform: translateY(0);
+}
+
+/* =====================================================
+   🔹 Footer
+   ===================================================== */
+footer {
+    text-align: center;
+    padding: 15px 0;
+    background-color: #1f2937;
+    color: white;
+    margin-top: 30px;
+}
+
+/* =====================================================
+   🔹 Mensajes flash
+   ===================================================== */
+.flash {
+    padding: 10px 20px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    font-weight: bold;
+}
+
+.flash.success {
+    background-color: #16a34a;
+    color: white;
+}
+
+.flash.danger {
+    background-color: #dc2626;
+    color: white;
+}

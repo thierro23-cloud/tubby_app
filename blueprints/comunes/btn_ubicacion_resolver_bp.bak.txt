@@ -1,0 +1,1012 @@
+# -*- coding: utf-8 -*-
+"""
+MÓDULO: Gestión unificada de proveedores (bd_tbl_comunes.tbl_proveedores)
+
+Este blueprint proporciona una pantalla única, compacta y “tabificada” para:
+
+- Crear y editar proveedores en la tabla:
+    bd_tbl_comunes.tbl_proveedores
+
+- Buscar proveedores por:
+    - NIF (tolerando ceros a la izquierda)
+    - Nombre / Razón Social (búsqueda case-insensitive sin tildes, vía COLLATE)
+
+- Gestionar la ubicación mediante combos dependientes:
+    - Provincias: bd_tbl_comunes.tbl_provincias
+    - Municipios: bd_tbl_comunes.tbl_municipios
+    - Tipos de vía: bd_tbl_comunes.tbl_tipos_de_vias
+    - Calles: bd_tbl_comunes.tbl_calles
+
+- Exponer APIs JSON auxiliares:
+    - /api/buscar_por_nombre   → autocompletar por nombre
+    - /api/buscar_por_nif      → autocompletar por NIF
+    - /api/provincias          → catálogo de provincias
+    - /api/municipios          → municipios filtrados por provincia
+    - /api/tipos_vias          → catálogo de tipos de vía
+    - /api/calles              → calles filtradas por municipio y tipo de vía
+    - /api/proveedor/<id>      → devuelve un proveedor completo en JSON
+
+Vista principal (formulario único)
+----------------------------------
+Ruta:
+    /comunes/proveedores/formulario
+
+Métodos:
+    - GET:
+        - Si viene querystring ?prov_id=NNN → carga ese proveedor y lo pinta en la
+          plantilla `comunes/proveedores/proveedores_gestionar.html`.
+        - Si no se pasa prov_id → formulario vacío (modo “Nuevo proveedor”).
+
+    - POST:
+        - Valida NIF y Nombre/Razón Social.
+        - INSERT si no hay Idtbl_proveedores (alta).
+        - UPDATE si hay Idtbl_proveedores (edición).
+        - Aplica patrón PRG (POST/REDIRECT/GET), redirigiendo de nuevo a
+          /comunes/proveedores/formulario?prov_id=NNN para evitar reenvíos.
+
+Plantilla asociada:
+    templates/comunes/proveedores/proveedores_gestionar.html
+
+    Esta plantilla:
+    - Renderiza el formulario compacto en tabs:
+        - Básico  → NIF, Razón Social, teléfono, alias.
+        - Dirección → provincia, municipio, vía, calle + domicilio, CP, portal.
+        - Contactos → contactos comercial/admin y teléfonos/emails.
+        - Bancos → cuenta bancaria, tipo de tercero, grupo de producto.
+        - Flags → switches (parquin, bar, construcción, informes, contenedores, etc.).
+
+    - Renderiza un panel izquierdo de búsqueda:
+        - Inputs para buscar por NIF y por Nombre.
+        - Resultado corto en la parte superior (ID, NIF, estado).
+        - Listado de resultados (scroll interno) con botón para cargar
+          un proveedor directamente en el formulario.
+
+    - Usa:
+        - Campo oculto `Idtbl_proveedores` para distinguir entre alta/edición.
+        - Botón “Guardar” que envía el form via POST al mismo endpoint.
+        - Botón “Nuevo” que limpia todo el formulario y deja el ID vacío.
+        - Botón “Volver” que usa window.history.back() con fallback a la
+          propia ruta de formulario.
+
+Datos que el backend debe pasar a la plantilla
+----------------------------------------------
+Desde este módulo se hace:
+
+    return render_template(
+        "comunes/proveedores/proveedores_gestionar.html",
+        proveedor=proveedor,                  # dict o None
+        provincias=listas["provincias"],      # [{id, nombre}]
+        tipos_de_vias=listas["tipos_de_vias"],
+        tipos_de_terceros=listas["tipos_de_terceros"],
+        productos_grupos=productos_grupos,    # lista [{id, nombre}]
+    )
+
+Registro del blueprint
+----------------------
+En tu factory o app.py:
+
+    from blueprints.comunes.btn_proveedores_gestionar_bp import btn_proveedores_gestionar_bp
+    app.register_blueprint(btn_proveedores_gestionar_bp)
+
+Con esto:
+- La ruta /comunes/proveedores/formulario aparece como botón (si usas el
+  patrón “btn_” para descubrimiento).
+- La plantilla `proveedores_gestionar.html` se encarga de la UI, y este
+  módulo gestiona toda la lógica de negocio (SQL, validación, PRG, APIs).
+"""
+
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from services.helpers import login_required, rol_required
+from db import ejecutar_query, ejecutar_non_query
+import logging
+
+logger = logging.getLogger(__name__)
+
+#==============================================================================
+# 1️⃣ BLUEPRINT DEFINICIÓN
+#==============================================================================
+
+btn_proveedores_gestionar_bp = Blueprint(
+    "btn_proveedores_gestionar_bp",
+    __name__,
+    url_prefix="/comunes/proveedores",
+)
+
+#==============================================================================
+# 2️⃣ HELPERS DE NORMALIZACIÓN
+#==============================================================================
+
+def _to_int_or_none(v):
+    """Convierte a int si es válido, si no → None (para columnas INT opcionales)."""
+    if v is None:
+        return None
+    v = str(v).strip()
+    return int(v) if v.isdigit() else None
+
+
+#==============================================================================
+# 3️⃣ HELPERS CRUD PARA PROVINCIAS, MUNICIPIOS, TIPOS DE VIA, CALLES
+#==============================================================================
+
+def _crud_insertar_provincia(nombre: str) -> int:
+    sql = """
+        INSERT INTO bd_tbl_comunes.tbl_provincias (provincias)
+        VALUES (%s)
+    """
+    ejecutar_non_query(sql, (nombre,), "bd_tbl_comunes")
+    rows = ejecutar_query("SELECT LAST_INSERT_ID() AS id", nombre_bd="bd_tbl_comunes")
+    return rows[0]["id"]
+
+
+def _crud_actualizar_provincia(id_provincia: int, nombre: str) -> bool:
+    sql = """
+        UPDATE bd_tbl_comunes.tbl_provincias
+        SET provincias = %s
+        WHERE idtbl_provincias = %s
+    """
+    filas = ejecutar_non_query(sql, (nombre, id_provincia), "bd_tbl_comunes")
+    return filas > 0
+
+
+def _crud_obtener_provincia(id_provincia: int):
+    rows = ejecutar_query(
+        "SELECT idtbl_provincias AS id, provincias AS nombre "
+        "FROM bd_tbl_comunes.tbl_provincias WHERE idtbl_provincias=%s",
+        (id_provincia,),
+        "bd_tbl_comunes",
+    )
+    return rows[0] if rows else None
+
+
+def _crud_insertar_municipio(id_provincia, nombre: str) -> int:
+    sql = """
+        INSERT INTO bd_tbl_comunes.tbl_municipios (idtbl_provincias, municipios)
+        VALUES (%s, %s)
+    """
+    ejecutar_non_query(sql, (id_provincia, nombre), "bd_tbl_comunes")
+    rows = ejecutar_query("SELECT LAST_INSERT_ID() AS id", nombre_bd="bd_tbl_comunes")
+    return rows[0]["id"]
+
+
+def _crud_actualizar_municipio(id_municipio: int, id_provincia, nombre: str) -> bool:
+    sql = """
+        UPDATE bd_tbl_comunes.tbl_municipios
+        SET idtbl_provincias = %s, municipios = %s
+        WHERE idtbl_municipios = %s
+    """
+    filas = ejecutar_non_query(sql, (id_provincia, nombre, id_municipio), "bd_tbl_comunes")
+    return filas > 0
+
+
+def _crud_obtener_municipio(id_municipio: int):
+    rows = ejecutar_query(
+        "SELECT idtbl_municipios AS id, idtbl_provincias, municipios AS nombre "
+        "FROM bd_tbl_comunes.tbl_municipios WHERE idtbl_municipios=%s",
+        (id_municipio,),
+        "bd_tbl_comunes",
+    )
+    return rows[0] if rows else None
+
+
+def _crud_insertar_tipo_via(nombre: str) -> int:
+    sql = """
+        INSERT INTO bd_tbl_comunes.tbl_tipos_de_vias (tipos_de_vias)
+        VALUES (%s)
+    """
+    ejecutar_non_query(sql, (nombre,), "bd_tbl_comunes")
+    rows = ejecutar_query("SELECT LAST_INSERT_ID() AS id", nombre_bd="bd_tbl_comunes")
+    return rows[0]["id"]
+
+
+def _crud_actualizar_tipo_via(id_tipo_via: int, nombre: str) -> bool:
+    sql = """
+        UPDATE bd_tbl_comunes.tbl_tipos_de_vias
+        SET tipos_de_vias = %s
+        WHERE idtbl_tipos_de_vias = %s
+    """
+    filas = ejecutar_non_query(sql, (nombre, id_tipo_via), "bd_tbl_comunes")
+    return filas > 0
+
+
+def _crud_obtener_tipo_via(id_tipo_via: int):
+    rows = ejecutar_query(
+        "SELECT idtbl_tipos_de_vias AS id, tipos_de_vias AS nombre "
+        "FROM bd_tbl_comunes.tbl_tipos_de_vias WHERE idtbl_tipos_de_vias=%s",
+        (id_tipo_via,),
+        "bd_tbl_comunes",
+    )
+    return rows[0] if rows else None
+
+
+def _crud_insertar_calle(id_municipio, id_tipo_via, nombre: str, codigopostal=None) -> int:
+    sql = """
+        INSERT INTO bd_tbl_comunes.tbl_calles
+            (idtbl_municipios, idtbl_tipos_de_vias, calles, Codigopostal)
+        VALUES (%s, %s, %s, %s)
+    """
+    ejecutar_non_query(sql, (id_municipio, id_tipo_via, nombre, codigopostal), "bd_tbl_comunes")
+    rows = ejecutar_query("SELECT LAST_INSERT_ID() AS id", nombre_bd="bd_tbl_comunes")
+    return rows[0]["id"]
+
+
+def _crud_actualizar_calle(id_calle: int, id_municipio, id_tipo_via, nombre: str, codigopostal=None) -> bool:
+    sql = """
+        UPDATE bd_tbl_comunes.tbl_calles
+        SET idtbl_municipios = %s,
+            idtbl_tipos_de_vias = %s,
+            calles = %s,
+            Codigopostal = %s
+        WHERE idtbl_calles = %s
+    """
+    filas = ejecutar_non_query(sql, (id_municipio, id_tipo_via, nombre, codigopostal, id_calle), "bd_tbl_comunes")
+    return filas > 0
+
+
+def _crud_obtener_calle(id_calle: int):
+    rows = ejecutar_query(
+        "SELECT idtbl_calles AS id, idtbl_municipios, idtbl_tipos_de_vias, "
+        "calles AS nombre, Codigopostal AS codigo_postal "
+        "FROM bd_tbl_comunes.tbl_calles WHERE idtbl_calles=%s",
+        (id_calle,),
+        "bd_tbl_comunes",
+    )
+    return rows[0] if rows else None
+
+
+#==============================================================================
+# 4️⃣ FORMULARIO PRINCIPAL (GET/POST) - PANTALLA ÚNICA
+#==============================================================================
+
+@btn_proveedores_gestionar_bp.route("/formulario", methods=["GET", "POST"])
+@login_required
+@rol_required("super_admin")
+def btn_proveedores_gestionar():
+    """
+    Formulario único proveedores:
+    - GET: Carga proveedor o vacío + listas maestras iniciales
+    - POST: Valida → INSERT/UPDATE → Redirige con prov_id (PRG)
+    - Botón "Nuevo": formulario vacío (sin prov_id)
+    - Botón "Volver": usa window.history.back() con fallback
+    """
+    if request.method == "POST":
+        return _procesar_post_proveedor()
+
+    # prov_id en querystring: ?prov_id=56948
+    prov_id_raw = request.args.get("prov_id")
+    prov_id = int(prov_id_raw) if prov_id_raw and prov_id_raw.isdigit() else None
+
+    return _cargar_formulario(prov_id=prov_id)
+
+
+def _procesar_post_proveedor():
+    """Procesador POST centralizado con validación completa."""
+    f = request.form
+    prov_id_raw = f.get("Idtbl_proveedores")
+    prov_id = int(prov_id_raw) if prov_id_raw and prov_id_raw.isdigit() else None
+
+    # VALIDACIÓN OBLIGATORIOS
+    nombre_razon = f.get("Nombre_Razon_Social", "").strip()
+    nif = f.get("NIF", "").strip()
+
+    if not nombre_razon or not nif:
+        flash("❌ Nombre/Razón Social y NIF obligatorios", "error")
+        proveedor = request.form.to_dict()
+        return _cargar_formulario(prov_id=prov_id, proveedor_override=proveedor)
+
+    # Datos normalizados
+    datos = {
+        "NIF": nif,
+        "Nombre_Razon_Social": nombre_razon,
+        "idtbl_provincias": _to_int_or_none(f.get("idtbl_provincias")),
+        "idtbl_municipios": _to_int_or_none(f.get("idtbl_municipios")),
+        "idtbl_tipos_de_vias": _to_int_or_none(f.get("idtbl_tipos_de_vias")),
+        "idtbl_calles": _to_int_or_none(f.get("idtbl_calles")),
+        "Domicilio": f.get("Domicilio", "").strip(),
+        "Poblacion": f.get("Poblacion", "").strip(),
+        "Codigo_Postal": f.get("Codigo_Postal", "").strip(),
+        "Provincia": f.get("Provincia", "").strip(),
+        "Telefono": f.get("Telefono", "").strip(),
+        "idtbl_Tipo_de_Tercero": _to_int_or_none(f.get("idtbl_Tipo_de_Tercero")),
+        "numero_cuenta": f.get("numero_cuenta", "").strip(),
+        "idtbl_productos_grupos": _to_int_or_none(f.get("idtbl_productos_grupos")),
+        "Persona_contacto_comercial": f.get("Persona_contacto_comercial", "").strip(),
+        "telefono_movil": f.get("telefono_movil", "").strip(),
+        "correo_electronico_comercial": f.get("correo_electronico_comercial", "").strip(),
+        "telefono_fijo_admin": f.get("telefono_fijo_admin", "").strip(),
+        "telefono_movil_admin": f.get("telefono_movil_admin", "").strip(),
+        "Persona_contacto_admin": f.get("Persona_contacto_admin", "").strip(),
+        "correo_electronico_admin": f.get("correo_electronico_admin", "").strip(),
+        "ALIAS": f.get("ALIAS", "").strip(),
+        "numero_portal": f.get("numero_portal", "").strip(),
+        # Campos booleanos (TINYINT 0/1)
+        "parquin": 0,
+        "coloca_contenedores": 0,
+        "empresa_construccion": 0,
+        "vende_material_construccion": 0,
+        "es_bar": 0,
+        "terraza_fija": 0,
+        "terraza_desmontable": 0,
+        "restuarante": 0,
+        "recibir_informe_pendientes": 0,
+    }
+
+    bool_campos = [
+        "parquin", "coloca_contenedores", "empresa_construccion",
+        "vende_material_construccion", "es_bar", "terraza_fija",
+        "terraza_desmontable", "restuarante", "recibir_informe_pendientes",
+    ]
+    for campo in bool_campos:
+        datos[campo] = 1 if f.get(campo) in ("1", "on", "true", "True", "TRUE") else 0
+
+    try:
+        logger.info("[PROVEEDORES] %s ID=%s datos=%r", "INSERT" if prov_id is None else "UPDATE", prov_id, datos)
+
+        if prov_id is None:
+            # INSERT
+            columnas = ", ".join(datos.keys())
+            placeholders = ", ".join(["%s"] * len(datos))
+            params = tuple(datos.values())
+
+            filas = ejecutar_non_query(
+                f"INSERT INTO bd_tbl_comunes.tbl_proveedores ({columnas}) VALUES ({placeholders})",
+                params=params,
+                nombre_bd="bd_tbl_comunes",
+            )
+
+            if filas > 0:
+                rows = ejecutar_query(
+                    "SELECT LAST_INSERT_ID() AS id",
+                    nombre_bd="bd_tbl_comunes",
+                )
+                prov_id = rows[0]["id"]
+                flash("✅ Proveedor creado correctamente", "success")
+                logger.info("[PROVEEDORES] Proveedor CREADO: ID %s", prov_id)
+            else:
+                raise Exception("No se insertó fila")
+        else:
+            # UPDATE
+            set_clause = ", ".join([f"{k}=%s" for k in datos.keys()])
+            params = tuple(datos.values()) + (prov_id,)
+
+            filas = ejecutar_non_query(
+                "UPDATE bd_tbl_comunes.tbl_proveedores "
+                f"SET {set_clause} WHERE Idtbl_proveedores=%s",
+                params=params,
+                nombre_bd="bd_tbl_comunes",
+            )
+
+            if filas > 0:
+                flash("✅ Proveedor actualizado correctamente", "success")
+                logger.info("[PROVEEDORES] Proveedor ACTUALIZADO: ID %s", prov_id)
+            else:
+                flash("⚠️ Proveedor no encontrado", "warning")
+
+        return redirect(
+            url_for(
+                "btn_proveedores_gestionar_bp.btn_proveedores_gestionar",
+                prov_id=prov_id,
+            )
+        )
+
+    except Exception as e:
+        flash(f"❌ Error guardando: {str(e)}", "error")
+        logger.exception("[PROVEEDORES] Error proveedor ID %s: %s", prov_id, e)
+        return _cargar_formulario(prov_id=prov_id)
+
+
+def _cargar_formulario(prov_id=None, proveedor_override=None):
+    """
+    Carga segura formulario + listas maestras:
+    - proveedor: dict o None
+    - provincias, tipos_de_vias, tipos_de_terceros, productos_grupos: catálogos
+    """
+    proveedor = None
+
+    if proveedor_override is not None:
+        proveedor = proveedor_override
+    elif prov_id:
+        try:
+            rows = ejecutar_query(
+                "SELECT * FROM bd_tbl_comunes.tbl_proveedores "
+                "WHERE Idtbl_proveedores=%s",
+                params=(prov_id,),
+                nombre_bd="bd_tbl_comunes",
+            )
+            proveedor = rows[0] if rows else None
+            if not proveedor:
+                flash("⚠️ Proveedor no encontrado", "warning")
+        except Exception as e:
+            flash(f"Error cargando proveedor: {str(e)}", "error")
+            logger.exception(f"Error carga proveedor {prov_id}")
+
+    try:
+        listas = {
+            "provincias": ejecutar_query(
+                "SELECT idtbl_provincias AS id, provincias AS nombre "
+                "FROM bd_tbl_comunes.tbl_provincias "
+                "ORDER BY provincias",
+                nombre_bd="bd_tbl_comunes",
+            ),
+            "tipos_de_vias": ejecutar_query(
+                "SELECT idtbl_tipos_de_vias AS id, tipos_de_vias AS nombre "
+                "FROM bd_tbl_comunes.tbl_tipos_de_vias "
+                "ORDER BY tipos_de_vias",
+                nombre_bd="bd_tbl_comunes",
+            ),
+            "tipos_de_terceros": ejecutar_query(
+                "SELECT idtbl_tipos_de_terceros AS id, tipos_de_terceros AS nombre "
+                "FROM bd_tbl_comunes.tbl_tipos_de_terceros "
+                "ORDER BY idtbl_tipos_de_terceros",
+                nombre_bd="bd_tbl_comunes",
+            ),
+        }
+
+        productos_grupos = ejecutar_query(
+            "SELECT idtbl_productos_grupos AS id, productos_grupos AS nombre "
+            "FROM bd_tbl_comunes.tbl_productos_grupos "
+            "ORDER BY productos_grupos",
+            nombre_bd="bd_tbl_comunes",
+        )
+
+    except Exception as e:
+        flash(f"Error listas maestras: {str(e)}", "error")
+        listas = {
+            "provincias": [],
+            "tipos_de_vias": [],
+            "tipos_de_terceros": [],
+        }
+        productos_grupos = []
+
+    return render_template(
+        "comunes/proveedores/proveedores_gestionar.html",
+        proveedor=proveedor,
+        provincias=listas["provincias"],
+        tipos_de_vias=listas["tipos_de_vias"],
+        tipos_de_terceros=listas["tipos_de_terceros"],
+        productos_grupos=productos_grupos,
+    )
+
+
+#==============================================================================
+# 5️⃣ APIs AUTOCOMPLETAR (NOMBRE / NIF)
+#==============================================================================
+
+@btn_proveedores_gestionar_bp.route("/api/buscar_por_nombre")
+@login_required
+@rol_required("super_admin")
+def api_buscar_proveedor_por_nombre():
+    texto = request.args.get("texto", "").strip()
+
+    if len(texto) < 2:
+        return jsonify({
+            "success": False,
+            "results": [],
+            "message": "Mínimo 2 caracteres para buscar por nombre"
+        }), 400
+
+    try:
+        sql = """
+            SELECT Idtbl_proveedores, NIF, Nombre_Razon_Social
+            FROM bd_tbl_comunes.tbl_proveedores
+            WHERE Nombre_Razon_Social COLLATE utf8mb4_0900_ai_ci LIKE %s
+            ORDER BY Nombre_Razon_Social ASC
+            LIMIT 50
+        """
+
+        rows = ejecutar_query(
+            sql,
+            params=(f"%{texto}%",),
+            nombre_bd="bd_tbl_comunes"
+        )
+
+        results = [
+            {
+                "id": r["Idtbl_proveedores"],
+                "nif": r["NIF"],
+                "nombre": r["Nombre_Razon_Social"],
+            }
+            for r in rows
+        ]
+
+        return jsonify({
+            "success": True,
+            "results": results,
+            "message": f"{len(results)} resultados"
+        })
+
+    except Exception as e:
+        logger.error(f"ERROR API nombre '{texto}': {str(e)}")
+        return jsonify({
+            "success": False,
+            "results": [],
+            "message": "Error servidor"
+        }), 500
+
+
+@btn_proveedores_gestionar_bp.route("/api/buscar_por_nif")
+@login_required
+@rol_required("super_admin")
+def api_buscar_proveedor_por_nif():
+    texto = request.args.get("texto", "").strip()
+
+    if not texto:
+        return jsonify({
+            "success": False,
+            "results": [],
+            "message": "Introduce NIF para buscar"
+        }), 400
+
+    # Normalizamos para quitar ceros a la izquierda,
+    texto_norm = texto.lstrip("0") or "0"
+    patron_like = f"{texto_norm}%"
+
+    try:
+        sql = """
+            SELECT Idtbl_proveedores, NIF, Nombre_Razon_Social
+            FROM bd_tbl_comunes.tbl_proveedores
+            WHERE
+                NIF = %s
+                OR TRIM(LEADING '0' FROM NIF) = %s
+                OR TRIM(LEADING '0' FROM NIF) LIKE %s
+            ORDER BY NIF ASC
+            LIMIT 50
+        """
+
+        rows = ejecutar_query(
+            sql,
+            params=(texto, texto_norm, patron_like),
+            nombre_bd="bd_tbl_comunes"
+        )
+
+        results = [
+            {
+                "id": r["Idtbl_proveedores"],
+                "nif": r["NIF"],
+                "nombre": r["Nombre_Razon_Social"],
+            }
+            for r in rows
+        ]
+
+        return jsonify({
+            "success": True,
+            "results": results,
+            "message": f"{len(results)} resultados"
+        })
+
+    except Exception as e:
+        logger.error(f"ERROR API NIF '{texto}': {str(e)}")
+        return jsonify({
+            "success": False,
+            "results": [],
+            "message": "Error servidor"
+        }), 500
+
+
+#==============================================================================
+# 6️⃣ APIs COMBOS DEPENDIENTES (DIRECCIÓN)
+#==============================================================================
+
+@btn_proveedores_gestionar_bp.route("/api/provincias")
+@login_required
+@rol_required("super_admin")
+def api_provincias():
+    rows = ejecutar_query(
+        "SELECT idtbl_provincias AS id, provincias AS nombre "
+        "FROM bd_tbl_comunes.tbl_provincias ORDER BY provincias",
+        nombre_bd="bd_tbl_comunes"
+    )
+    return jsonify([{"id": r["id"], "nombre": r["nombre"]} for r in rows])
+
+
+@btn_proveedores_gestionar_bp.route("/api/municipios")
+@login_required
+@rol_required("super_admin")
+def api_municipios():
+    prov_id = request.args.get("prov_id")
+    if prov_id:
+        rows = ejecutar_query(
+            "SELECT idtbl_municipios AS id, municipios AS nombre "
+            "FROM bd_tbl_comunes.tbl_municipios "
+            "WHERE idtbl_provincias=%s ORDER BY municipios",
+            params=(int(prov_id),), nombre_bd="bd_tbl_comunes"
+        )
+    else:
+        rows = ejecutar_query(
+            "SELECT idtbl_municipios AS id, municipios AS nombre "
+            "FROM bd_tbl_comunes.tbl_municipios "
+            "WHERE idtbl_provincias IS NOT NULL "
+            "ORDER BY municipios",
+            nombre_bd="bd_tbl_comunes"
+        )
+    return jsonify([{"id": r["id"], "nombre": r["nombre"]} for r in rows])
+
+
+@btn_proveedores_gestionar_bp.route("/api/tipos_vias")
+@login_required
+@rol_required("super_admin")
+def api_tipos_vias():
+    rows = ejecutar_query(
+        "SELECT idtbl_tipos_de_vias AS id, tipos_de_vias AS nombre "
+        "FROM bd_tbl_comunes.tbl_tipos_de_vias ORDER BY tipos_de_vias",
+        nombre_bd="bd_tbl_comunes"
+    )
+    return jsonify([{"id": r["id"], "nombre": r["nombre"]} for r in rows])
+
+
+@btn_proveedores_gestionar_bp.route("/api/calles")
+@login_required
+@rol_required("super_admin")
+def api_calles():
+    mun_id = request.args.get("mun_id")
+    via_id = request.args.get("via_id")
+    params = []
+    where_clauses = []
+
+    if mun_id:
+        where_clauses.append("idtbl_municipios = %s")
+        params.append(int(mun_id))
+    if via_id:
+        where_clauses.append("idtbl_tipos_de_vias = %s")
+        params.append(int(via_id))
+
+    where_str = "WHERE " + " AND ".join(where_clauses) if where_clauses else ""
+
+    rows = ejecutar_query(
+        f"SELECT idtbl_calles AS id, calles AS nombre, Codigopostal "
+        f"FROM bd_tbl_comunes.tbl_calles {where_str} ORDER BY calles",
+        params=tuple(params), nombre_bd="bd_tbl_comunes"
+    )
+    return jsonify([
+        {"id": r["id"], "nombre": f"{r['nombre']} ({r.get('Codigopostal', '')})"}
+        for r in rows
+    ])
+
+
+#==============================================================================
+# 7️⃣ API: OBTENER PROVEEDOR POR ID (JSON)
+#==============================================================================
+
+@btn_proveedores_gestionar_bp.route("/api/proveedor/<int:prov_id>")
+@login_required
+@rol_required("super_admin")
+def api_get_proveedor(prov_id):
+    """
+    Devuelve los datos completos de un proveedor en JSON
+    para rellenar el formulario desde JS (búsqueda/autocomplete).
+    """
+    try:
+        rows = ejecutar_query(
+            """
+            SELECT *
+            FROM bd_tbl_comunes.tbl_proveedores
+            WHERE Idtbl_proveedores = %s
+            """,
+            params=(prov_id,),
+            nombre_bd="bd_tbl_comunes",
+        )
+        if not rows:
+            return jsonify({
+                "success": False,
+                "message": "Proveedor no encontrado",
+            }), 404
+
+        p = rows[0]
+
+        return jsonify({
+            "success": True,
+            "proveedor": {
+                "Idtbl_proveedores": p["Idtbl_proveedores"],
+                "NIF": p.get("NIF"),
+                "Nombre_Razon_Social": p.get("Nombre_Razon_Social"),
+                "Telefono": p.get("Telefono"),
+                "ALIAS": p.get("ALIAS"),
+                "idtbl_provincias": p.get("idtbl_provincias"),
+                "idtbl_municipios": p.get("idtbl_municipios"),
+                "idtbl_tipos_de_vias": p.get("idtbl_tipos_de_vias"),
+                "idtbl_calles": p.get("idtbl_calles"),
+                "Domicilio": p.get("Domicilio"),
+                "Poblacion": p.get("Poblacion"),
+                "Codigo_Postal": p.get("Codigo_Postal"),
+                "Provincia": p.get("Provincia"),
+                "numero_portal": p.get("numero_portal"),
+                "Persona_contacto_comercial": p.get("Persona_contacto_comercial"),
+                "telefono_movil": p.get("telefono_movil"),
+                "correo_electronico_comercial": p.get("correo_electronico_comercial"),
+                "Persona_contacto_admin": p.get("Persona_contacto_admin"),
+                "telefono_fijo_admin": p.get("telefono_fijo_admin"),
+                "telefono_movil_admin": p.get("telefono_movil_admin"),
+                "correo_electronico_admin": p.get("correo_electronico_admin"),
+                "numero_cuenta": p.get("numero_cuenta"),
+                "idtbl_Tipo_de_Tercero": p.get("idtbl_Tipo_de_Tercero"),
+                "idtbl_productos_grupos": p.get("idtbl_productos_grupos"),
+                "parquin": bool(p.get("parquin")),
+                "coloca_contenedores": bool(p.get("coloca_contenedores")),
+                "empresa_construccion": bool(p.get("empresa_construccion")),
+                "vende_material_construccion": bool(p.get("vende_material_construccion")),
+                "es_bar": bool(p.get("es_bar")),
+                "terraza_fija": bool(p.get("terraza_fija")),
+                "terraza_desmontable": bool(p.get("terraza_desmontable")),
+                "restuarante": bool(p.get("restuarante")),
+                "recibir_informe_pendientes": bool(p.get("recibir_informe_pendientes")),
+            }
+        })
+    except Exception as e:
+        logger.exception(f"Error API proveedor {prov_id}: {e}")
+        return jsonify({
+            "success": False,
+            "message": "Error servidor",
+        }), 500
+
+
+#==============================================================================
+# 8️⃣ VISTAS CRUD: PROVINCIAS / MUNICIPIOS / TIPOS DE VIA / CALLES
+#==============================================================================
+
+@btn_proveedores_gestionar_bp.route("/provincias", methods=["GET"])
+@login_required
+@rol_required("super_admin")
+def listar_provincias():
+    rows = ejecutar_query(
+        "SELECT idtbl_provincias AS id, provincias AS nombre "
+        "FROM bd_tbl_comunes.tbl_provincias ORDER BY provincias",
+        nombre_bd="bd_tbl_comunes",
+    )
+    return render_template(
+        "comunes/proveedores/provincias_listar.html",
+        provincias=rows,
+    )
+
+
+@btn_proveedores_gestionar_bp.route("/provincias/<int:id>/editar", methods=["GET", "POST"])
+@login_required
+@rol_required("super_admin")
+def editar_provincia(id: int):
+    provincia = _crud_obtener_provincia(id)
+
+    if request.method == "POST":
+        nombre = request.form.get("provincia", "").strip()
+        if not nombre:
+            flash("❌ Nombre de provincia obligatorio", "error")
+            return render_template(
+                "comunes/proveedores/provincias_form.html",
+                provincia=provincia,
+            )
+
+        if provincia:
+            ok = _crud_actualizar_provincia(id, nombre)
+            if ok:
+                flash("✅ Provincia actualizada", "success")
+            else:
+                flash("⚠️ Provincia no encontrada", "warning")
+        else:
+            flash("❌ Error actualizando provincia", "error")
+            return render_template(
+                "comunes/proveedores/provincias_form.html",
+                provincia=provincia,
+            )
+
+        return redirect(url_for("btn_proveedores_gestionar_bp.listar_provincias"))
+
+    return render_template(
+        "comunes/proveedores/provincias_form.html",
+        provincia=provincia,
+    )
+
+
+@btn_proveedores_gestionar_bp.route("/municipios", methods=["GET"])
+@login_required
+@rol_required("super_admin")
+def listar_municipios():
+    rows = ejecutar_query(
+        "SELECT m.idtbl_municipios AS id, m.municipios AS nombre, "
+        "p.provincias AS provincia "
+        "FROM bd_tbl_comunes.tbl_municipios AS m "
+        "LEFT JOIN bd_tbl_comunes.tbl_provincias AS p "
+        "ON m.idtbl_provincias = p.idtbl_provincias "
+        "ORDER BY p.provincias, m.municipios",
+        nombre_bd="bd_tbl_comunes",
+    )
+    return render_template(
+        "comunes/proveedores/municipios_listar.html",
+        municipios=rows,
+    )
+
+
+@btn_proveedores_gestionar_bp.route("/municipios/<int:id>/editar", methods=["GET", "POST"])
+@login_required
+@rol_required("super_admin")
+def editar_municipio(id: int):
+    municipio = _crud_obtener_municipio(id)
+
+    if request.method == "POST":
+        nombre = request.form.get("municipio", "").strip()
+        id_provincia = _to_int_or_none(request.form.get("idtbl_provincias"))
+
+        if not nombre:
+            flash("❌ Nombre de municipio obligatorio", "error")
+            return render_template(
+                "comunes/proveedores/municipios_form.html",
+                municipio=municipio,
+                provincias=ejecutar_query(
+                    "SELECT idtbl_provincias AS id, provincias AS nombre "
+                    "FROM bd_tbl_comunes.tbl_provincias ORDER BY provincias",
+                    nombre_bd="bd_tbl_comunes",
+                ),
+            )
+
+        if municipio:
+            ok = _crud_actualizar_municipio(id, id_provincia, nombre)
+            if ok:
+                flash("✅ Municipio actualizado", "success")
+            else:
+                flash("⚠️ Municipio no encontrado", "warning")
+        else:
+            flash("❌ Error actualizando municipio", "error")
+            return render_template(
+                "comunes/proveedores/municipios_form.html",
+                municipio=municipio,
+                provincias=ejecutar_query(
+                    "SELECT idtbl_provincias AS id, provincias AS nombre "
+                    "FROM bd_tbl_comunes.tbl_provincias ORDER BY provincias",
+                    nombre_bd="bd_tbl_comunes",
+                ),
+            )
+
+        return redirect(url_for("btn_proveedores_gestionar_bp.listar_municipios"))
+
+    provincias = ejecutar_query(
+        "SELECT idtbl_provincias AS id, provincias AS nombre "
+        "FROM bd_tbl_comunes.tbl_provincias ORDER BY provincias",
+        nombre_bd="bd_tbl_comunes",
+    )
+
+    return render_template(
+        "comunes/proveedores/municipios_form.html",
+        municipio=municipio,
+        provincias=provincias,
+    )
+
+
+@btn_proveedores_gestionar_bp.route("/tipos-vias", methods=["GET"])
+@login_required
+@rol_required("super_admin")
+def listar_tipos_vias():
+    rows = ejecutar_query(
+        "SELECT idtbl_tipos_de_vias AS id, tipos_de_vias AS nombre "
+        "FROM bd_tbl_comunes.tbl_tipos_de_vias ORDER BY tipos_de_vias",
+        nombre_bd="bd_tbl_comunes",
+    )
+    return render_template(
+        "comunes/proveedores/tipos_vias_listar.html",
+        tipos_vias=rows,
+    )
+
+
+@btn_proveedores_gestionar_bp.route("/tipos-vias/<int:id>/editar", methods=["GET", "POST"])
+@login_required
+@rol_required("super_admin")
+def editar_tipo_via(id: int):
+    tipo_via = _crud_obtener_tipo_via(id)
+
+    if request.method == "POST":
+        nombre = request.form.get("tipo_via", "").strip()
+        if not nombre:
+            flash("❌ Nombre de tipo de vía obligatorio", "error")
+            return render_template(
+                "comunes/proveedores/tipos_vias_form.html",
+                tipo_via=tipo_via,
+            )
+
+        if tipo_via:
+            ok = _crud_actualizar_tipo_via(id, nombre)
+            if ok:
+                flash("✅ Tipo de vía actualizado", "success")
+            else:
+                flash("⚠️ Tipo de vía no encontrado", "warning")
+        else:
+            flash("❌ Error actualizando tipo de vía", "error")
+            return render_template(
+                "comunes/proveedores/tipos_vias_form.html",
+                tipo_via=tipo_via,
+            )
+
+        return redirect(url_for("btn_proveedores_gestionar_bp.listar_tipos_vias"))
+
+    return render_template(
+        "comunes/proveedores/tipos_vias_form.html",
+        tipo_via=tipo_via,
+    )
+
+
+@btn_proveedores_gestionar_bp.route("/calles", methods=["GET"])
+@login_required
+@rol_required("super_admin")
+def listar_calles():
+    rows = ejecutar_query(
+        "SELECT c.idtbl_calles AS id, c.calles AS nombre, "
+        "m.municipios AS municipio, t.tipos_de_vias AS tipo_via "
+        "FROM bd_tbl_comunes.tbl_calles AS c "
+        "LEFT JOIN bd_tbl_comunes.tbl_municipios AS m "
+        "ON c.idtbl_municipios = m.idtbl_municipios "
+        "LEFT JOIN bd_tbl_comunes.tbl_tipos_de_vias AS t "
+        "ON c.idtbl_tipos_de_vias = t.idtbl_tipos_de_vias "
+        "ORDER BY m.municipios, t.tipos_de_vias, c.calles",
+        nombre_bd="bd_tbl_comunes",
+    )
+    return render_template(
+        "comunes/proveedores/calles_listar.html",
+        calles=rows,
+    )
+
+
+@btn_proveedores_gestionar_bp.route("/calles/<int:id>/editar", methods=["GET", "POST"])
+@login_required
+@rol_required("super_admin")
+def editar_calle(id: int):
+    calle = _crud_obtener_calle(id)
+
+    if request.method == "POST":
+        nombre = request.form.get("calle", "").strip()
+        id_municipio = _to_int_or_none(request.form.get("idtbl_municipios"))
+        id_tipo_via = _to_int_or_none(request.form.get("idtbl_tipos_de_vias"))
+        codigopostal = request.form.get("codigo_postal", "").strip() or None
+
+        if not nombre:
+            flash("❌ Nombre de calle obligatorio", "error")
+            return render_template(
+                "comunes/proveedores/calles_form.html",
+                calle=calle,
+                municipios=ejecutar_query(
+                    "SELECT idtbl_municipios AS id, municipios AS nombre "
+                    "FROM bd_tbl_comunes.tbl_municipios ORDER BY municipios",
+                    nombre_bd="bd_tbl_comunes",
+                ),
+                tipos_vias=ejecutar_query(
+                    "SELECT idtbl_tipos_de_vias AS id, tipos_de_vias AS nombre "
+                    "FROM bd_tbl_comunes.tbl_tipos_de_vias ORDER BY tipos_de_vias",
+                    nombre_bd="bd_tbl_comunes",
+                ),
+            )
+
+        if calle:
+            ok = _crud_actualizar_calle(id, id_municipio, id_tipo_via, nombre, codigopostal)
+            if ok:
+                flash("✅ Calle actualizada", "success")
+            else:
+                flash("⚠️ Calle no encontrada", "warning")
+        else:
+            flash("❌ Error actualizando calle", "error")
+            return render_template(
+                "comunes/proveedores/calles_form.html",
+                calle=calle,
+                municipios=ejecutar_query(
+                    "SELECT idtbl_municipios AS id, municipios AS nombre "
+                    "FROM bd_tbl_comunes.tbl_municipios ORDER BY municipios",
+                    nombre_bd="bd_tbl_comunes",
+                ),
+                tipos_vias=ejecutar_query(
+                    "SELECT idtbl_tipos_de_vias AS id, tipos_de_vias AS nombre "
+                    "FROM bd_tbl_comunes.tbl_tipos_de_vias ORDER BY tipos_de_vias",
+                    nombre_bd="bd_tbl_comunes",
+                ),
+            )
+
+        return redirect(url_for("btn_proveedores_gestionar_bp.listar_calles"))
+
+    municipios = ejecutar_query(
+        "SELECT idtbl_municipios AS id, municipios AS nombre "
+        "FROM bd_tbl_comunes.tbl_municipios ORDER BY municipios",
+        nombre_bd="bd_tbl_comunes",
+    )
+    tipos_vias = ejecutar_query(
+        "SELECT idtbl_tipos_de_vias AS id, tipos_de_vias AS nombre "
+        "FROM bd_tbl_comunes.tbl_tipos_de_vias ORDER BY tipos_de_vias",
+        nombre_bd="bd_tbl_comunes",
+    )
+
+    return render_template(
+        "comunes/proveedores/calles_form.html",
+        calle=calle,
+        municipios=municipios,
+        tipos_vias=tipos_vias,
+    )

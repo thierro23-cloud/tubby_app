@@ -1,0 +1,32 @@
+📊 Ejemplo para obras
+
+En tu blueprint:
+
+from servicios.generador_estadisticas import generar_estadisticas
+estadisticas = generar_estadisticas(
+
+    tabla="tbl_obras",
+
+    campo_fecha="fecha_colocacion",
+
+    campo_proveedor="idtbl_proveedores",
+
+    campo_calle="idtbl_calles",
+
+    campo_tipo_via="idtbl_tipos_de_vias"
+
+)
+📤 Enviar al template
+return render_template(
+
+    "control_obras/informes_estadisticas.html",
+
+    estadisticas=estadisticas
+
+)
+📈 Ejemplo en HTML (Chart.js)
+<script>
+
+const datos = {{ estadisticas.por_mes|tojson }}
+
+</script>

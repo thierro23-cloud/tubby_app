@@ -1,0 +1,192 @@
+{# =============================================================================
+   0️⃣ PLANTILLA · COMUNES · PROVEEDORES · USUARIOS
+   =============================================================================
+   NOMBRE DEL ARCHIVO
+   -----------------------------------------------------------------------------
+   templates/comunes/proveedores/proveedores_usuarios_gestionar.html
+
+   BLUEPRINT QUE LA CONTROLA
+   -----------------------------------------------------------------------------
+   - Archivo Python:
+       blueprints/comunes/btn_proveedores_usuarios_gestionar_bp.py
+
+   - Nombre del blueprint:
+       btn_proveedores_usuarios_gestionar_bp
+
+   - Nombre de la vista (función):
+       btn_proveedores_usuarios_gestionar
+
+   - Endpoint completo para url_for:
+       "btn_proveedores_usuarios_gestionar_bp.btn_proveedores_usuarios_gestionar"
+
+   - Ruta HTTP asociada (según el blueprint):
+       /comunes/proveedores_usuarios/btn_proveedores_usuarios_gestionar
+
+   Es decir:
+   - La vista Python hace:
+       return render_template(
+           "comunes/proveedores/proveedores_usuarios_gestionar.html",
+           filas=filas,
+           titulo="Usuarios por proveedor",
+       )
+   - Esta plantilla es la que pinta esa pantalla.
+
+   -----------------------------------------------------------------------------
+   1️⃣ OBJETIVO FUNCIONAL DE LA PLANTILLA
+   -----------------------------------------------------------------------------
+   Mostrar todos los proveedores (comunes) y, para cada uno, un pequeño
+   formulario incrustado con los datos de tbl_usuarios:
+
+     idtbl_usuarios, idtbl_proveedores, numero_cuenta,
+     activo_baja, fecha_inicio, fecha_baja
+
+   Cada fila de la tabla:
+     - Representa un proveedor.
+     - Tiene un formulario que envía un POST a la misma ruta para guardar
+       o actualizar el usuario asociado a ese proveedor.
+
+   -----------------------------------------------------------------------------
+   2️⃣ VARIABLES QUE RECIBE DESDE LA VISTA PYTHON
+   -----------------------------------------------------------------------------
+   La vista entrega a render_template:
+
+     filas: lista de dicts con columnas:
+        idtbl_proveedores
+        proveedor_nombre
+        proveedor_nif
+        proveedor_telefono
+        proveedor_email
+        proveedor_activo_baja
+        idtbl_usuarios
+        numero_cuenta
+        usuario_activo_baja
+        fecha_inicio
+        fecha_baja
+
+     titulo: texto para el título principal de la página.
+
+   -----------------------------------------------------------------------------
+   3️⃣ ESTRUCTURA VISUAL GENERAL
+   -----------------------------------------------------------------------------
+   - Hereda layout de base.html
+   - Bloque <title> con "Usuarios por proveedor"
+   - Cabecera con título + descripción
+   - Tabla:
+       * Columnas de proveedor (nombre, NIF, contacto, estado)
+       * Columna con formulario de usuario (tbl_usuarios)
+   ============================================================================= #}
+
+{% extends "base.html" %}
+
+{# 4️⃣ TÍTULO DE LA PESTAÑA DEL NAVEGADOR #}
+{% block title %}{{ titulo or "Usuarios por proveedor" }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+  {# 5️⃣ CABECERA · TÍTULO Y SUBTÍTULO #}
+  <div class="mb-3 border-bottom pb-2">
+    <h1 class="h4 mb-1">{{ titulo or "Usuarios por proveedor" }}</h1>
+    <p class="text-muted mb-0">
+      Gestiona los datos de usuario asociados a cada proveedor
+      (número de cuenta, estado y fechas de alta/baja).
+    </p>
+  </div>
+
+  {# 6️⃣ TABLA PRINCIPAL · LISTADO DE PROVEEDORES + FORMULARIOS DE USUARIO #}
+  <table class="table table-sm align-middle">
+    <thead>
+      <tr>
+        <th>Proveedor<br><small class="text-muted">Nombre e ID</small></th>
+        <th>NIF</th>
+        <th>Contacto<br><small class="text-muted">Teléfono y Email</small></th>
+        <th>Estado prov.</th>
+        <th style="width: 420px;">Usuario (tbl_usuarios)</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {# 6.1 UNA FILA POR PROVEEDOR #}
+      {% for fila in filas %}
+      <tr>
+        {# 6.1.1 COLUMNA · DATOS DEL PROVEEDOR #}
+        <td>
+          <strong>{{ fila.proveedor_nombre }}</strong><br>
+          <small>ID prov: {{ fila.idtbl_proveedores }}</small>
+        </td>
+
+        {# 6.1.2 COLUMNA · NIF DEL PROVEEDOR #}
+        <td>{{ fila.proveedor_nif }}</td>
+
+        {# 6.1.3 COLUMNA · CONTACTO (TELÉFONO + EMAIL) #}
+        <td>
+          <div>{{ fila.proveedor_telefono }}</div>
+          <div>{{ fila.proveedor_email }}</div>
+        </td>
+
+        {# 6.1.4 COLUMNA · ESTADO DEL PROVEEDOR (ACTIVO/BAJA) #}
+        <td>{{ fila.proveedor_activo_baja }}</td>
+
+        {# 6.1.5 COLUMNA · FORMULARIO INCRUSTADO POR PROVEEDOR #}
+        <td>
+          {# FORMULARIO INCRUSTADO POR PROVEEDOR #}
+          <form method="POST" class="row g-2">
+            {# IDs ocultos #}
+            <input type="hidden" name="idtbl_proveedores"
+                   value="{{ fila.idtbl_proveedores }}">
+            <input type="hidden" name="idtbl_usuarios"
+                   value="{{ fila.idtbl_usuarios or '' }}">
+
+            <div class="col-md-4">
+              <label class="form-label form-label-sm mb-0">Número cuenta</label>
+              <input type="text" class="form-control form-control-sm"
+                     name="numero_cuenta"
+                     value="{{ fila.numero_cuenta or '' }}">
+            </div>
+
+            <div class="col-md-3">
+              <label class="form-label form-label-sm mb-0">Estado usuario</label>
+              {% set est = fila.usuario_activo_baja or 'activo' %}
+              <select name="activo_baja"
+                      class="form-select form-select-sm">
+                <option value="activo" {% if est == 'activo' %}selected{% endif %}>
+                  Activo
+                </option>
+                <option value="baja" {% if est == 'baja' %}selected{% endif %}>
+                  Baja
+                </option>
+              </select>
+            </div>
+
+            <div class="col-md-2">
+              <label class="form-label form-label-sm mb-0">F. inicio</label>
+              <input type="date" class="form-control form-control-sm"
+                     name="fecha_inicio"
+                     value="{{ fila.fecha_inicio|default('', true) }}">
+            </div>
+
+            <div class="col-md-3">
+              <label class="form-label form-label-sm mb-0">F. baja</label>
+              <input type="date" class="form-control form-control-sm"
+                     name="fecha_baja"
+                     value="{{ fila.fecha_baja|default('', true) }}">
+            </div>
+
+            <div class="col-12 mt-1">
+              <button type="submit" class="btn btn-primary btn-sm">
+                💾 Guardar usuario
+              </button>
+            </div>
+
+          </form>
+        </td>
+
+        {# 6.1.6 COLUMNA VACÍA · RESERVADA PARA ACCIONES FUTURAS #}
+        <td></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+</div>
+{% endblock %}

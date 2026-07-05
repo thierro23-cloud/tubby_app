@@ -1,0 +1,48 @@
+# watcher_contenedores.py arranca a parte del app.py
+import time
+import os
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
+
+from app import create_app                  # ⚙️ usa la factoría del propio proyecto
+from blueprints.control_obras.control_obras_bp import procesar_pdf_contenedor
+
+CARPETA_CONTENEDORES = r"C:\Users\TU_USUARIO\Desktop\contenedores"
+
+
+class ContenedoresHandler(FileSystemEventHandler):
+    def __init__(self, flask_app):
+        self.app = flask_app
+
+    def on_created(self, event):
+        if event.is_directory:
+            return
+        ruta = event.src_path
+        if not ruta.lower().endswith(".pdf"):
+            return
+
+        with self.app.app_context():
+            try:
+                print(f"📥 Nuevo PDF detectado: {ruta}")
+                procesar_pdf_contenedor(ruta)
+                os.remove(ruta)
+                print(f"✅ Procesado y borrado: {ruta}")
+            except Exception as e:
+                print(f"❌ Error procesando {ruta}: {e}")
+
+
+if __name__ == "__main__":
+    app = create_app()
+
+    observer = Observer()
+    handler = ContenedoresHandler(app)
+    observer.schedule(handler, path=CARPETA_CONTENEDORES, recursive=False)
+    observer.start()
+    print(f"👀 Vigilando carpeta: {CARPETA_CONTENEDORES}")
+
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        observer.stop()
+    observer.join()

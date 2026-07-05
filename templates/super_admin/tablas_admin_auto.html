@@ -1,0 +1,54 @@
+{# =============================================================================
+   📋 TABLAS · LISTADO DINÁMICO (ADMIN AUTO)
+   Archivo: templates/admin_auto/tablas_listado.html
+   =============================================================================
+   Esta plantilla se usa exclusivamente para el listado dinámico de
+   tablas gestionado por admin_auto_bp.listado.
+============================================================================= #}
+
+<h4 class="mb-3">Listado dinámico · {{ tabla }}</h4>
+
+<form method="get" class="mb-2">
+  <div class="input-group input-group-sm">
+    <input name="q"
+           value="{{ q }}"
+           placeholder="Buscar..."
+           class="form-control">
+    <button class="btn btn-outline-secondary" type="submit">Filtrar</button>
+  </div>
+</form>
+
+{% if 'admin_auto_bp.crear' in endpoints %}
+  <a href="{{ url_for('admin_auto_bp.crear', tabla=tabla) }}"
+     class="btn btn-success btn-sm mb-2">
+     ➕ Nuevo
+  </a>
+{% else %}
+  <span class="btn btn-secondary btn-sm mb-2 disabled">
+    ➕ Nuevo (no disponible)
+  </span>
+{% endif %}
+
+<table class="table table-sm table-striped table-hover align-middle">
+  <thead class="table-dark">
+    <tr>
+      {% for c in columnas %}
+        <th>{{ c }}</th>
+      {% endfor %}
+      <th style="width: 80px;">Acciones</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for row in datos %}
+    <tr>
+      {% for c in columnas %}
+        <td>{{ row[c] }}</td>
+      {% endfor %}
+      <td class="text-nowrap">
+        <a href="/admin/{{ tabla }}/editar/{{ row.id }}" title="Editar">✏️</a>
+        <a href="/admin/{{ tabla }}/borrar/{{ row.id }}" title="Eliminar">❌</a>
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>

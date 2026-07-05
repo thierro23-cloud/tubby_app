@@ -1,0 +1,18 @@
+<!-- templates/admin_auto/form.html -->
+
+<h2>{{ tabla }}</h2>
+
+<form method="post">
+
+  {% for campo in campos %}
+    <div class="mb-2">
+      <label>{{ campo }}</label>
+      <input name="{{ campo }}"
+             value="{{ dato[campo] if dato else '' }}"
+             class="form-control">
+    </div>
+  {% endfor %}
+
+  <button class="btn btn-primary">Guardar</button>
+
+</form>

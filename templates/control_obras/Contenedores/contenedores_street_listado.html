@@ -1,0 +1,324 @@
+{# =============================================================================
+🧠 PLANTILLA: contenedores_street_listado.html
+============================================================================= #
+
+# =============================================================================
+# 📌 INTRODUCCIÓN GENERAL
+# =============================================================================
+#
+# Esta plantilla representa el FRONTEND principal del módulo:
+#
+#   👉 control_contenedores_crud
+#
+# Forma parte de una arquitectura real en Flask basada en:
+#
+#   🧠 BACKEND (Flask Blueprint)
+#        ↓
+#   📦 CONTEXTO (datos desde BD)
+#        ↓
+#   🧩 JINJA2 (render dinámico)
+#        ↓
+#   🎨 HTML + CSS + JS (interfaz final)
+#
+# -----------------------------------------------------------------------------
+# 🎯 OBJETIVO DEL PANEL
+# -----------------------------------------------------------------------------
+#
+# ✔ Visualizar contenedores (tabla completa)
+# ✔ Filtrar por proveedor, estado, búsqueda libre
+# ✔ Mostrar KPIs en tiempo real
+# ✔ Representar contenedores en mapa (Leaflet)
+# ✔ Exportar datos a CSV
+# ✔ Permitir acciones CRUD (editar, consultar)
+#
+# -----------------------------------------------------------------------------
+# 🧩 BACKEND QUE CONTROLA ESTA PLANTILLA
+# -----------------------------------------------------------------------------
+#
+# Blueprint principal:
+#
+#   contenedores_bp
+#
+# Ruta principal:
+#
+#   @contenedores_bp.route("/")
+#   def panel_contenedores_crud():
+#
+# -----------------------------------------------------------------------------
+# 📦 VARIABLES QUE RECIBE ESTA PLANTILLA
+# -----------------------------------------------------------------------------
+#
+# 🔹 filas → LISTA PRINCIPAL (datos de BD)
+#    - Contiene todos los contenedores
+#    - Se usa en:
+#        ✔ tabla
+#        ✔ mapa
+#        ✔ KPIs
+#        ✔ resumen proveedores
+#
+# 🔹 kpis → DATOS AGREGADOS
+#    {
+#       "activos": int,
+#       "retirados": int,
+#       "con_coords": int,
+#       "gps_ok": int,
+#       "con_csv_alta": int
+#    }
+#
+# 🔹 proveedores → LISTA DE PROVEEDORES
+#
+# 🔹 filtros activos:
+#    - filtro_q
+#    - filtro_proveedor
+#    - filtro_estado
+#
+# 🔹 pendientes_count → contador badge
+#
+# 🔹 error → mensaje si algo falla
+#
+# -----------------------------------------------------------------------------
+# 🔄 FLUJO REAL DE EJECUCIÓN
+# -----------------------------------------------------------------------------
+#
+# 1️⃣ Usuario entra a /control-contenedores
+#
+# 2️⃣ Flask ejecuta:
+#       panel_contenedores_crud()
+#
+# 3️⃣ Backend:
+#       - consulta BD
+#       - aplica filtros
+#       - calcula KPIs
+#
+# 4️⃣ render_template("contenedores.html", ...)
+#
+# 5️⃣ Jinja:
+#       - recorre filas
+#       - pinta KPIs
+#
+# 6️⃣ JS:
+#       - genera mapa
+#       - exporta CSV
+#
+# -----------------------------------------------------------------------------
+# 🔗 RELACIÓN CON OTROS MÓDULOS
+# -----------------------------------------------------------------------------
+#
+# ✔ contenedor_pendientes_validacion_bp
+# ✔ control_contenedores_manual_bp
+# ✔ editar_contenedor (CRUD)
+#
+# Arquitectura:
+#
+#   panel → modulo → btn
+#
+# =============================================================================
+# 🚀 NIVEL PRODUCCIÓN
+# =============================================================================
+#
+# ✔ Separación backend/frontend real
+# ✔ Escalable (muchos registros)
+# ✔ Optimización (KPIs calculados en backend)
+# ✔ Integración mapa + exportación
+#
+# ============================================================================= #}
+
+
+{% extends "base.html" %}
+
+{% block title %}Control contenedores CRUD{% endblock %}
+
+{% block content %}
+
+{# =============================================================================
+1️⃣ ESTILOS ESPECÍFICOS DEL PANEL
+============================================================================= #}
+<style>
+.cc-page { padding: 20px; }
+.cc-hero { margin-bottom: 20px; }
+.cc-card { border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+.cc-kpi { font-size: 1.5rem; font-weight: bold; }
+.cc-empty { text-align: center; color: #888; padding: 30px; }
+</style>
+
+
+{# =============================================================================
+2️⃣ CÁLCULOS EN JINJA (BACKUP / APOYO)
+============================================================================= #}
+
+{% set total = filas|length %}
+
+
+{# =============================================================================
+3️⃣ CONTENEDOR PRINCIPAL
+============================================================================= #}
+
+<div class="cc-page">
+
+    {# =========================================================================
+    4️⃣ HERO PRINCIPAL
+    ========================================================================= #}
+
+    <section class="cc-hero">
+        <h2>♻️ Panel maestro · Contenedores</h2>
+
+        
+        <a href="{{ url_for('contenedores_bp.btn_contenedores_street_pendientes') }}">
+            Pendientes ({{ pendientes_count or 0 }})
+        </a>
+
+        <a href="{{ url_for('contenedores_bp.btn_contenedores_street_alta_manual') }}">
+            Alta manual
+        </a>
+    </section>
+
+
+    {# =========================================================================
+    5️⃣ ERROR
+    ========================================================================= #}
+
+    {% if error %}
+        <div class="alert alert-danger">
+            {{ error }}
+        </div>
+    {% endif %}
+
+
+    {# =========================================================================
+    6️⃣ KPIs
+    ========================================================================= #}
+
+    <section>
+        <div>Total: {{ total }}</div>
+        <div>Activos: {{ kpis.activos }}</div>
+        <div>Retirados: {{ kpis.retirados }}</div>
+        <div>GPS OK: {{ kpis.gps_ok }}</div>
+    </section>
+
+
+    {# =========================================================================
+    7️⃣ FILTROS (BACKEND)
+    ========================================================================= #}
+
+    <form method="get" action="{{ url_for('contenedores_bp.btn_contenedores_street_listado') }}">
+
+        <input type="text" name="q" value="{{ filtro_q or '' }}" placeholder="Buscar">
+
+        <select name="proveedor">
+            <option value="">Todos</option>
+            {% for p in proveedores %}
+                <option value="{{ p.proveedor }}">{{ p.proveedor }}</option>
+            {% endfor %}
+        </select>
+
+        <select name="estado">
+            <option value="">Todos</option>
+            <option value="activos">Activos</option>
+            <option value="retirados">Retirados</option>
+        </select>
+
+        <button type="submit">Filtrar</button>
+
+    </form>
+
+
+    {# =========================================================================
+    8️⃣ MAPA
+    ========================================================================= #}
+
+    <div id="mapaContenedores" style="height:300px;"></div>
+
+
+    {# =========================================================================
+    9️⃣ TABLA PRINCIPAL
+    ========================================================================= #}
+
+    {% if filas %}
+
+        <table border="1" id="tablaContenedores">
+
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Proveedor</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                {% for fila in filas %}
+
+                    <tr>
+                        <td>{{ fila.idtbl_control_contenedores }}</td>
+                        <td>{{ fila.proveedor }}</td>
+
+                        <td>
+                            {% if fila.fecha_retirada %}
+                                Retirado
+                            {% else %}
+                                Activo
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            <a href="{{ url_for('contenedores_bp.editar_contenedor',
+                                id_contenedor=fila.idtbl_control_contenedores) }}">
+                                Editar
+                            </a>
+                        </td>
+
+                    </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+
+    {% else %}
+
+        <div class="cc-empty">
+            No hay registros
+        </div>
+
+    {% endif %}
+
+
+</div>
+
+
+{# =============================================================================
+🔟 JAVASCRIPT
+============================================================================= #}
+
+<script>
+
+function exportarTablaCSV() {
+    let tabla = document.getElementById("tablaContenedores");
+    let filas = tabla.querySelectorAll("tr");
+    let csv = [];
+
+    filas.forEach(fila => {
+        let cols = fila.querySelectorAll("td, th");
+        let row = [];
+
+        cols.forEach(col => {
+            row.push(col.innerText);
+        });
+
+        csv.push(row.join(";"));
+    });
+
+    let blob = new Blob([csv.join("\n")], { type: "text/csv" });
+
+    let link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "contenedores.csv";
+    link.click();
+}
+
+</script>
+
+{% endblock %}

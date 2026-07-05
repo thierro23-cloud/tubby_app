@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>Buscador de calles</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+<div class="container py-4">
+    <!-- TÍTULO: Buscador de calles -->
+    <h3 class="mb-3">Buscador de calles</h3>
+
+    <!-- C1. FILTROS: PROVINCIA + MUNICIPIO + TEXTO -->
+    <div class="row g-3 mb-3">
+        <!-- C1.1. SELECT PROVINCIA -->
+        <div class="col-md-4">
+            <label for="id_provincia" class="form-label">Provincia</label>
+            <select id="id_provincia" class="form-select">
+                <option value="">Selecciona una provincia...</option>
+                {% for p in provincias %}
+                <option value="{{ p.id }}">{{ p.nombre }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- C1.2. SELECT MUNICIPIO (DEPENDIENTE) -->
+        <div class="col-md-4">
+            <label for="id_municipio" class="form-label">Municipio</label>
+            <select id="id_municipio" class="form-select" disabled>
+                <option value="">Selecciona primero una provincia...</option>
+            </select>
+        </div>
+
+        <!-- C1.3. TEXTO DE BÚSQUEDA -->
+        <div class="col-md-4">
+            <label for="q" class="form-label">Buscar calle / avenida / plaza...</label>
+            <input type="text" id="q" class="form-control" placeholder="Empieza a escribir" disabled>
+        </div>
+    </div>
+
+    <!-- C2. MENSAJE DE AYUDA -->
+    <div id="ayuda" class="text-muted mb-2">
+        Selecciona provincia y municipio, y luego escribe para ver calles.
+    </div>
+
+    <!-- C3. RESULTADOS -->
+    <ul id="resultados" class="list-group"></ul>
+</div>
+
+<script>
+(function() {
+    // ================================================
+    // ELEMENTOS DEL DOM
+    // ================================================
+    const selectProvincia = document.getElementById('id_provincia');
+    const selectMunicipio = document.getElementById('id_municipio');
+    const input = document.getElementById('q');
+    const resultados = document.getElementById('resultados');
+    const ayuda = document.getElementById('ayuda');
+
+    let timeoutId = null;
+
+    // ================================================
+    // FUNCIONES AUXILIARES
+    // ================================================
+
+    function limpiarResultados() {
+        resultados.innerHTML = '';
+    }
+
+    function mostrarMensaje(msg) {
+        ayuda.textContent = msg;
+    }
+
+    // ================================================
+    // C4. CARGAR MUNICIPIOS AL CAMBIAR PROVINCIA
+    // ================================================
+    selectProvincia.addEventListener('change', function() {
+        const idProvincia = selectProvincia.value;
+        selectMunicipio.innerHTML = '';
+        limpiarResultados();
+        input.value = '';
+        input.disabled = true;
+
+        if (!idProvincia) {
+            selectMunicipio.disabled = true;
+            const opt = document.createElement('option');
+            opt.value = '';
+            opt.textContent = 'Selecciona primero una provincia...';
+            selectMunicipio.appendChild(opt);
+            mostrarMensaje('Selecciona provincia y municipio, y luego escribe para ver calles.');
+            return;
+        }
+
+        mostrarMensaje('Cargando municipios...');
+        selectMunicipio.disabled = true;
+
+        const url = new URL('{{ url_for("btn_ubicacion_calles_buscador_bp.api_municipios_por_provincia") }}', window.location.origin);
+        url.searchParams.set('id_provincia', idProvincia);
+
+        fetch(url)
+            .then(resp => resp.json())
+            .then(json => {
+                selectMunicipio.innerHTML = '';
+                if (!json.ok) {
+                    const opt = document.createElement('option');
+                    opt.value = '';
+                    opt.textContent = json.msg || 'Error al cargar municipios';
+                    selectMunicipio.appendChild(opt);
+                    mostrarMensaje('Error al cargar municipios.');
+                    return;
+                }
+
+                if (!json.data || !json.data.length) {
+                    const opt = document.createElement('option');
+                    opt.value = '';
+                    opt.textContent = 'No hay municipios para esta provincia';
+                    selectMunicipio.appendChild(opt);
+                    mostrarMensaje('No hay municipios para esta provincia.');
+                    return;
+                }
+
+                const optDefault = document.createElement('option');
+                optDefault.value = '';
+                optDefault.textContent = 'Selecciona un municipio...';
+                selectMunicipio.appendChild(optDefault);
+
+                json.data.forEach(m => {
+                    const opt = document.createElement('option');
+                    opt.value = m.id;
+                    opt.textContent = m.nombre;
+                    selectMunicipio.appendChild(opt);
+                });
+
+                selectMunicipio.disabled = false;
+                mostrarMensaje('Selecciona un municipio y luego escribe al menos 2 caracteres de la calle.');
+            })
+            .catch(err => {
+                console.error(err);
+                const opt = document.createElement('option');
+                opt.value = '';
+                opt.textContent = 'Error al cargar municipios';
+                selectMunicipio.appendChild(opt);
+                mostrarMensaje('Error al cargar municipios.');
+            });
+    });
+
+    // ================================================
+    // C5. HABILITAR BÚSQUEDA AL CAMBIAR MUNICIPIO
+    // ================================================
+    selectMunicipio.addEventListener('change', function() {
+        limpiarResultados();
+        input.value = '';
+        if (!selectMunicipio.value) {
+            input.disabled = true;
+            mostrarMensaje('Selecciona un municipio y luego escribe para buscar.');
+        } else {
+            input.disabled = false;
+            mostrarMensaje('Escribe al menos 2 caracteres para buscar calles.');
+        }
+    });
+
+    // ================================================
+    // C6. PINTAR RESULTADOS
+    // ================================================
+    function renderResultados(data) {
+        limpiarResultados();
+
+        if (!data.length) {
+            mostrarMensaje('Sin resultados para ese texto.');
+            return;
+        }
+
+        mostrarMensaje('Resultados:');
+
+        data.forEach(function(item) {
+            const li = document.createElement('li');
+            li.className = 'list-group-item d-flex justify-content-between align-items-center gap-2';
+
+            const texto = document.createElement('div');
+            const tipo = item.tipo_via ? item.tipo_via.toUpperCase() + ' ' : '';
+            texto.textContent = tipo + item.nombre;
+
+            const grupo = document.createElement('div');
+            grupo.className = 'd-flex align-items-center gap-2';
+
+            const badge = document.createElement('span');
+            badge.className = 'badge bg-secondary rounded-pill';
+            badge.textContent = item.id;
+
+            const btnEditar = document.createElement('a');
+            btnEditar.className = 'btn btn-sm btn-outline-primary';
+            btnEditar.textContent = 'Editar';
+            btnEditar.href = '{{ url_for("btn_ubicacion_calles_editar_bp.btn_ubicacion_calles_editar_form", idtbl_calles=0) }}'
+                .replace('0', item.id);
+
+            grupo.appendChild(badge);
+            grupo.appendChild(btnEditar);
+
+            li.appendChild(texto);
+            li.appendChild(grupo);
+
+            resultados.appendChild(li);
+        });
+    }
+
+    // ================================================
+    // C7. FUNCIÓN DE BÚSQUEDA (AJAX)
+    // ================================================
+    function buscar() {
+        const idMunicipio = selectMunicipio.value;
+        const q = input.value.trim();
+
+        if (!idMunicipio || q.length < 2) {
+            limpiarResultados();
+            if (!idMunicipio) {
+                mostrarMensaje('Selecciona un municipio.');
+            } else {
+                mostrarMensaje('Escribe al menos 2 caracteres para buscar.');
+            }
+            return;
+        }
+
+        const url = new URL('{{ url_for("btn_ubicacion_calles_buscador_bp.api_buscador_calles") }}', window.location.origin);
+        url.searchParams.set('id_municipio', idMunicipio);
+        url.searchParams.set('q', q);
+
+        mostrarMensaje('Buscando...');
+        fetch(url)
+            .then(resp => resp.json())
+            .then(json => {
+                if (!json.ok) {
+                    mostrarMensaje(json.msg || 'Error en la búsqueda.');
+                    limpiarResultados();
+                    return;
+                }
+                renderResultados(json.data || []);
+            })
+            .catch(err => {
+                console.error(err);
+                mostrarMensaje('Error al buscar.');
+                limpiarResultados();
+            });
+    }
+
+    // ================================================
+    // C8. EVENTO INPUT CON DEBOUNCE
+    // ================================================
+    input.addEventListener('input', function() {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(buscar, 300);
+    });
+})();
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

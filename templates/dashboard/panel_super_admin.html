@@ -1,0 +1,81 @@
+{% extends "dashboard/base_dashboard.html" %}
+
+{% block title %}Panel Super Admin{% endblock %}
+
+{% block role_content %}
+<h2>Panel Super Admin</h2>
+
+<div class="tarjetas">
+    <!-- Base de datos: bd_tbl_comunes -->
+    <div class="tarjeta">
+        <div style="font-size: 3rem;">📚</div>
+        <h3>Comunes</h3>
+        <p>Gestiona datos generales</p>
+        <button onclick="location.href='/super_admin/comunes'">Entrar</button>
+    </div>
+
+    <!-- Base de datos: control_obras -->
+    <div class="tarjeta">
+        <div style="font-size: 3rem;">🏗️</div>
+        <h3>Control Obras</h3>
+        <p>Supervisa obras y proyectos</p>
+        <button onclick="location.href='/super_admin/control_obras'">Entrar</button>
+    </div>
+
+    <!-- Base de datos: inventario -->
+    <div class="tarjeta">
+        <div style="font-size: 3rem;">📦</div>
+        <h3>Inventario</h3>
+        <p>Gestiona stock y materiales</p>
+        <button onclick="location.href='/super_admin/inventario'">Entrar</button>
+    </div>
+
+    <!-- Base de datos: mobiliario_urbano -->
+    <div class="tarjeta">
+        <div style="font-size: 3rem;">🪑</div>
+        <h3>Mobiliario Urbano</h3>
+        <p>Control de bancos, papeleras y señales</p>
+        <button onclick="location.href='/super_admin/mobiliario_urbano'">Entrar</button>
+    </div>
+
+    <!-- Base de datos: parquin_camiones -->
+    <div class="tarjeta">
+        <div style="font-size: 3rem;">🚛</div>
+        <h3>Parquín Camiones</h3>
+        <p>Gestión de plazas y reservas</p>
+        <button onclick="location.href='/super_admin/parquin_camiones'">Entrar</button>
+    </div>
+
+    <!-- Base de datos: patrulla_verde -->
+    <div class="tarjeta">
+        <div style="font-size: 3rem;">🌳</div>
+        <h3>Patrulla Verde</h3>
+        <p>Supervisa zonas verdes y medio ambiente</p>
+        <button onclick="location.href='/super_admin/patrulla_verde'">Entrar</button>
+    </div>
+
+    <!-- Base de datos: personal_vestuario -->
+    <div class="tarjeta">
+        <div style="font-size: 3rem;">👔</div>
+        <h3>Personal / Vestuario</h3>
+        <p>Gestiona usuarios y uniformes</p>
+        <button onclick="location.href='/super_admin/personal_vestuario'">Entrar</button>
+    </div>
+
+    <!-- Base de datos: plan_de_emergencias -->
+    <div class="tarjeta">
+        <div style="font-size: 3rem;">🚨</div>
+        <h3>Plan de Emergencias</h3>
+        <p>Control de protocolos y alertas</p>
+        <button onclick="location.href='/super_admin/plan_de_emergencias'">Entrar</button>
+    </div>
+
+    <!-- Tarjeta extra: Administrar Gestores -->
+    <div class="tarjeta">
+        <div style="font-size: 3rem;">🧑‍💼</div>
+        <h3>Administrar Gestores</h3>
+        <p>Crear, editar o eliminar gestores</p>
+        <button onclick="location.href='/super_admin/gestores'">Entrar</button>
+    </div>
+</div>
+{% endblock %}

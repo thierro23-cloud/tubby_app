@@ -1,0 +1,283 @@
+{#============================================================================
+  📂 1️⃣ PLANTILLA · CONTENEDORES - LISTAR POR CARPETAS
+  ============================================================================
+  🧠 INTRODUCCIÓN GENERAL
+  ----------------------------------------------------------------------------
+  (1.1) OBJETIVO DE ESTA VISTA
+        - Ofrecer una "vista de bandejas" por carpetas lógicas de trabajo:
+            · para_revision
+            · pendientes_validacion
+            · solo_retirada
+            · papelera
+        - Cada carpeta corresponde a la columna ruta_pdf de tbl_contenedores_pendientes.
+        - La lista muestra, en forma de tabla, todos los pendientes de la carpeta
+          seleccionada (id, csv, estado, motivo, fechas...).
+
+  (1.2) CONEXIÓN CON EL BACKEND
+        - BACKEND PRINCIPAL:
+            · Blueprint: contenedores_listar_carpetas_bp
+            · Ruta   : /control_via_publica/contenedores/carpetas/
+            · Vista  : listar_carpetas()
+            · Render : esta plantilla
+              "control_via_publica/contenedores/contenedores_listar_carpetas.html"
+
+        - CONTEXTO QUE ENVÍA EL BACKEND:
+            · carpeta                 ?carpeta seleccionada (str)
+            · carpetas_permitidas     ?lista de carpetas válidas para el <select>
+            · filas                   ?lista de dicts con:
+                                        id, nombre_pdf, ruta_pdf,
+                                        csv, csv_retirada,
+                                        estado, motivo, fecha_creacion,
+                                        numero_expediente, numero_solicitud,
+                                        nombre_solicitante
+            · anio_actual             ?int, para mostrar en la cabecera
+            · url_workflow_pendientes ?URL base del validador uno-a-uno
+                                       (btn_contenedores_listar_pendientes_bp)
+
+  (1.3) CONEXIÓN CON EL VISOR / VALIDADOR 50/50
+        - Desde esta tabla se puede saltar al validador secuencial:
+            · Blueprint: btn_contenedores_listar_pendientes_bp
+            · Ruta: /
+            · Plantilla: contenedores_listar_pendientes.html
+        - El enlace "Abrir en validador" envía:
+            · id_pendiente  ?id del registro
+            · i=0 (por simplicidad; se puede ajustar para ir al índice real)
+            · carpeta       ?carpeta actual (para_revision, solo_retirada, etc.)
+        - El validador usa ese contexto para cargar el PDF correspondiente,
+          respetando la lógica de nombres:
+            · Si hay CSV  ?nombre_pdf = "<csv>.pdf"
+            · Sin CSV    ?nombre_pdf mantiene el nombre original.
+
+  (1.4) FLUJO VISUAL ESPERADO
+        - El usuario abre esta vista:
+            · Por defecto se muestra la carpeta "para_revision".
+            · Puede cambiar de carpeta en el <select> y la página se recarga
+              filtrando por ruta_pdf.
+        - Para cada fila:
+            · Ve el estado, motivo, CSV, solicitante, fechas...
+            · Puede pulsar "Abrir en validador" para entrar al layout 50/50
+              (PDF + formulario) sobre ese id concreto.
+  ----------------------------------------------------------------------------
+  🧠 TERMINA INTRODUCCIÓN GENERAL
+  ============================================================================#}
+
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+
+      {#---------------------------------------------------------------------------
+    2️⃣ CABECERA PRINCIPAL
+    --------------------------------------------------------------------------#}
+  
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h1 class="h3 mb-1">
+        Contenedores · Listado por carpetas
+        <small class="text-muted">(año {{ anio_actual }})</small>
+      </h1>
+      <small class="text-muted">
+        Carpeta actual: <strong>{{ carpeta }}</strong> · registros: <strong>{{ filas|length }}</strong>
+      </small>
+    </div>
+
+    {# Botón Volver: 
+       - Si quieres algo genérico, usa request.referrer.
+       - Si prefieres una ruta concreta, cambia href a url_for(...) #}
+    <div>
+      <a href="{{ request.referrer or url_for('index') }}"
+         class="btn btn-sm btn-secondary">
+        ← Volver
+      </a>
+    </div>
+  </div>
+  {#---------------------------------------------------------------------------
+    3️⃣ SELECTOR DE CARPETA (ruta_pdf)
+    - Se conecta con el backend contenedores_listar_carpetas_bp.listar_carpetas
+    - Al cambiar de opción se recarga la misma vista con ?carpeta=...
+    --------------------------------------------------------------------------#}
+  <form class="form-inline mb-3"
+        method="get"
+        action="{{ url_for('btn_contenedores_listar_carpetas_bp.btn_contenedores_listar_carpetas') }}">
+    <label for="carpeta" class="mr-2">Carpeta:</label>
+    <select name="carpeta" id="carpeta"
+            class="form-control form-control-sm mr-2"
+            onchange="this.form.submit()">
+      {% for c in carpetas_permitidas %}
+        <option value="{{ c }}" {% if c == carpeta %}selected{% endif %}>
+          {{ c }}
+        </option>
+      {% endfor %}
+    </select>
+  </form>
+
+  {#---------------------------------------------------------------------------
+    4️⃣ MENSAJE SI NO HAY PENDIENTES EN LA CARPETA
+    --------------------------------------------------------------------------#}
+  {% if filas|length == 0 %}
+    <div class="alert alert-info">
+      No hay contenedores pendientes en la carpeta
+      <strong>{{ carpeta }}</strong>.
+    </div>
+  {% else %}
+
+    {#-----------------------------------------------------------------------
+      5️⃣ TABLA DE PENDIENTES DE LA CARPETA SELECCIONADA
+      ------------------------------------------------------------------------#}
+    <style>
+      .cvp-table-wrapper {
+        border: 1px solid #e0e0e0;
+        border-radius: 6px;
+        background: #f8fafc;
+        padding: 0.5rem;
+      }
+
+      .cvp-table {
+        margin-bottom: 0;
+        border-collapse: collapse;
+        width: 100%;
+        table-layout: fixed;
+        font-size: 0.85rem;
+      }
+
+      .cvp-table thead tr {
+        background: #e2e8f0;
+      }
+
+      .cvp-table thead th {
+        border-bottom: 1px solid #cbd5e1;
+        color: #1f2933;
+        font-weight: 600;
+        padding: 0.4rem 0.35rem;
+        white-space: nowrap;
+      }
+
+      .cvp-table tbody tr:nth-child(odd) {
+        background: #ffffff;
+      }
+
+      .cvp-table tbody tr:nth-child(even) {
+        background: #f1f5f9;
+      }
+
+      .cvp-table tbody tr:hover {
+        background: #e0f2fe;
+        cursor: pointer;
+      }
+
+      .cvp-table tbody td {
+        padding: 0.3rem 0.35rem;
+        vertical-align: middle;
+        border-top: 1px solid #e5e7eb;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .cvp-col-id,
+      .cvp-cell-id       { width: 3%;  text-align: right; }
+      .cvp-col-csv,
+      .cvp-cell-csv      { width: 9%; }
+      .cvp-col-pdf,
+      .cvp-cell-pdf      { width: 18%; }
+      .cvp-col-estado,
+      .cvp-cell-estado   { width: 7%; }
+      .cvp-col-motivo,
+      .cvp-cell-motivo   { width: 18%; }
+      .cvp-col-exp,
+      .cvp-cell-exp      { width: 7%; }
+      .cvp-col-sol,
+      .cvp-cell-sol      { width: 7%; }
+      .cvp-col-solicitante,
+      .cvp-cell-solicitante { width: 12%; }
+      .cvp-col-fecha,
+      .cvp-cell-fecha    { width: 10%; }
+      .cvp-col-acciones,
+      .cvp-cell-acciones { width: 9%; text-align: center; }
+
+      .cvp-btn-validar {
+        background: #0284c7;
+        border-color: #0284c7;
+        color: #ffffff;
+        padding: 0.15rem 0.45rem;
+        font-size: 0.75rem;
+        border-radius: 999px;
+        transition: background 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+      }
+
+      .cvp-btn-validar:hover {
+        background: #0369a1;
+        color: #ffffff;
+        text-decoration: none;
+        transform: translateY(-1px);
+        box-shadow: 0 1px 4px rgba(15, 23, 42, 0.25);
+      }
+
+      .cvp-btn-validar:active {
+        transform: translateY(0);
+        box-shadow: none;
+      }
+
+      .cvp-cell-acciones:hover {
+        background: inherit;
+      }
+    </style>
+
+    <div class="cvp-table-wrapper mt-3">
+      <table class="table table-sm cvp-table">
+        <thead>
+          <tr>
+            <th class="cvp-col-id">ID</th>
+            <th class="cvp-col-csv">CSV</th>
+            <th class="cvp-col-csv">CSV retirada</th>
+            <th class="cvp-col-pdf">PDF</th>
+            <th class="cvp-col-estado">Estado</th>
+            <th class="cvp-col-motivo">Motivo</th>
+            <th class="cvp-col-exp">Expediente</th>
+            <th class="cvp-col-sol">Solicitud</th>
+            <th class="cvp-col-solicitante">Solicitante</th>
+            <th class="cvp-col-fecha">Fecha creación</th>
+            <th class="cvp-col-acciones">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for f in filas %}
+          <tr>
+            <td class="cvp-cell-id">{{ f.id }}</td>
+            <td class="cvp-cell-csv">{{ f.csv or '' }}</td>
+            <td class="cvp-cell-csv">{{ f.csv_retirada or '' }}</td>
+            <td class="cvp-cell-pdf" title="{{ f.nombre_pdf }}">{{ f.nombre_pdf }}</td>
+            <td class="cvp-cell-estado">{{ f.estado }}</td>
+            <td class="cvp-cell-motivo">{{ f.motivo }}</td>
+            <td class="cvp-cell-exp">{{ f.numero_expediente or '' }}</td>
+            <td class="cvp-cell-sol">{{ f.numero_solicitud or '' }}</td>
+            <td class="cvp-cell-solicitante">{{ f.nombre_solicitante or '' }}</td>
+            <td class="cvp-cell-fecha">{{ f.fecha_creacion }}</td>
+            <td class="cvp-cell-acciones">
+              {#-------------------------------------------------------------
+                5.1 ENLACE AL VALIDADOR UNO-A-UNO
+                - url_workflow_pendientes viene del backend y apunta a:
+                  btn_contenedores_listar_pendientes_bp.btn_contenedores_listar_pendientes
+                - Parámetros que enviamos:
+                    · i=0            ?índice inicial (luego puedes mejorarlo
+                                      en backend para ir al índice real).
+                    · id_pendiente  ?id del registro (te sirve para hacer
+                                      un posicionamiento preciso si lo deseas).
+                    · carpeta       ?carpeta actual, para que el validador
+                                      siga trabajando dentro de esta bandeja.
+              --------------------------------------------------------------#}
+              <a class="btn btn-sm cvp-btn-validar"
+                 href="{{ url_workflow_pendientes }}?i=0&id_pendiente={{ f.id }}&carpeta={{ carpeta }}">
+                Abrir en validador
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+  {% endif %}
+
+</div>
+{% endblock %}

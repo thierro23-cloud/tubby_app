@@ -1,0 +1,32 @@
+.app-shell {
+  max-width: 1000px;   /* antes 1100 */
+  padding: 8px;        /* antes 16 */
+}
+.app-header {
+  margin-bottom: 10px; /* antes 18 */
+}
+.app-content {
+  border-radius: 18px; /* antes 24 */
+  padding: 12px;       /* antes 16 */
+}
+.cards-grid {
+  gap: 8px;            /* antes 12 */
+}
+.card {
+  padding: 10px;       /* antes 14 */
+  border-radius: 14px; /* antes 18 */
+}
+.card-body-text {
+  margin: 2px 0 6px 0; /* más compacto */
+  font-size: 0.76rem;  /* un pelín más pequeño */
+}
+.panel-btn {
+  padding: 6px 8px;         /* antes 8px 10px */
+  font-size: 0.76rem;
+}
+.app-title h1 {
+  font-size: 1.2rem;  /* más pequeño */
+}
+.app-title span {
+  font-size: 0.7rem;
+}

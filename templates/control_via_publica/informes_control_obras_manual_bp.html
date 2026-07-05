@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+{% block title %}Informe Control Obras{% endblock %}
+
+{% block content %}
+
+<!-- ============================================================= -->
+<!-- 1️⃣ TÍTULO -->
+<!-- ============================================================= -->
+
+<h2>📊 Informe manual de control de obras</h2>
+
+<p>
+Seleccione un rango de fechas para visualizar las inspecciones realizadas
+en las obras activas.
+</p>
+
+
+<!-- ============================================================= -->
+<!-- 2️⃣ FORMULARIO DE FECHAS -->
+<!-- ============================================================= -->
+
+<form method="POST">
+
+<div style="display:flex; gap:20px; align-items:center">
+
+<label>Fecha inicio</label>
+<input type="date" name="fecha_inicio" required>
+
+<label>Fecha fin</label>
+<input type="date" name="fecha_fin" required>
+
+<button type="submit" class="btn btn-primary">
+Ver informe
+</button>
+
+</div>
+
+</form>
+
+
+<!-- ============================================================= -->
+<!-- 3️⃣ BOTÓN GENERAR DOCUMENTOS -->
+<!-- ============================================================= -->
+
+{% if datos %}
+
+<form method="POST"
+      action="{{ url_for('informes_control_obras_manual_bp.generar_documentos') }}">
+
+<input type="hidden" name="fecha_inicio" value="{{ fecha_inicio }}">
+<input type="hidden" name="fecha_fin" value="{{ fecha_fin }}">
+
+<br>
+
+<button class="btn btn-success">
+Generar DOCX + PDF
+</button>
+
+</form>
+
+{% endif %}
+
+
+<!-- ============================================================= -->
+<!-- 4️⃣ RESULTADOS -->
+<!-- ============================================================= -->
+
+{% if datos %}
+
+<hr>
+
+<h3>Resultados</h3>
+
+{% for obra_id, pack in datos.items() %}
+
+<div style="border:1px solid #ddd; padding:15px; margin-bottom:20px">
+
+<h4>Obra #{{ obra_id }}</h4>
+
+<p>
+<strong>Proveedor:</strong> {{ pack.obra.proveedor }}
+</p>
+
+<p>
+<strong>Ubicación:</strong>
+{{ pack.obra.tipo_via }} {{ pack.obra.calle }}
+</p>
+
+<p>
+<strong>Observaciones:</strong>
+{{ pack.obra.observaciones }}
+</p>
+
+{% if pack.visitas %}
+
+<table border="1" cellpadding="6">
+
+<tr>
+<th>Fecha</th>
+<th>Agente</th>
+<th>Vallas</th>
+<th>Materiales</th>
+<th>Andamios</th>
+<th>Gruas</th>
+</tr>
+
+{% for v in pack.visitas %}
+
+<tr>
+<td>{{ v.fecha_inspeccion }}</td>
+<td>{{ v.n_agente1 }}</td>
+<td>{{ v.vallas }}</td>
+<td>{{ v.materiales_de_construccion }}</td>
+<td>{{ v.andamios }}</td>
+<td>{{ v.gruas }}</td>
+</tr>
+
+{% endfor %}
+
+</table>
+
+{% else %}
+
+<p style="color:orange">Sin inspecciones en este periodo</p>
+
+{% endif %}
+
+</div>
+
+{% endfor %}
+
+{% endif %}
+
+
+{% endblock %}

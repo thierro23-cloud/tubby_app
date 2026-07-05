@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block title %}Histórico de Titulares{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center mb-4 gap-3">
+        <div>
+            <h1 class="mb-1 fw-bold">🕘 Histórico de Titulares</h1>
+            <p class="text-muted mb-0">
+                Relación histórica de proveedores que han sido titulares del vado.
+            </p>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2">
+            <a href="{{ url_for('control_vados_bp.detalle_vado', idtbl_vados=vado.idtbl_vados) }}" class="btn btn-outline-secondary">
+                ← Volver al detalle
+            </a>
+            <a href="{{ url_for('control_vados_bp.cambio_titular_vado', idtbl_vados=vado.idtbl_vados) }}" class="btn btn-info text-white">
+                👤 Nuevo cambio de titular
+            </a>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <div class="text-muted small">ID Vado</div>
+                    <div class="fw-semibold">{{ vado.idtbl_vados }}</div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-muted small">Nº actual</div>
+                    <div class="fw-semibold">{{ vado.n_vado or '—' }}</div>
+                </div>
+                <div class="col-md-6">
+                    <div class="text-muted small">Titular actual</div>
+                    <div class="fw-semibold">{{ vado.titular_nombre or '—' }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-0 pt-4 pb-0">
+            <h5 class="fw-semibold mb-1">📋 Registro histórico</h5>
+            <p class="text-muted small mb-0">Se muestran los cambios realizados del más reciente al más antiguo.</p>
+        </div>
+
+        <div class="card-body p-0 pt-4">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th class="px-3 py-3">⬅️ Titular anterior</th>
+                            <th class="px-3 py-3">🪪 NIF anterior</th>
+                            <th class="px-3 py-3">➡️ Titular nuevo</th>
+                            <th class="px-3 py-3">🪪 NIF nuevo</th>
+                            <th class="px-3 py-3">📅 Fecha cambio</th>
+                            <th class="px-3 py-3">🧑‍💼 Gestor</th>
+                            <th class="px-3 py-3">📝 Observaciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if historico %}
+                            {% for item in historico %}
+                                <tr>
+                                    <td class="px-3 py-3 fw-semibold">{{ item.titular_anterior_nombre or '—' }}</td>
+                                    <td class="px-3 py-3">{{ item.titular_anterior_nif or '—' }}</td>
+                                    <td class="px-3 py-3 fw-semibold">{{ item.titular_nuevo_nombre or '—' }}</td>
+                                    <td class="px-3 py-3">{{ item.titular_nuevo_nif or '—' }}</td>
+                                    <td class="px-3 py-3">{{ item.fecha_cambio or '—' }}</td>
+                                    <td class="px-3 py-3">{{ item.gestor_nombre or '—' }}</td>
+                                    <td class="px-3 py-3">{{ item.observaciones or '—' }}</td>
+                                </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="7" class="text-center py-5">
+                                    <div class="d-flex flex-column align-items-center gap-2">
+                                        <div class="fs-1">📭</div>
+                                        <div class="fw-semibold">No existen cambios de titular registrados</div>
+                                        <div class="text-muted">Este vado aún no tiene histórico de titulares.</div>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

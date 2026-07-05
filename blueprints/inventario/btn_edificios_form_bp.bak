@@ -1,0 +1,435 @@
+# =============================================================================
+# 1. IMPORTACIONES
+# =============================================================================
+
+from flask import (
+    Blueprint,
+    render_template,
+    request,
+    redirect,
+    url_for,
+    flash,
+    abort,
+)
+from db import ejecutar_query, ejecutar_non_query
+
+
+# =============================================================================
+# 2. DEFINICIÓN DEL BLUEPRINT
+# =============================================================================
+
+edificios_bp = Blueprint(
+    "edificios_bp",
+    __name__,
+    url_prefix="/inventario/edificios",
+)
+
+
+# =============================================================================
+# 3. RUTAS PRINCIPALES
+# =============================================================================
+# 3.1. Formulario nuevo
+# 3.2. Formulario editar
+# 3.3. Guardar (INSERT/UPDATE)
+# 3.4. Eliminar
+# =============================================================================
+
+# 3.1. FORMULARIO NUEVO =======================================================
+
+@edificios_bp.route("/form", methods=["GET"])
+def edificios_nuevo():
+    """
+    3.1. Formulario de alta de edificios.
+
+    Muestra el formulario en modo "nuevo" (sin datos precargados).
+    """
+    return _renderizar_formulario(edificios_id=None)
+
+
+# 3.2. FORMULARIO EDITAR ======================================================
+
+@edificios_bp.route("/form/<int:edificios_id>", methods=["GET"])
+def edificios_editar(edificios_id: int):
+    """
+    3.2. Formulario de edición de edificios.
+
+    Args:
+        edificios_id (int): PK de tbl_edificios_municipales.
+
+    Returns:
+        HTML del formulario con los datos del edificio.
+    """
+    return _renderizar_formulario(edificios_id=edificios_id)
+
+
+# 3.3. GUARDAR (INSERT / UPDATE) ==============================================
+
+@edificios_bp.route("/form", methods=["POST"])
+def edificios_guardar():
+    """
+    3.3. Guardar edificios (INSERT o UPDATE).
+
+    Lee todos los campos del formulario y decide entre:
+        - INSERT: si no hay edificios_id.
+        - UPDATE: si edificios_id tiene valor.
+    """
+    try:
+        # 3.3.1. ID del registro (hidden en el formulario)
+        edificios_id = request.form.get("edificios_id")
+
+        # 3.3.2. Construir diccionario de datos
+        # Las claves son NOMBRES EXACTOS de columnas en la tabla.
+        datos = {
+            "inmueble": request.form.get("inmueble"),
+
+            # Localización (ids en plural)
+            "idtbl_provincias": request.form.get("idtbl_provincias") or None,
+            "idtbl_municipios": request.form.get("idtbl_municipios") or None,
+            "idtbl_tipos_de_vias": request.form.get("idtbl_tipos_de_vias") or None,
+            "idtbl_calles": request.form.get("idtbl_calles") or None,
+            "numero": request.form.get("numero"),
+
+            # Datos técnicos
+            "calefaccion": request.form.get("calefaccion"),
+            "numero_calderas": request.form.get("numero_calderas") or None,
+            "ascensores": request.form.get("ascensores"),
+            "numero_registro_ascensor": request.form.get("numero_registro_ascensor"),
+            "idtbl_ascensor": request.form.get("idtbl_ascensor") or None,
+            "idtbl_calefaccion": request.form.get("idtbl_calefaccion") or None,
+            "documentos_adjuntos": request.form.get("documentos_adjuntos"),
+            "idtbl_numero_catastro": request.form.get("idtbl_numero_catastro") or None,
+            "escaleras_mecanicas": request.form.get("escaleras_mecanicas"),
+            "numero_escaleras_mecanicas": request.form.get("numero_escaleras_mecanicas") or None,
+            "altura": request.form.get("altura") or None,
+            "perimetro_canalones": request.form.get("perimetro_canalones") or None,
+            "numero_edificio": request.form.get("numero_edificio"),
+            "Observaciones": request.form.get("Observaciones"),
+            "tipo_de_edificio": request.form.get("tipo_de_edificio"),
+
+            # Datos administrativos
+            "idtbl_servicio": request.form.get("idtbl_servicio") or None,
+            "idtbl_inspeccion": request.form.get("idtbl_inspeccion") or None,
+            "idtbl_bienes": request.form.get("idtbl_bienes") or None,
+            "calderas_control_remoto": request.form.get("calderas_control_remoto"),
+            "acceso_remoto": request.form.get("acceso_remoto"),
+            "alarma": request.form.get("alarma"),
+            "consumo_remoto": request.form.get("consumo_remoto"),
+            "idtbl_caldera": request.form.get("idtbl_caldera") or None,
+            "idtbl_organo_contable": request.form.get("idtbl_organo_contable") or None,
+            "foto_edificios": request.form.get("foto_edificios"),
+            "Limpieza": request.form.get("Limpieza"),
+        }
+
+        # 3.3.3. Elegir INSERT o UPDATE
+        if edificios_id:
+            # UPDATE
+            query = """
+                UPDATE tbl_edificios_municipales SET
+                    inmueble = %s,
+                    idtbl_provincias = %s,
+                    idtbl_municipios = %s,
+                    idtbl_tipos_de_vias = %s,
+                    idtbl_calles = %s,
+                    numero = %s,
+                    calefaccion = %s,
+                    numero_calderas = %s,
+                    ascensores = %s,
+                    numero_registro_ascensor = %s,
+                    idtbl_ascensor = %s,
+                    idtbl_calefaccion = %s,
+                    documentos_adjuntos = %s,
+                    idtbl_numero_catastro = %s,
+                    escaleras_mecanicas = %s,
+                    numero_escaleras_mecanicas = %s,
+                    altura = %s,
+                    perimetro_canalones = %s,
+                    numero_edificio = %s,
+                    Observaciones = %s,
+                    tipo_de_edificio = %s,
+                    idtbl_servicio = %s,
+                    idtbl_inspeccion = %s,
+                    idtbl_bienes = %s,
+                    calderas_control_remoto = %s,
+                    acceso_remoto = %s,
+                    alarma = %s,
+                    consumo_remoto = %s,
+                    idtbl_caldera = %s,
+                    idtbl_organo_contable = %s,
+                    foto_edificios = %s,
+                    Limpieza = %s
+                WHERE `Idtbl:edificios_municipales` = %s
+            """
+            params = tuple(datos.values()) + (edificios_id,)
+            accion = "actualizado"
+        else:
+            # INSERT
+            query = """
+                INSERT INTO tbl_edificios_municipales (
+                    inmueble,
+                    idtbl_provincias,
+                    idtbl_municipios,
+                    idtbl_tipos_de_vias,
+                    idtbl_calles,
+                    numero,
+                    calefaccion,
+                    numero_calderas,
+                    ascensores,
+                    numero_registro_ascensor,
+                    idtbl_ascensor,
+                    idtbl_calefaccion,
+                    documentos_adjuntos,
+                    idtbl_numero_catastro,
+                    escaleras_mecanicas,
+                    numero_escaleras_mecanicas,
+                    altura,
+                    perimetro_canalones,
+                    numero_edificio,
+                    Observaciones,
+                    tipo_de_edificio,
+                    idtbl_servicio,
+                    idtbl_inspeccion,
+                    idtbl_bienes,
+                    calderas_control_remoto,
+                    acceso_remoto,
+                    alarma,
+                    consumo_remoto,
+                    idtbl_caldera,
+                    idtbl_organo_contable,
+                    foto_edificios,
+                    Limpieza
+                ) VALUES (
+                    %s, %s, %s, %s, %s,
+                    %s, %s, %s, %s, %s,
+                    %s, %s, %s, %s, %s,
+                    %s, %s, %s, %s, %s,
+                    %s, %s, %s, %s, %s,
+                    %s, %s, %s, %s, %s,
+                    %s
+                )
+            """
+            params = tuple(datos.values())
+            accion = "creado"
+
+        # 3.3.4. Ejecutar y redirigir
+        ejecutar_non_query(query, params, nombre_bd="inventario")
+        flash(f"✅ Edificio {accion} correctamente: {datos['inmueble']}", "success")
+        return redirect(url_for("edificios_bp.edificios_nuevo"))
+
+    except Exception as e:
+        flash(f"❌ Error al guardar: {str(e)}", "danger")
+        return redirect(request.referrer or url_for("edificios_bp.edificios_nuevo"))
+
+
+# 3.4. ELIMINAR ===============================================================
+
+@edificios_bp.route("/form/eliminar", methods=["POST"])
+def edificios_eliminar():
+    """
+    3.4. Eliminar edificios.
+
+    Elimina definitivamente un registro de tbl_edificios_municipales.
+    """
+    try:
+        edificios_id = request.form.get("edificios_id", type=int)
+
+        if not edificios_id:
+            flash("❌ No se proporcionó ID de edificios", "danger")
+            return redirect(url_for("edificios_bp.edificios_nuevo"))
+
+        filas = ejecutar_query(
+            """
+            SELECT inmueble
+            FROM tbl_edificios_municipales
+            WHERE `Idtbl:edificios_municipales` = %s
+            """,
+            (edificios_id,),
+            nombre_bd="inventario",
+        )
+
+        if not filas:
+            flash("❌ Edificios no encontrados", "danger")
+            return redirect(url_for("edificios_bp.edificios_nuevo"))
+
+        inmueble = filas[0]["inmueble"]
+
+        ejecutar_non_query(
+            """
+            DELETE FROM tbl_edificios_municipales
+            WHERE `Idtbl:edificios_municipales` = %s
+            """,
+            (edificios_id,),
+            nombre_bd="inventario",
+        )
+
+        flash(f"🗑️ Edificio eliminado: {inmueble}", "warning")
+        return redirect(url_for("edificios_bp.edificios_nuevo"))
+
+    except Exception as e:
+        flash(f"❌ Error al eliminar: {str(e)}", "danger")
+        return redirect(url_for("edificios_bp.edificios_nuevo"))
+
+
+# =============================================================================
+# 4. FUNCIÓN AUXILIAR: RENDERIZAR FORMULARIO (NUEVO / EDITAR)
+# =============================================================================
+# 4.1. Carga de edificio
+# 4.2. Cálculo de prev/next
+# 4.3. Carga de datos auxiliares (provincias, municipios, tipos_de_vias, calles)
+# =============================================================================
+
+def _renderizar_formulario(edificios_id: int | None = None):
+    """
+    4. Renderizar formulario de edificios.
+
+    Args:
+        edificios_id (int | None): PK del edificio a editar, o None para nuevo.
+
+    Returns:
+        HTML del formulario.
+    """
+    edificios = None
+    accion = "nuevo"
+    prev_id = None
+    next_id = None
+
+    # 4.1. CARGA DE EDIFICIO (MODO EDICIÓN) ----------------------------------
+    if edificios_id:
+        filas = ejecutar_query(
+            """
+            SELECT
+                `Idtbl:edificios_municipales` AS id,
+                inmueble,
+                idtbl_provincias,
+                idtbl_municipios,
+                idtbl_tipos_de_vias,
+                idtbl_calles,
+                numero,
+                calefaccion,
+                numero_calderas,
+                ascensores,
+                numero_registro_ascensor,
+                idtbl_ascensor,
+                idtbl_calefaccion,
+                documentos_adjuntos,
+                idtbl_numero_catastro,
+                escaleras_mecanicas,
+                numero_escaleras_mecanicas,
+                altura,
+                perimetro_canalones,
+                numero_edificio,
+                Observaciones,
+                tipo_de_edificio,
+                idtbl_servicio,
+                idtbl_inspeccion,
+                idtbl_bienes,
+                calderas_control_remoto,
+                acceso_remoto,
+                alarma,
+                consumo_remoto,
+                idtbl_caldera,
+                idtbl_organo_contable,
+                foto_edificios,
+                Limpieza
+            FROM tbl_edificios_municipales
+            WHERE `Idtbl:edificios_municipales` = %s
+            """,
+            (edificios_id,),
+            nombre_bd="inventario",
+        )
+
+        if not filas:
+            abort(404, description=f"Edificios con ID {edificios_id} no encontrados")
+
+        edificios = filas[0]
+        accion = "editar"
+
+        # 4.2. CÁLCULO DE PREV / NEXT ----------------------------------------
+        prev_row = ejecutar_query(
+            """
+            SELECT `Idtbl:edificios_municipales` AS id
+            FROM tbl_edificios_municipales
+            WHERE `Idtbl:edificios_municipales` < %s
+            ORDER BY `Idtbl:edificios_municipales` DESC
+            LIMIT 1
+            """,
+            (edificios_id,),
+            nombre_bd="inventario",
+        )
+        if prev_row:
+            prev_id = prev_row[0]["id"]
+
+        next_row = ejecutar_query(
+            """
+            SELECT `Idtbl:edificios_municipales` AS id
+            FROM tbl_edificios_municipales
+            WHERE `Idtbl:edificios_municipales` > %s
+            ORDER BY `Idtbl:edificios_municipales` ASC
+            LIMIT 1
+            """,
+            (edificios_id,),
+            nombre_bd="inventario",
+        )
+        if next_row:
+            next_id = next_row[0]["id"]
+
+    # 4.3. DATOS AUXILIARES PARA SELECTS --------------------------------------
+
+    provincias = ejecutar_query(
+        """
+        SELECT
+            idtbl_provincias,
+            provincias
+        FROM tbl_provincias
+        ORDER BY provincias
+        """,
+        nombre_bd="bd_tbl_comunes",
+    )
+
+    municipios = ejecutar_query(
+        """
+        SELECT
+            idtbl_municipios,
+            municipios,
+            idtbl_provincias
+        FROM tbl_municipios
+        ORDER BY municipios
+        """,
+        nombre_bd="bd_tbl_comunes",
+    )
+
+    tipos_de_vias = ejecutar_query(
+        """
+        SELECT
+            idtbl_tipos_de_vias,
+            tipos_de_vias
+        FROM tbl_tipos_de_vias
+        ORDER BY tipos_de_vias
+        """,
+        nombre_bd="bd_tbl_comunes",
+    )
+
+    calles = ejecutar_query(
+        """
+        SELECT
+            idtbl_calles,
+            calles,
+            idtbl_municipios,
+            idtbl_tipos_de_vias
+        FROM tbl_calles
+        ORDER BY calles
+        """,
+        nombre_bd="bd_tbl_comunes",
+    )
+
+    # 4.4. RENDERIZAR PLANTILLA -----------------------------------------------
+    return render_template(
+        "inventario/edificios_form.html",
+        edificios=edificios,          # dict o None (en plural)
+        provincias=provincias,
+        municipios=municipios,
+        tipos_de_vias=tipos_de_vias,
+        calles=calles,
+        accion=accion,
+        prev_id=prev_id,
+        next_id=next_id,
+    )

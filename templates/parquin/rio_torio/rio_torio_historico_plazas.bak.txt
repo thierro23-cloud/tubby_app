@@ -1,0 +1,227 @@
+{# ============================================================================
+  templates/parquin/rio_torio/rio_torio_historico_plazas.html
+  🧮 LISTADO GLOBAL DEL HISTÓRICO DE PLAZAS + FILTROS
+  ============================================================================
+  SECCIONES:
+    1️⃣ Cabecera de página.
+    2️⃣ Mensaje de error.
+    3️⃣ Formulario de filtros (solo cliente, sin POST).
+    4️⃣ Tabla global del histórico (solo lectura) + botón Editar por plaza.
+    5️⃣ JS de filtros en cliente.
+#}
+
+{% extends "base.html" %}
+{% block title %}Histórico de plazas{% endblock %}
+
+{% block content %}
+<div class="container mt-3">
+
+  {# 1️⃣ CABECERA DE PÁGINA -------------------------------------------------- #}
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h4 mb-0">🧮 Histórico de plazas</h1>
+    <button class="btn btn-secondary btn-sm" onclick="history.back()">
+      ⬅️ Volver
+    </button>
+  </div>
+
+  {# 2️⃣ MENSAJE DE ERROR (SI LO HAY) --------------------------------------- #}
+  {% if error %}
+    <div class="alert alert-danger">{{ error }}</div>
+  {% endif %}
+
+  {# 3️⃣ FORMULARIO DE FILTROS (SOLO CLIENTE, SIN POST) --------------------- #}
+  <div class="card mb-3">
+    <div class="card-header py-2">
+      <span class="fw-semibold">
+        🔎 Filtros rápido (solo cliente, no filtra en servidor de momento)
+      </span>
+    </div>
+    <div class="card-body">
+      {# ⚠️ IMPORTANTE:
+         - No ponemos method="post".
+         - onsubmit="return false" evita que el Enter haga submit real.
+      #}
+      <form class="row g-3" onsubmit="return false;">
+
+        {# 3.1 Seleccionar plaza por código (usa codigo_plaza en el texto) --- #}
+        <div class="col-md-3">
+          <label for="filtro_plaza" class="form-label">Plaza</label>
+          <select id="filtro_plaza" class="form-select form-select-sm">
+            <option value="">— Todas las plazas —</option>
+            {% for plaza in plazas %}
+              {# value = id (para el filtro), texto = codigo_plaza #}
+              <option value="{{ plaza.id }}">
+                {{ plaza.codigo_plaza }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        {# 3.2 Buscar proveedor por NIF -------------------------------------- #}
+        <div class="col-md-3">
+          <label for="filtro_nif" class="form-label">NIF proveedor</label>
+          <input type="text"
+                 id="filtro_nif"
+                 class="form-control form-control-sm"
+                 placeholder="Introduce NIF para buscar proveedor">
+        </div>
+
+        {# 3.3 Nombre/Razón social con autocompletado ------------------------ #}
+        <div class="col-md-3">
+          <label for="filtro_nombre" class="form-label">Proveedor</label>
+          <input type="text"
+                 id="filtro_nombre"
+                 class="form-control form-control-sm"
+                 list="lista_proveedores"
+                 placeholder="Empieza a escribir el nombre del proveedor">
+          <datalist id="lista_proveedores">
+            {% for prov in proveedores %}
+              <option value="{{ prov.nombre }}">{{ prov.nif }}</option>
+            {% endfor %}
+          </datalist>
+        </div>
+
+        {# 3.4 Botón BUSCAR (aplica filtros en JS, no hace submit) ----------- #}
+        <div class="col-md-1 d-flex align-items-end">
+          <button type="button"              {# 👈 type="button", NO submit #}
+                  id="btn_buscar"
+                  class="btn btn-sm btn-primary w-100">
+            🔍 Buscar
+          </button>
+        </div>
+
+        {# 3.5 Botón LIMPIAR (reset filtros en JS) --------------------------- #}
+        <div class="col-md-2 d-flex align-items-end">
+          <button type="button"              {# 👈 type="button", NO submit #}
+                  id="btn_limpiar_filtros"
+                  class="btn btn-sm btn-outline-secondary w-100">
+            🧹 Limpiar
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  {# 4️⃣ TABLA GLOBAL DEL HISTÓRICO (SOLO LECTURA + ENLACE EDITAR) ---------- #}
+  <div class="card">
+    <div class="card-header py-2">
+      <span class="fw-semibold">📋 Histórico completo</span>
+    </div>
+    <div class="card-body p-2">
+      <div class="table-responsive">
+        {# id="tabla_historico" se usa en el JS de filtros #}
+        <table class="table table-sm table-striped table-hover align-middle mb-0" id="tabla_historico">
+          <thead class="table-light">
+            <tr>
+              <th>ID hist.</th>       {# tbl_historico_plazas.idtbl_historico_plazas #}
+              <th>Código plaza</th>   {# 👈 Ahora mostramos codigo_plaza #}
+              <th>ID proveedor</th>   {# tbl_historico_plazas.idtbl_proveedores #}
+              <th>Proveedor</th>      {# Nombre proveedor (JOIN) #}
+              <th>F. inicio</th>      {# tbl_historico_plazas.fecha_inicio #}
+              <th>F. fin</th>         {# tbl_historico_plazas.fecha_fin #}
+              <th>Exp. fin</th>       {# tbl_historico_plazas.exp_solicitud_fin #}
+              <th>Acciones</th>       {# Enlace al detalle editable #}
+            </tr>
+          </thead>
+          <tbody>
+            {% for fila in filas %}
+              <tr
+                data-id-plaza="{{ fila.idtbl_plazas }}"          {# se mantiene para filtro JS #}
+                data-id-proveedor="{{ fila.idtbl_proveedores }}"> {# reservado por si luego filtras por proveedor #}
+                <td>{{ fila.idtbl_historico_plazas }}</td>
+                {# 👉 Aquí mostramos el código de la plaza, no el ID numérico #}
+                <td>{{ fila.codigo_plaza }}</td>
+                <td>{{ fila.idtbl_proveedores }}</td>
+                <td>{{ fila.proveedor or '—' }}</td>
+                <td>{{ fila.fecha_inicio }}</td>
+                <td>{{ fila.fecha_fin or '—' }}</td>
+                <td>{{ fila.exp_solicitud_fin or '—' }}</td>
+                <td>
+                  {# 🔗 Enlace al detalle totalmente editable de esa plaza #}
+                  <a href="{{ url_for('btn_rio_torio_historico_plazas_bp.btn_rio_torio_historico_plazas',
+                                      id_plaza=fila.idtbl_plazas) }}"
+                     class="btn btn-sm btn-outline-primary">
+                    ✏️ Editar
+                  </a>
+                </td>
+              </tr>
+            {% else %}
+              <tr>
+                <td colspan="8" class="text-center text-muted">
+                  No hay registros en el histórico de plazas.
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>  {# cierre .container #}
+
+{# 5️⃣ JS LIGERO PARA AUTORELLENAR NOMBRE POR NIF Y FILTROS EN CLIENTE ------ #}
+<script>
+  // 5.1 Construimos un array JS con los proveedores (para autocompletar por NIF)
+  const proveedores = [
+    {% for prov in proveedores %}
+      {
+        id: {{ prov.id }},
+        nif: "{{ prov.nif }}",
+        nombre: "{{ prov.nombre|e }}"
+      }{% if not loop.last %},{% endif %}
+    {% endfor %}
+  ];
+
+  // 5.2 Referencias a inputs y tabla
+  const inputNif    = document.getElementById('filtro_nif');
+  const inputNombre = document.getElementById('filtro_nombre');
+  const selectPlaza = document.getElementById('filtro_plaza');
+  const btnBuscar   = document.getElementById('btn_buscar');
+  const btnLimpiar  = document.getElementById('btn_limpiar_filtros');
+  const tabla       = document.getElementById('tabla_historico');
+
+  // 5.3 Autorrellenar nombre al escribir un NIF completo
+  inputNif.addEventListener('change', () => {
+    const nif = inputNif.value.trim().toUpperCase();
+    const prov = proveedores.find(p => p.nif.toUpperCase() === nif);
+    if (prov) {
+      inputNombre.value = prov.nombre;
+    }
+  });
+
+  // 5.4 Función que aplica filtros en cliente (sin tocar servidor)
+  function aplicarFiltros() {
+    const idPlaza     = selectPlaza.value;
+    const textoNombre = inputNombre.value.trim().toLowerCase();
+
+    Array.from(tabla.tBodies[0].rows).forEach(row => {
+      const rowIdPlaza      = row.getAttribute('data-id-plaza');
+      const nombreProveedor = row.cells[3].textContent.trim().toLowerCase();
+
+      let visible = true;
+
+      if (idPlaza && rowIdPlaza !== idPlaza) {
+        visible = false;
+      }
+
+      if (textoNombre && !nombreProveedor.includes(textoNombre)) {
+        visible = false;
+      }
+
+      row.style.display = visible ? '' : 'none';
+    });
+  }
+
+  // 5.5 Eventos de botones de filtro
+  btnBuscar.addEventListener('click', aplicarFiltros);
+
+  btnLimpiar.addEventListener('click', () => {
+    selectPlaza.value = "";
+    inputNif.value = "";
+    inputNombre.value = "";
+    aplicarFiltros();
+  });
+</script>
+{% endblock %}

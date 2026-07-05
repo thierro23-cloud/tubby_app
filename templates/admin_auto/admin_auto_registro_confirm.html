@@ -1,0 +1,96 @@
+{# =============================================================================
+   🧩 ADMIN AUTO · CONFIRMACIÓN DE ELIMINACIÓN (INDIVIDUAL)
+   Archivo: templates/admin_auto/admin_auto_registro_confirm.html
+   =============================================================================
+   ✅ Recibe:
+      - schema: str
+      - tabla: str
+      - reg_id: ID del registro
+      - col_primary: nombre de la columna primaria
+      - registro: dict con datos del registro
+      - origen: URL de donde viene
+   =============================================================================
+#}
+
+{% extends "base.html" %}
+
+{% block title %}Confirmar eliminación en {{ tabla }}{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid py-3">
+
+  <!-- =================================================================== -->
+  <!-- A. CABECERA                                                          -->
+  <!-- =================================================================== -->
+
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>
+      <a href="{{ origen }}"
+         class="btn btn-outline-secondary btn-sm mb-2">
+        ← Volver
+      </a>
+      Confirmar eliminación en tabla:
+      <strong>{{ tabla }}</strong>
+      <small class="text-muted">({{ schema }})</small>
+    </h2>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- B. MENSAJE DE CONFIRMACIÓN                                           -->
+  <!-- =================================================================== -->
+
+  <div class="card">
+    <div class="card-body">
+
+      {% if registro %}
+        <p class="mb-2">
+          Estás por eliminar el siguiente registro:
+        </p>
+
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered">
+            <tbody>
+              {% for col_key in registro %}
+                <tr>
+                  <td><strong>{{ col_key }}</strong></td>
+                  <td>
+                    {{ registro[col_key] if registro[col_key] is not none else "-" }}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="text-danger">
+          No se encontró el registro a eliminar.
+        </p>
+      {% endif %}
+
+      <p class="mb-3">
+        Esta acción <strong>no se puede revertir</strong>.
+      </p>
+
+      <form
+        method="post"
+        action="{{ url_for('btn_tablas_admin_auto_bp.admin_auto_registro_confirm', schema=schema, tabla=tabla, reg_id=reg_id) }}?origen={{ origen }}"
+      >
+        <div class="d-flex justify-content-end gap-2">
+          <a href="{{ origen }}"
+             class="btn btn-outline-secondary btn-sm">
+            Cancelar
+          </a>
+
+          <button type="submit" class="btn btn-danger btn-sm">
+            🗑️ Eliminar registro
+          </button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}

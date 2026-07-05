@@ -1,0 +1,92 @@
+<div class="container-fluid mt-4">
+
+<h2 class="mb-4">📦 Panel de Control de Contenedores</h2>
+
+<div class="row">
+
+<div class="col-md-3">
+<div class="card shadow">
+<div class="card-body text-center">
+<h5>Activos</h5>
+<h2>{{ stats.activos }}</h2>
+</div>
+</div>
+</div>
+
+<div class="col-md-3">
+<div class="card shadow">
+<div class="card-body text-center">
+<h5>Retirados</h5>
+<h2>{{ stats.retirados }}</h2>
+</div>
+</div>
+</div>
+
+<div class="col-md-3">
+<div class="card shadow">
+<div class="card-body text-center">
+<h5>Pendientes</h5>
+<h2>{{ stats.pendientes }}</h2>
+</div>
+</div>
+</div>
+
+<div class="col-md-3">
+<div class="card shadow">
+<div class="card-body text-center">
+<h5>PDFs en revisión</h5>
+<h2>{{ stats.revision }}</h2>
+</div>
+</div>
+</div>
+
+</div>
+
+
+<div class="row mt-4">
+
+<div class="col-md-6">
+<canvas id="graficoColocaciones"></canvas>
+</div>
+
+<div class="col-md-6">
+<canvas id="graficoDimensiones"></canvas>
+</div>
+
+</div>
+
+</div>
+
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+
+const ctx1 = document.getElementById('graficoColocaciones');
+
+new Chart(ctx1, {
+type: 'bar',
+data: {
+labels: {{ meses | tojson }},
+datasets: [{
+label: 'Contenedores colocados',
+data: {{ colocaciones_mes | tojson }},
+backgroundColor: '#007bff'
+}]
+}
+});
+
+const ctx2 = document.getElementById('graficoDimensiones');
+
+new Chart(ctx2, {
+type: 'pie',
+data: {
+labels: {{ dimensiones | tojson }},
+datasets: [{
+data: {{ cantidades_dimensiones | tojson }},
+backgroundColor: ['#ff6384','#36a2eb','#ffce56','#2ecc71']
+}]
+}
+});
+
+</script>
