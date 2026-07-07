@@ -26,7 +26,9 @@ def roles_required(*roles_permitidos):
             if rol_usuario not in roles_permitidos:
                 abort(403)
             return view_func(*args, **kwargs)
+
         return wrapped_view
+
     return wrapper
 
 
@@ -36,7 +38,11 @@ def api_provincias():
     try:
         provincias = cargar_provincias()
         if q:
-            provincias = [p for p in provincias if q.lower() in str(p.get("provincias", "")).lower()]
+            provincias = [
+                p
+                for p in provincias
+                if q.lower() in str(p.get("provincias", "")).lower()
+            ]
         return jsonify({"ok": True, "provincias": provincias})
     except Exception as exc:
         current_app.logger.exception("Error al cargar provincias")
@@ -76,7 +82,9 @@ def api_calles():
     if not id_municipio or not id_tipo_via:
         return jsonify({"ok": False, "error": "Faltan id_municipio o id_tipo_via"}), 400
     try:
-        calles = cargar_calles(id_municipio=id_municipio, id_tipo_via=id_tipo_via, texto=q)
+        calles = cargar_calles(
+            id_municipio=id_municipio, id_tipo_via=id_tipo_via, texto=q
+        )
         return jsonify({"ok": True, "calles": calles})
     except Exception as exc:
         current_app.logger.exception("Error al cargar calles")
@@ -95,17 +103,25 @@ def crear_municipio():
     nombre_mun = (data.get("municipios") or "").strip()
     codigo_postal = (data.get("codigo_postal") or "").strip() or None
     if not id_provincia or not nombre_mun:
-        return jsonify({"ok": False, "error": "Faltan idtbl_provincias o municipios"}), 400
+        return (
+            jsonify({"ok": False, "error": "Faltan idtbl_provincias o municipios"}),
+            400,
+        )
     try:
         nuevo_id = insertar_municipio(id_provincia, nombre_mun, codigo_postal)
-        return jsonify({
-            "ok": True,
-            "municipio": {
-                "idtbl_municipios": nuevo_id,
-                "idtbl_provincias": id_provincia,
-                "municipios": nombre_mun,
-            },
-        }), 201
+        return (
+            jsonify(
+                {
+                    "ok": True,
+                    "municipio": {
+                        "idtbl_municipios": nuevo_id,
+                        "idtbl_provincias": id_provincia,
+                        "municipios": nombre_mun,
+                    },
+                }
+            ),
+            201,
+        )
     except Exception as exc:
         current_app.logger.exception("Error al crear municipio")
         return jsonify({"ok": False, "error": str(exc)}), 500
@@ -121,13 +137,18 @@ def crear_tipo_via():
         return jsonify({"ok": False, "error": "Falta tipos_de_vias"}), 400
     try:
         nuevo_id = insertar_tipo_via(nombre_tipo)
-        return jsonify({
-            "ok": True,
-            "tipo_via": {
-                "idtbl_tipos_de_vias": nuevo_id,
-                "tipos_de_vias": nombre_tipo,
-            },
-        }), 201
+        return (
+            jsonify(
+                {
+                    "ok": True,
+                    "tipo_via": {
+                        "idtbl_tipos_de_vias": nuevo_id,
+                        "tipos_de_vias": nombre_tipo,
+                    },
+                }
+            ),
+            201,
+        )
     except Exception as exc:
         current_app.logger.exception("Error al crear tipo de vía")
         return jsonify({"ok": False, "error": str(exc)}), 500
@@ -148,18 +169,35 @@ def crear_calle():
         id_tipo_via = 0
     nombre_calle = (data.get("calles") or "").strip()
     if not id_municipio or not id_tipo_via or not nombre_calle:
-        return jsonify({"ok": False, "error": "Faltan idtbl_municipios, idtbl_tipos_de_vias o calles"}), 400
+        return (
+            jsonify(
+                {
+                    "ok": False,
+                    "error": "Faltan idtbl_municipios, idtbl_tipos_de_vias o calles",
+                }
+            ),
+            400,
+        )
     try:
-        nuevo_id = insertar_calle(id_municipio=id_municipio, id_tipo_via=id_tipo_via, nombre_calle=nombre_calle)
-        return jsonify({
-            "ok": True,
-            "calle": {
-                "idtbl_calles": nuevo_id,
-                "idtbl_municipios": id_municipio,
-                "idtbl_tipos_de_vias": id_tipo_via,
-                "calles": nombre_calle,
-            },
-        }), 201
+        nuevo_id = insertar_calle(
+            id_municipio=id_municipio,
+            id_tipo_via=id_tipo_via,
+            nombre_calle=nombre_calle,
+        )
+        return (
+            jsonify(
+                {
+                    "ok": True,
+                    "calle": {
+                        "idtbl_calles": nuevo_id,
+                        "idtbl_municipios": id_municipio,
+                        "idtbl_tipos_de_vias": id_tipo_via,
+                        "calles": nombre_calle,
+                    },
+                }
+            ),
+            201,
+        )
     except Exception as exc:
         current_app.logger.exception("Error al crear calle")
         return jsonify({"ok": False, "error": str(exc)}), 500
@@ -172,8 +210,8 @@ def formulario_helpers_vias():
     provincias = cargar_provincias()
     municipios = []  # ✅ VACÍO - Se cargan dinámicamente vía AJAX
     tipos_via = cargar_tipos_via(texto="")
-    calles = []      # ✅ VACÍO - Se cargan dinámicamente vía AJAX
-    
+    calles = []  # ✅ VACÍO - Se cargan dinámicamente vía AJAX
+
     return render_template(
         "helpers_vias/formulario_helpers_vias.html",
         provincias=provincias,

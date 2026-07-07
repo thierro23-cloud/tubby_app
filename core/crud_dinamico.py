@@ -6,24 +6,13 @@ from flask import Blueprint, render_template, request, redirect, url_for, abort,
 from db import ejecutar_query, ejecutar_non_query
 from core.audit import registrar_evento
 
-
-admin_auto_bp = Blueprint(
-    "admin_auto_bp",
-    __name__,
-    url_prefix="/admin"
-)
+admin_auto_bp = Blueprint("admin_auto_bp", __name__, url_prefix="/admin")
 
 
 # =============================================================================
 # 🛡️ TABLAS PERMITIDAS (🔥 CLAVE SEGURIDAD)
 # =============================================================================
-TABLAS_PERMITIDAS = {
-    "usuarios",
-    "proveedores",
-    "plazas",
-    "camiones",
-    "contenedores"
-}
+TABLAS_PERMITIDAS = {"usuarios", "proveedores", "plazas", "camiones", "contenedores"}
 
 
 def validar_tabla(tabla):
@@ -52,16 +41,10 @@ def ver_tabla(tabla):
         where = "WHERE " + " OR ".join(filtros)
         valores = [f"%{busqueda}%"] * len(campos)
 
-    datos = ejecutar_query(
-        f"SELECT * FROM {tabla} {where} LIMIT 100",
-        valores
-    )
+    datos = ejecutar_query(f"SELECT * FROM {tabla} {where} LIMIT 100", valores)
 
     return render_template(
-        "admin_auto/listado.html",
-        tabla=tabla,
-        columnas=campos,
-        datos=datos
+        "admin_auto/listado.html", tabla=tabla, columnas=campos, datos=datos
     )
 
 
@@ -92,11 +75,7 @@ def crear(tabla):
 
         return redirect(url_for("admin_auto_bp.ver_tabla", tabla=tabla))
 
-    return render_template(
-        "admin_auto/form.html",
-        tabla=tabla,
-        campos=campos
-    )
+    return render_template("admin_auto/form.html", tabla=tabla, campos=campos)
 
 
 # =============================================================================
@@ -116,28 +95,19 @@ def editar(tabla, id):
 
         set_sql = ", ".join([f"{c}=%s" for c in campos])
 
-        ejecutar_non_query(
-            f"UPDATE {tabla} SET {set_sql} WHERE id=%s",
-            valores + [id]
-        )
+        ejecutar_non_query(f"UPDATE {tabla} SET {set_sql} WHERE id=%s", valores + [id])
 
         registrar_evento("editar", tabla)
 
         return redirect(url_for("admin_auto_bp.ver_tabla", tabla=tabla))
 
-    datos = ejecutar_query(
-        f"SELECT * FROM {tabla} WHERE id=%s",
-        [id]
-    )
+    datos = ejecutar_query(f"SELECT * FROM {tabla} WHERE id=%s", [id])
 
     if not datos:
         abort(404)
 
     return render_template(
-        "admin_auto/form.html",
-        tabla=tabla,
-        campos=campos,
-        dato=datos[0]
+        "admin_auto/form.html", tabla=tabla, campos=campos, dato=datos[0]
     )
 
 
@@ -149,10 +119,7 @@ def borrar(tabla, id):
 
     validar_tabla(tabla)
 
-    ejecutar_non_query(
-        f"DELETE FROM {tabla} WHERE id=%s",
-        [id]
-    )
+    ejecutar_non_query(f"DELETE FROM {tabla} WHERE id=%s", [id])
 
     registrar_evento("borrar", tabla)
 

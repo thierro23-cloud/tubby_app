@@ -33,10 +33,10 @@ from agenda_core.backend_agenda import (
     añadir_calle_a_evento,
 )
 
-
 # =============================================================================
 # 1️⃣ PROCESAMIENTO DE PDFS DE OBRAS
 # =============================================================================
+
 
 def procesar_pdf_core_obras(ruta_pdf: str) -> Dict[str, Any]:
     """
@@ -159,6 +159,7 @@ def procesar_pdf_core_obras(ruta_pdf: str) -> Dict[str, Any]:
 #   - origen_tabla: 'tbl_obras'
 #   - origen_id: idtbl_obras
 # =============================================================================
+
 
 def crear_evento_para_obra(
     id_obra: int,

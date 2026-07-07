@@ -40,6 +40,6 @@ def panel_comunes():
         · Mostrar un HTML simple (panel_comunes.html), o
         · Redirigir directamente al Super Admin.
     """
-    
+
     # Opción B: redirigir al Super Admin (descomenta si prefieres esto)
     # return redirect(url_for("super_admin_bp.super_admin"))

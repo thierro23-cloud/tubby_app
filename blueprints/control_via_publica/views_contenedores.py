@@ -10,6 +10,7 @@ from utils_async import _ruta_pdf  # ya lo tienes en utils_async
 
 bp_contenedores = Blueprint("contenedores", __name__)
 
+
 @bp_contenedores.route("/contenedores/subir", methods=["GET", "POST"])
 @login_required
 def subir_contenedor():
@@ -46,7 +47,7 @@ def subir_contenedor():
             ) VALUES (%s, %s, %s, NOW())
             """,
             (
-                current_user.id,     # ID del usuario logueado
+                current_user.id,  # ID del usuario logueado
                 nombre_seguro,
                 "entrada_pdf",
             ),

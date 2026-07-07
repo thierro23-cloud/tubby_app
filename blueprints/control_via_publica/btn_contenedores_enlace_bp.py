@@ -1,6 +1,6 @@
-#============================================================================
+# ============================================================================
 # 🚛 BLUEPRINT · ENLACE CONTENEDORES (COLOCACIÓN ↔ RETIRADA)
-#============================================================================
+# ============================================================================
 # OBJETIVO:
 #   - Listar retiradas sin relación (tbl_contenedores_retirada.tiene_relacion = FALSE)
 #   - Buscar colocación candidata (tbl_control_contenedores) por:
@@ -24,7 +24,7 @@
 #   · "/vincular/<int:id_retirada>"     → vincular (POST → guarda relación)
 #   · "/pdf/retirada/<int:id>/<path:filename>"   → pdf_retirada (servir PDF de solo_retirada)
 #   · "/pdf/colocacion/<int:id>/<path:filename>" → pdf_colocacion (servir PDF de para_revision)
-#============================================================================
+# ============================================================================
 
 from flask import (
     Blueprint,
@@ -45,9 +45,9 @@ from flask_login import current_user
 from datetime import date
 import os
 
-#============================================================================
+# ============================================================================
 # 🧱 1. DEFINICIÓN DEL BLUEPRINT
-#============================================================================
+# ============================================================================
 
 btn_contenedores_enlace_bp = Blueprint(
     "btn_contenedores_enlace_bp",
@@ -55,9 +55,9 @@ btn_contenedores_enlace_bp = Blueprint(
     url_prefix="/control_via_publica/contenedores/enlace",
 )
 
-#============================================================================
+# ============================================================================
 # 📄 2. SQL · CONSULTAS BASE
-#============================================================================
+# ============================================================================
 
 SQL_RETIRADAS_SIN_RELACION = """
 SELECT 
@@ -134,4 +134,4 @@ SET tiene_relacion = TRUE,
     fecha_validacion = NOW(),
     idtbl_usuario_validacion = %s
 WHERE idtbl_contenedores_retirada = %s
-"""    
+"""

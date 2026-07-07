@@ -50,7 +50,6 @@ from db import ejecutar_query
 from services.helpers import rol_required
 from flask_login import login_required
 
-
 # =============================================================================
 # 1️⃣ BLUEPRINT DEL BOTÓN · ALINEADO CON LA ARQUITECTURA
 # =============================================================================
@@ -214,6 +213,7 @@ WHERE
 #        - Enviar el fichero como descarga al navegador.
 # =============================================================================
 
+
 @btn_contenedores_informe_mensual_liquidados_bp.route(
     "/informe_mensual_liquidados",
     methods=["GET"],
@@ -257,8 +257,7 @@ def contenedores_informe_mensual_liquidados():
             "control_obras/informe_contenedores_mensaje.html",
             titulo="Sin resultados",
             mensaje=(
-                "No se encontraron contenedores liquidados "
-                "en el mes anterior."
+                "No se encontraron contenedores liquidados " "en el mes anterior."
             ),
         )
 

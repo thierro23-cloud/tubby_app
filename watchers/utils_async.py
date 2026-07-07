@@ -3,6 +3,27 @@ blueprints/control_via_publica/utils_async.py
 
 UTILS ASYNC · PDFs EN VÍA PÚBLICA
 
+PROPIETARIO DEL CÓDIGO
+----------------------
+Tinito · control_via_publica
+
+FECHA DE MODIFICACIÓN
+---------------------
+06/07/2026
+
+CAMBIO PROFESIONAL APLICADO
+---------------------------
+Se mantiene la lógica existente y solo se corrige el fallo detectado en
+contenedores/entrada_pdf:
+
+- Un error en un PDF concreto no debe detener la lectura del resto de PDFs.
+- Cuando un PDF no pueda procesarse correctamente, se enviará a
+  contenedores/para_revision.
+- Siempre que sea posible, se creará un registro en
+  tbl_contenedores_pendientes con estado REVISION.
+- No se modifica el comportamiento funcional de los casos correctos:
+  auto_guardado, solo_retirada, CSV duplicado, PDF sin CSV, obras ni stubs.
+
 RESPONSABILIDADES PRINCIPALES
 -----------------------------
 1) CONTENEDORES
@@ -110,6 +131,150 @@ def _nombre_pdf_por_csv(csv_value: str | None, nombre_por_defecto: str) -> str:
     if "." in csv_value:
         return csv_value
     return f"{csv_value}.pdf"
+
+
+# =============================================================================
+# 2️⃣ BIS · PROTECCIÓN PROFESIONAL DE ARCHIVOS FALLIDOS (CONTENEDORES)
+# =============================================================================
+
+def _nombre_pdf_unico_en_subcarpeta(subcarpeta: str, nombre_pdf: str) -> str:
+    """
+    TÍTULO: Generar un nombre de PDF único en una subcarpeta de contenedores.
+
+    Propietario del código:
+     Tinito · control_via_publica
+
+    Fecha de modificación:
+      06/07/2026
+
+    Finalidad:
+      Evitar que un PDF fallido sobrescriba a otro archivo existente cuando se
+      envía a contenedores/para_revision.
+
+    Alcance del cambio:
+      Esta función solo se usa como mecanismo de seguridad en fallos. No altera
+      la lógica normal de los PDFs que se procesan correctamente.
+
+    Reglas:
+      - Si el nombre no existe en destino, se conserva el nombre original.
+      - Si ya existe, se añade un sufijo incremental:
+          expediente.pdf
+          expediente_001.pdf
+          expediente_002.pdf
+    """
+    ruta_destino = _ruta_pdf(subcarpeta, nombre_pdf)
+    if not os.path.exists(ruta_destino):
+        return nombre_pdf
+
+    base, extension = os.path.splitext(nombre_pdf)
+    extension = extension or ".pdf"
+
+    contador = 1
+    while True:
+        candidato = f"{base}_{contador:03d}{extension}"
+        if not os.path.exists(_ruta_pdf(subcarpeta, candidato)):
+            return candidato
+        contador += 1
+
+
+def _enviar_pdf_fallido_a_para_revision(
+    nombre_pdf: str,
+    motivo_error: str,
+    datos: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    """
+    TÍTULO: Enviar de forma segura un PDF fallido a para_revision.
+
+    Propietario del código:
+      Tinito · control_via_publica
+
+    Fecha de modificación:
+      06/07/2026
+
+    Problema corregido:
+      Si procesar_pdf_core, PyPDF2, la lectura de metadatos, la base de datos o
+      cualquier paso intermedio falla, el procesamiento no debe detener la
+      lectura del resto de archivos en contenedores/entrada_pdf.
+
+    Comportamiento profesional:
+      - El PDF fallido se saca de contenedores/entrada_pdf.
+      - El destino es siempre contenedores/para_revision.
+      - Se intenta crear un pendiente con estado REVISION.
+      - Si la inserción en base de datos también falla, se registra el error y
+        aun así se intenta mover el PDF para que no bloquee la bandeja.
+      - La función devuelve un dict controlado y nunca relanza la excepción.
+
+    Parámetros:
+      - nombre_pdf: nombre físico del PDF localizado en entrada_pdf.
+      - motivo_error: descripción técnica del error producido.
+      - datos: datos parciales disponibles, si los hubiera.
+
+    Devuelve:
+      Diccionario compatible con el resto del módulo, con:
+        - estado: pendiente_validacion
+        - motivo: descripción del envío a revisión
+        - ruta_final_pdf: ruta de destino si se ha podido mover
+        - id_pendiente: id creado o None si no fue posible insertar
+    """
+    _ensure_contenedores_dirs()
+
+    datos_fallo = datos.copy() if isinstance(datos, dict) else {}
+    datos_fallo.setdefault("nombre_pdf", nombre_pdf)
+    datos_fallo.setdefault("error_procesamiento", motivo_error)
+    datos_fallo.setdefault("origen_error", "procesar_pdf_entrada")
+
+    nombre_destino = _nombre_pdf_unico_en_subcarpeta("para_revision", nombre_pdf)
+    ruta_origen = _ruta_pdf("entrada_pdf", nombre_pdf)
+    ruta_destino = _ruta_pdf("para_revision", nombre_destino)
+
+    id_pendiente = None
+
+    try:
+        id_pendiente = _insertar_pendiente_en_revision(
+            nombre_pdf=nombre_destino,
+            datos=datos_fallo,
+            motivo=(
+                "Error procesando PDF; enviado automáticamente a revisión manual"
+            ),
+            csv=None,
+            csv_retirada=None,
+            ruta_relativa="para_revision",
+            estado_inicial="REVISION",
+        )
+    except Exception as e:
+        current_app.logger.error(
+            f"[UTILS_ASYNC] No se pudo crear pendiente para PDF fallido {nombre_pdf}: {e!r}",
+            exc_info=True,
+        )
+
+    try:
+        if os.path.exists(ruta_origen):
+            shutil.move(ruta_origen, ruta_destino)
+            current_app.logger.warning(
+                f"[UTILS_ASYNC] PDF fallido enviado a para_revision: "
+                f"origen={ruta_origen}, destino={ruta_destino}, id_pendiente={id_pendiente}"
+            )
+        else:
+            current_app.logger.error(
+                f"[UTILS_ASYNC] No se pudo mover PDF fallido; no existe en entrada_pdf: {ruta_origen}"
+            )
+            ruta_destino = None
+    except Exception as e:
+        current_app.logger.error(
+            f"[UTILS_ASYNC] Error moviendo PDF fallido a para_revision {nombre_pdf}: {e!r}",
+            exc_info=True,
+        )
+        ruta_destino = ruta_origen
+
+    return {
+        "estado": "pendiente_validacion",
+        "motivo": (
+            "Error procesando PDF; enviado automáticamente a revisión manual"
+        ),
+        "datos": datos_fallo,
+        "ruta_final_pdf": ruta_destino,
+        "id_pendiente": id_pendiente,
+    }
 
 
 # =============================================================================
@@ -362,7 +527,7 @@ from agenda_core.backend_agenda import (
 from datetime import datetime, timedelta
 
 
-def procesar_pdf_entrada(nombre_pdf: str) -> Dict[str, Any]:
+def _procesar_pdf_entrada_impl(nombre_pdf: str) -> Dict[str, Any]:
     """
     Punto único de entrada para procesar un PDF desde contenedores/entrada_pdf.
 
@@ -591,6 +756,146 @@ def procesar_pdf_entrada(nombre_pdf: str) -> Dict[str, Any]:
     resultado["ruta_final_pdf"] = ruta_destino
     resultado["id_pendiente"] = id_pendiente
     return resultado
+
+
+
+
+def procesar_pdf_entrada(nombre_pdf: str) -> Dict[str, Any]:
+    """
+    TÍTULO: Punto público seguro para procesar un PDF de contenedores.
+
+    Propietario del código:
+      Tinito · control_via_publica
+
+    Fecha de modificación:
+      06/07/2026
+
+    Finalidad:
+      Mantener el mismo punto de entrada público que ya usa el sistema, pero
+      blindarlo para que un fallo en un PDF concreto no detenga la lectura del
+      resto de documentos almacenados en contenedores/entrada_pdf.
+
+    Alcance del cambio:
+      - No se modifica la lógica interna original: se conserva en
+        _procesar_pdf_entrada_impl.
+      - Solo se añade una capa de seguridad alrededor de esa lógica.
+      - Si la lógica original funciona, el resultado es exactamente el mismo.
+      - Si la lógica original falla con una excepción no controlada, el PDF se
+        envía a contenedores/para_revision.
+
+    Regla funcional solicitada:
+      Si no sale bien, se va a para_revision.
+    """
+    try:
+        return _procesar_pdf_entrada_impl(nombre_pdf)
+    except Exception as e:
+        current_app.logger.error(
+            f"[UTILS_ASYNC] Error no controlado procesando {nombre_pdf}; "
+            "se envía a para_revision y se continúa con el resto: "
+            f"{e!r}",
+            exc_info=True,
+        )
+        return _enviar_pdf_fallido_a_para_revision(
+            nombre_pdf=nombre_pdf,
+            motivo_error=repr(e),
+        )
+
+
+def procesar_todos_pdfs_entrada_contenedores() -> Dict[str, Any]:
+    """
+    TÍTULO: Procesar de forma segura todos los PDFs de contenedores/entrada_pdf.
+
+    Propietario del código:
+      Tinito · control_via_publica
+
+    Fecha de modificación:
+      06/07/2026
+
+    Finalidad:
+      Vaciar la bandeja contenedores/entrada_pdf sin que un PDF defectuoso,
+      corrupto o problemático bloquee la lectura de los siguientes archivos.
+
+    Comportamiento:
+      - Lee únicamente archivos con extensión .pdf.
+      - Procesa los archivos por orden alfabético para que el resultado sea
+        previsible y auditable.
+      - Cada PDF se procesa de forma aislada.
+      - Si un PDF falla, se envía a contenedores/para_revision.
+      - El lote continúa siempre con el siguiente PDF.
+
+    Cuándo usar esta función:
+      Debe llamarse desde el watcher, tarea programada o botón administrativo
+      que quiera procesar todo lo pendiente en contenedores/entrada_pdf.
+
+    Devuelve:
+      Resumen del lote con número total de PDFs, procesados correctamente,
+      enviados a revisión y detalle individual por archivo.
+    """
+    _ensure_contenedores_dirs()
+
+    carpeta_entrada = _ruta_pdf("entrada_pdf", "")
+
+    try:
+        nombres_pdf = sorted(
+            nombre
+            for nombre in os.listdir(carpeta_entrada)
+            if nombre.lower().endswith(".pdf")
+        )
+    except Exception as e:
+        current_app.logger.error(
+            f"[UTILS_ASYNC] Error leyendo carpeta entrada_pdf: {e!r}",
+            exc_info=True,
+        )
+        return {
+            "estado": "error",
+            "motivo": "No se pudo leer la carpeta contenedores/entrada_pdf",
+            "total": 0,
+            "procesados": 0,
+            "a_revision": 0,
+            "resultados": [],
+        }
+
+    resultados = []
+    procesados = 0
+    a_revision = 0
+
+    for nombre_pdf in nombres_pdf:
+        try:
+            resultado = procesar_pdf_entrada(nombre_pdf)
+        except Exception as e:
+            # Doble cinturón de seguridad: procesar_pdf_entrada ya está protegido,
+            # pero este bloque evita que cualquier error imprevisto del lote corte
+            # la lectura de los siguientes PDFs.
+            current_app.logger.error(
+                f"[UTILS_ASYNC] Fallo no controlado en lote para {nombre_pdf}; "
+                "se fuerza envío a para_revision: "
+                f"{e!r}",
+                exc_info=True,
+            )
+            resultado = _enviar_pdf_fallido_a_para_revision(
+                nombre_pdf=nombre_pdf,
+                motivo_error=repr(e),
+            )
+
+        resultados.append({
+            "nombre_pdf": nombre_pdf,
+            "resultado": resultado,
+        })
+
+        estado = resultado.get("estado") if isinstance(resultado, dict) else None
+        if estado == "pendiente_validacion":
+            a_revision += 1
+        else:
+            procesados += 1
+
+    return {
+        "estado": "ok",
+        "motivo": "Procesamiento de entrada_pdf finalizado",
+        "total": len(nombres_pdf),
+        "procesados": procesados,
+        "a_revision": a_revision,
+        "resultados": resultados,
+    }
 
 
 # =============================================================================

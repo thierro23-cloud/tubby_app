@@ -11,6 +11,7 @@
 #       * DATABASES   → todas las conexiones a MySQL que usará db.get_connection()
 # ============================================================================
 
+
 class Config:
     # ========================================================================
     # SECCIÓN 1. CLAVE SECRETA DE FLASK
@@ -34,7 +35,6 @@ class Config:
     # - Por eso TODAS las claves internas deben estar en MAYÚSCULAS.
     # ========================================================================
     DATABASES = {
-
         # ====================================================================
         # 2.1 BD COMÚN: bd_tbl_comunes
         # --------------------------------------------------------------------
@@ -43,13 +43,12 @@ class Config:
         # - auth_bp.login llama a get_connection() sin argumentos.
         # ====================================================================
         "bd_tbl_comunes": {
-            "HOST": "localhost",          # 🌐 Host o IP del servidor MySQL
-            "USER": "root",               # 👤 Usuario MySQL con acceso a esta BD
-            "PASSWORD": "F@Fe1132",               # 🔑 Contraseña (vacía si tu MySQL lo permite)
-            "DB": "bd_tbl_comunes",       # 🏠 Nombre REAL de la BD en MySQL
-            "PORT": 3306,                 # 🚪 Puerto MySQL (por defecto 3306)
+            "HOST": "localhost",  # 🌐 Host o IP del servidor MySQL
+            "USER": "root",  # 👤 Usuario MySQL con acceso a esta BD
+            "PASSWORD": "F@Fe1132",  # 🔑 Contraseña (vacía si tu MySQL lo permite)
+            "DB": "bd_tbl_comunes",  # 🏠 Nombre REAL de la BD en MySQL
+            "PORT": 3306,  # 🚪 Puerto MySQL (por defecto 3306)
         },
-
         # ====================================================================
         # 2.2 BD PRINCIPAL DE OBRAS: control_obras
         # --------------------------------------------------------------------
@@ -64,10 +63,9 @@ class Config:
             "HOST": "localhost",
             "USER": "root",
             "PASSWORD": "F@Fe1132",
-            "DB": "control_via_publica",        # 🏠 nombre REAL en MySQL
+            "DB": "control_via_publica",  # 🏠 nombre REAL en MySQL
             "PORT": 3306,
         },
-
         # ====================================================================
         # 2.3 ALIAS "obras" → MISMA BD FÍSICA QUE control_via_publica
         # --------------------------------------------------------------------
@@ -80,10 +78,9 @@ class Config:
             "HOST": "localhost",
             "USER": "root",
             "PASSWORD": "F@Fe1132",
-            "DB": "control_via_publica",        # 🧷 misma BD que control_obras
+            "DB": "control_via_publica",  # 🧷 misma BD que control_obras
             "PORT": 3306,
         },
-
         # ====================================================================
         # 2.4 BD GIS MUNICIPAL: gis_municipal
         # --------------------------------------------------------------------
@@ -97,7 +94,6 @@ class Config:
             "DB": "gis_municipal",
             "PORT": 3306,
         },
-
         # ====================================================================
         # 2.5 BD INVENTARIO GENERAL: inventario
         # --------------------------------------------------------------------
@@ -110,7 +106,6 @@ class Config:
             "DB": "inventario",
             "PORT": 3306,
         },
-
         # ====================================================================
         # 2.6 BD MOBILIARIO URBANO: mobiliario_urbano
         # --------------------------------------------------------------------
@@ -123,7 +118,6 @@ class Config:
             "DB": "mobiliario_urbano",
             "PORT": 3306,
         },
-
         # ====================================================================
         # 2.7 BD PARKING CAMIONES: parquin_camiones
         # --------------------------------------------------------------------
@@ -136,7 +130,6 @@ class Config:
             "DB": "parquin_camiones",
             "PORT": 3306,
         },
-
         # ====================================================================
         # 2.8 BD PATRULLA VERDE: patrulla_verde
         # --------------------------------------------------------------------
@@ -149,7 +142,6 @@ class Config:
             "DB": "patrulla_verde",
             "PORT": 3306,
         },
-
         # ====================================================================
         # 2.9 BD PERSONAL / VESTUARIO: personal_vestuario
         # --------------------------------------------------------------------
@@ -162,7 +154,6 @@ class Config:
             "DB": "personal_vestuario",
             "PORT": 3306,
         },
-
         # ====================================================================
         # 2.10 BD PLANES DE EMERGENCIA: plan_de_emergencias
         # --------------------------------------------------------------------
@@ -176,6 +167,8 @@ class Config:
             "PORT": 3306,
         },
     }
+
+
 # ============================================================================
 # SECCIÓN 3. CONFIGURACIÓN DEL WATCHER DE ENDPOINTS
 # ----------------------------------------------------------------------------
@@ -184,49 +177,50 @@ class Config:
 # - Los endpoints se guardan en la BD principal: bd_tbl_comunes
 # ============================================================================
 
+
 class WatcherConfig:
     """
     Configuración específica para el sistema de vigilancia de endpoints.
-    
+
     Uso:
         - El watcher usa esta configuración para logging y comportamiento
         - La conexión a MySQL usa DATABASES["bd_tbl_comunes"]
     """
-    
+
     # ========================================================================
     # 3.1 CONFIGURACIÓN DE LOGGING
     # ========================================================================
-    
+
     # Archivo donde se guardan los logs del watcher
-    LOG_FILE = 'endpoints_watcher.log'
-    
+    LOG_FILE = "endpoints_watcher.log"
+
     # Formato de las entradas en el archivo de log
     # Ejemplo: 2026-05-22 19:08:15 - INFO - Mensaje del log
-    LOG_FORMAT = '%(asctime)s - %(levelname)s - %(message)s'
-    
+    LOG_FORMAT = "%(asctime)s - %(levelname)s - %(message)s"
+
     # Formato de fecha en los logs
-    LOG_DATE_FORMAT = '%Y-%m-%d %H:%M:%S'
-    
+    LOG_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
+
     # Nivel de detalle del log
     # Opciones: DEBUG, INFO, WARNING, ERROR, CRITICAL
-    LOG_LEVEL = 'INFO'
-    
+    LOG_LEVEL = "INFO"
+
     # ========================================================================
     # 3.2 CONFIGURACIÓN DEL WATCHER
     # ========================================================================
-    
+
     # Tiempo mínimo (segundos) entre sincronizaciones
     # Evita múltiples ejecuciones cuando se modifican varios archivos a la vez
     DEBOUNCE_SECONDS = 2
-    
+
     # Vigilar subdirectorios de forma recursiva
     # True: vigila toda la estructura de carpetas
     # False: solo vigila la carpeta raíz
     WATCH_RECURSIVE = True
-    
+
     # Base de datos donde se guardan los endpoints
     # Debe coincidir con una clave de DATABASES
     ENDPOINTS_DATABASE = "bd_tbl_comunes"
-    
+
     # Nombre de la tabla de endpoints
     ENDPOINTS_TABLE = "tbl_endpoints"

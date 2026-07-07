@@ -1,5 +1,10 @@
 from flask import Blueprint, render_template, request, jsonify, g
-from services.helpers import login_required, rol_required, ejecutar_consulta, ejecutar_non_query
+from services.helpers import (
+    login_required,
+    rol_required,
+    ejecutar_consulta,
+    ejecutar_non_query,
+)
 
 # =============================================================================
 # 1. BLUEPRINT: BTN_VADOS_CAMBIOS_BP
@@ -33,6 +38,7 @@ btn_vados_cambios_bp = Blueprint(
 # - Recuperar el idtbl_vados, el número actual y el proveedor actual,
 #   necesarios para guardar el histórico antes de cambiar.
 # =============================================================================
+
 
 def get_vado_por_numero_vado(numero_vado: str) -> dict | None:
     """
@@ -86,6 +92,7 @@ def get_vado_por_numero_vado(numero_vado: str) -> dict | None:
 # La lógica del formulario (qué endpoint POST llamar) se implementa en el JS/HTML.
 # =============================================================================
 
+
 @btn_vados_cambios_bp.get("/")
 @login_required
 @rol_required("gestor", "super_admin")
@@ -99,9 +106,7 @@ def btn_vados_cambios_formulario() -> str:
       - Un campo para buscar proveedores por NIF que use la API
         /vados_cambios/api/buscar_proveedores_por_nif.
     """
-    return render_template(
-        "control_via_publica/Control_vados/vados_cambios.html"
-    )
+    return render_template("control_via_publica/Control_vados/vados_cambios.html")
 
 
 # =============================================================================
@@ -123,6 +128,7 @@ def btn_vados_cambios_formulario() -> str:
 #   5. Devolver JSON con el detalle del cambio.
 # =============================================================================
 
+
 @btn_vados_cambios_bp.post("/numero")
 @login_required
 @rol_required("gestor", "super_admin")
@@ -141,46 +147,76 @@ def cambiar_numero_vado():
 
     # Validaciones básicas de entrada.
     if not numero_vado_actual:
-        return jsonify({
-            "ok": False,
-            "error": "numero_vado_actual obligatorio",
-        }), 400
+        return (
+            jsonify(
+                {
+                    "ok": False,
+                    "error": "numero_vado_actual obligatorio",
+                }
+            ),
+            400,
+        )
     if not numero_vado_nuevo:
-        return jsonify({
-            "ok": False,
-            "error": "numero_vado_nuevo obligatorio",
-        }), 400
+        return (
+            jsonify(
+                {
+                    "ok": False,
+                    "error": "numero_vado_nuevo obligatorio",
+                }
+            ),
+            400,
+        )
     if not motivo_cambio:
-        return jsonify({
-            "ok": False,
-            "error": "motivo_cambio obligatorio",
-        }), 400
+        return (
+            jsonify(
+                {
+                    "ok": False,
+                    "error": "motivo_cambio obligatorio",
+                }
+            ),
+            400,
+        )
 
     # Obtenemos el idtbl_gestores del usuario logueado.
     idtbl_gestores = getattr(g, "user", {}).get("idtbl_gestores", None)
     if not idtbl_gestores:
-        return jsonify({
-            "ok": False,
-            "error": "No se ha podido determinar el gestor logueado",
-        }), 400
+        return (
+            jsonify(
+                {
+                    "ok": False,
+                    "error": "No se ha podido determinar el gestor logueado",
+                }
+            ),
+            400,
+        )
 
     # 4.1 Buscamos el vado por número de vado actual.
     vado = get_vado_por_numero_vado(numero_vado_actual)
     if not vado:
-        return jsonify({
-            "ok": False,
-            "error": "Vado no encontrado con ese número de vado",
-        }), 404
+        return (
+            jsonify(
+                {
+                    "ok": False,
+                    "error": "Vado no encontrado con ese número de vado",
+                }
+            ),
+            404,
+        )
 
     idtbl_vados = vado["idtbl_vados"]
     numero_anterior = vado["numero_vado"]
 
     # Si el número nuevo es igual al actual, no hacemos nada.
     if numero_anterior == numero_vado_nuevo:
-        return jsonify({
-            "ok": False,
-            "error": "El número nuevo es igual al actual",
-        }), 400
+        return (
+            jsonify(
+                {
+                    "ok": False,
+                    "error": "El número nuevo es igual al actual",
+                }
+            ),
+            400,
+        )
 
     try:
         # 4.2 Insertar un registro en el histórico de números.
@@ -228,21 +264,31 @@ def cambiar_numero_vado():
 
     except Exception as exc:
         # Si algo falla, devolvemos error 500 con el detalle.
-        return jsonify({
-            "ok": False,
-            "error": f"Error al cambiar número de vado: {exc}",
-        }), 500
+        return (
+            jsonify(
+                {
+                    "ok": False,
+                    "error": f"Error al cambiar número de vado: {exc}",
+                }
+            ),
+            500,
+        )
 
     # Respuesta de éxito con la información del cambio.
-    return jsonify({
-        "ok": True,
-        "mensaje": "Número de vado actualizado correctamente",
-        "vado": {
-            "idtbl_vados": idtbl_vados,
-            "numero_anterior": numero_anterior,
-            "numero_vado_nuevo": numero_vado_nuevo,
-        },
-    }), 200
+    return (
+        jsonify(
+            {
+                "ok": True,
+                "mensaje": "Número de vado actualizado correctamente",
+                "vado": {
+                    "idtbl_vados": idtbl_vados,
+                    "numero_anterior": numero_anterior,
+                    "numero_vado_nuevo": numero_vado_nuevo,
+                },
+            }
+        ),
+        200,
+    )
 
 
 # =============================================================================
@@ -262,6 +308,7 @@ def cambiar_numero_vado():
 #   4. Actualizar tbl_vados.idtbl_proveedores y fecha_cambio, idtbl_gestores.
 #   5. Devolver JSON con el detalle del cambio.
 # =============================================================================
+
 
 @btn_vados_cambios_bp.post("/titular")
 @login_required
@@ -285,41 +332,66 @@ def cambiar_titular_vado():
 
     # Validaciones básicas de entrada.
     if not numero_vado:
-        return jsonify({
-            "ok": False,
-            "error": "numero_vado obligatorio",
-        }), 400
+        return (
+            jsonify(
+                {
+                    "ok": False,
+                    "error": "numero_vado obligatorio",
+                }
+            ),
+            400,
+        )
     if idtbl_proveedor_nuevo <= 0:
-        return jsonify({
-            "ok": False,
-            "error": "idtbl_proveedor_nuevo inválido",
-        }), 400
+        return (
+            jsonify(
+                {
+                    "ok": False,
+                    "error": "idtbl_proveedor_nuevo inválido",
+                }
+            ),
+            400,
+        )
 
     # Obtenemos el idtbl_gestores del usuario logueado.
     idtbl_gestores = getattr(g, "user", {}).get("idtbl_gestores", None)
     if not idtbl_gestores:
-        return jsonify({
-            "ok": False,
-            "error": "No se ha podido determinar el gestor logueado",
-        }), 400
+        return (
+            jsonify(
+                {
+                    "ok": False,
+                    "error": "No se ha podido determinar el gestor logueado",
+                }
+            ),
+            400,
+        )
 
     # 5.1 Buscamos el vado por número de vado.
     vado = get_vado_por_numero_vado(numero_vado)
     if not vado:
-        return jsonify({
-            "ok": False,
-            "error": "Vado no encontrado con ese número de vado",
-        }), 404
+        return (
+            jsonify(
+                {
+                    "ok": False,
+                    "error": "Vado no encontrado con ese número de vado",
+                }
+            ),
+            404,
+        )
 
     idtbl_vados = vado["idtbl_vados"]
     idtbl_proveedor_anterior = vado["idtbl_proveedores"]
 
     # Si el proveedor nuevo es igual al actual, no tiene sentido el cambio.
     if idtbl_proveedor_anterior == idtbl_proveedor_nuevo:
-        return jsonify({
-            "ok": False,
-            "error": "El proveedor nuevo es igual al actual",
-        }), 400
+        return (
+            jsonify(
+                {
+                    "ok": False,
+                    "error": "El proveedor nuevo es igual al actual",
+                }
+            ),
+            400,
+        )
 
     try:
         # 5.2 Insertar un registro en el histórico de titulares.
@@ -365,22 +437,32 @@ def cambiar_titular_vado():
 
     except Exception as exc:
         # Si algo falla en histórico o en la actualización, devolvemos error 500.
-        return jsonify({
-            "ok": False,
-            "error": f"Error al cambiar titular de vado: {exc}",
-        }), 500
+        return (
+            jsonify(
+                {
+                    "ok": False,
+                    "error": f"Error al cambiar titular de vado: {exc}",
+                }
+            ),
+            500,
+        )
 
     # Respuesta de éxito con la información del cambio.
-    return jsonify({
-        "ok": True,
-        "mensaje": "Titular del vado actualizado correctamente",
-        "vado": {
-            "idtbl_vados": idtbl_vados,
-            "numero_vado": numero_vado,
-            "idtbl_proveedor_anterior": idtbl_proveedor_anterior,
-            "idtbl_proveedor_nuevo": idtbl_proveedor_nuevo,
-        },
-    }), 200
+    return (
+        jsonify(
+            {
+                "ok": True,
+                "mensaje": "Titular del vado actualizado correctamente",
+                "vado": {
+                    "idtbl_vados": idtbl_vados,
+                    "numero_vado": numero_vado,
+                    "idtbl_proveedor_anterior": idtbl_proveedor_anterior,
+                    "idtbl_proveedor_nuevo": idtbl_proveedor_nuevo,
+                },
+            }
+        ),
+        200,
+    )
 
 
 # =============================================================================
@@ -407,6 +489,7 @@ def cambiar_titular_vado():
 #     ...
 #   ]
 # =============================================================================
+
 
 @btn_vados_cambios_bp.get("/api/buscar_proveedores_por_nif")
 @login_required

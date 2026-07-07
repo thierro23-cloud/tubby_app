@@ -41,7 +41,6 @@
 from flask import Blueprint, render_template
 from services.helpers import rol_required
 
-
 # =============================================================================
 # 🧱 3️⃣ DEFINICIÓN DEL BLUEPRINT · modulo_parquin_rio_torio_bp
 # =============================================================================
@@ -94,6 +93,7 @@ modulo_parquin_rio_torio_bp = Blueprint(
 #   - El SuperAdminService lo agrupará bajo panel_parquin_bp como módulo
 #     "modulo_parquin_rio_torio".
 # =============================================================================
+
 
 @modulo_parquin_rio_torio_bp.route("/", methods=["GET"])
 @rol_required("gestor", "super_admin")

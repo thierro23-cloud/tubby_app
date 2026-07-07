@@ -31,14 +31,13 @@ import uuid
 from typing import Optional
 
 from flask import (
-    session,     # Diccionario de sesión (cookie firmada)
-    redirect,    # Respuesta HTTP 302 (redirección)
-    url_for,     # Construye URLs a partir de endpoints
-    flash,       # Mensajes temporales almacenados en sesión
-    request,     # Información de la petición HTTP actual
-    current_app, # Aplicación Flask actual (para config y logger)
+    session,  # Diccionario de sesión (cookie firmada)
+    redirect,  # Respuesta HTTP 302 (redirección)
+    url_for,  # Construye URLs a partir de endpoints
+    flash,  # Mensajes temporales almacenados en sesión
+    request,  # Información de la petición HTTP actual
+    current_app,  # Aplicación Flask actual (para config y logger)
 )
-
 
 # =============================================================================
 # 2️⃣ FUNCIONES GENÉRICAS DE BASE DE DATOS
@@ -48,27 +47,28 @@ from flask import (
 # Descripción: Wrappers sobre db.py para mantener compatibilidad con helpers_vias
 # =============================================================================
 
+
 def ejecutar_consulta(
-    query: str, 
-    params: Optional[list] = None, 
-    devolver_dict: bool = False, 
-    database: str = "bd_tbl_comunes"
+    query: str,
+    params: Optional[list] = None,
+    devolver_dict: bool = False,
+    database: str = "bd_tbl_comunes",
 ) -> list:
     """
     Ejecuta una consulta SELECT y retorna los resultados.
-    
+
     Esta función es un wrapper sobre db.ejecutar_query() para mantener
     compatibilidad con el código de helpers_vias.
-    
+
     Args:
         query (str): Consulta SQL a ejecutar. Usa %s como placeholders.
         params (list, opcional): Lista de parámetros para la consulta.
         devolver_dict (bool, opcional): Ignorado. db.py siempre retorna diccionarios.
         database (str, opcional): Nombre de la BD en DATABASES config.
-    
+
     Returns:
         list: Lista de diccionarios {columna: valor}
-    
+
     Example:
         >>> resultados = ejecutar_consulta(
         ...     "SELECT * FROM tbl_provincias WHERE idtbl_provincias = %s",
@@ -77,16 +77,16 @@ def ejecutar_consulta(
         ... )
     """
     from db import ejecutar_query as db_ejecutar_query
-    
+
     try:
         # Convertir lista a tupla (db.py espera tuplas)
         params_tuple = tuple(params) if params else None
-        
+
         # db.ejecutar_query ya devuelve diccionarios por defecto
         resultados = db_ejecutar_query(query, params_tuple, nombre_bd=database)
-        
+
         return resultados or []
-    
+
     except Exception as e:
         current_app.logger.error(f"❌ Error en ejecutar_consulta: {e}")
         current_app.logger.error(f"   Query: {query}")
@@ -95,13 +95,11 @@ def ejecutar_consulta(
 
 
 def insertar_generico(
-    tabla: str, 
-    campos: dict, 
-    database: str = "bd_tbl_comunes"
+    tabla: str, campos: dict, database: str = "bd_tbl_comunes"
 ) -> int:
     """
     Inserta un registro en una tabla y retorna el ID generado.
-    
+
     Args:
         tabla (str): Nombre de la tabla donde insertar.
             Ejemplo: "tbl_calles", "tbl_municipios"
@@ -114,11 +112,11 @@ def insertar_generico(
             }
         database (str, opcional): Nombre de la BD en DATABASES config.
             Por defecto: "bd_tbl_comunes"
-    
+
     Returns:
         int: ID del registro insertado (lastrowid).
             Retorna 0 si hay error.
-    
+
     Example:
         >>> nuevo_id = insertar_generico(
         ...     tabla="tbl_municipios",
@@ -130,39 +128,39 @@ def insertar_generico(
         ... )
     """
     from db import get_connection
-    
+
     try:
         # Construir lista de columnas escapadas
         columnas = ", ".join(f"`{col}`" for col in campos.keys())
-        
+
         # Construir placeholders (%s, %s, %s, ...)
         placeholders = ", ".join(["%s"] * len(campos))
-        
+
         # Extraer valores en el mismo orden que las columnas
         valores = tuple(campos.values())
-        
+
         # Construir query INSERT
         query = f"INSERT INTO `{tabla}` ({columnas}) VALUES ({placeholders})"
-        
+
         # Usar get_connection de db.py
         conn = get_connection(database)
         cursor = conn.cursor()
-        
+
         # Ejecutar INSERT
         cursor.execute(query, valores)
-        
+
         # Hacer commit de la transacción
         conn.commit()
-        
+
         # Obtener ID autogenerado
         nuevo_id = cursor.lastrowid
-        
+
         # Cerrar cursor y conexión
         cursor.close()
         conn.close()
-        
+
         return nuevo_id
-    
+
     except Exception as e:
         current_app.logger.error(f"❌ Error en insertar_generico: {e}")
         current_app.logger.error(f"   Tabla: {tabla}")
@@ -171,23 +169,21 @@ def insertar_generico(
 
 
 def ejecutar_non_query(
-    query: str, 
-    params: Optional[list] = None, 
-    database: str = "bd_tbl_comunes"
+    query: str, params: Optional[list] = None, database: str = "bd_tbl_comunes"
 ) -> int:
     """
     Ejecuta una consulta INSERT/UPDATE/DELETE sin retornar resultados.
-    
+
     Esta función es un wrapper sobre db.ejecutar_non_query().
-    
+
     Args:
         query (str): Consulta SQL a ejecutar (INSERT, UPDATE, DELETE)
         params (list, opcional): Lista de parámetros para la consulta
         database (str, opcional): Nombre de la BD en DATABASES config
-    
+
     Returns:
         int: Número de filas afectadas (rowcount)
-    
+
     Example:
         >>> filas = ejecutar_non_query(
         ...     "INSERT INTO audit_log (accion, ip) VALUES (%s, %s)",
@@ -196,16 +192,16 @@ def ejecutar_non_query(
         ... )
     """
     from db import ejecutar_non_query as db_ejecutar_non_query
-    
+
     try:
         # Convertir lista a tupla (db.py espera tuplas)
         params_tuple = tuple(params) if params else None
-        
+
         # Usar la función de db.py
         filas_afectadas = db_ejecutar_non_query(query, params_tuple, nombre_bd=database)
-        
+
         return filas_afectadas
-    
+
     except Exception as e:
         current_app.logger.error(f"❌ Error en ejecutar_non_query: {e}")
         current_app.logger.error(f"   Query: {query}")
@@ -216,6 +212,7 @@ def ejecutar_non_query(
 # =============================================================================
 # 3️⃣ UTILIDADES BÁSICAS DE SESIÓN Y ROL
 # =============================================================================
+
 
 def is_logged() -> bool:
     """
@@ -249,6 +246,7 @@ def is_super_admin() -> bool:
 # Estas funciones NO se usan directamente en blueprints; las consumen
 # los decoradores de más abajo para registrar accesos en audit_log.
 # =============================================================================
+
 
 def _get_request_id() -> str:
     """
@@ -289,14 +287,18 @@ def _registrar_audit(accion: str, descripcion: Optional[str] = None) -> None:
     try:
         # 1) Identidades de sesión
         idtbl_gestores = session.get("idtbl_gestores") or session.get("user_id")
-        idtbl_roles = None  # si más adelante guardas idtbl_roles en sesión, ajústalo aquí
+        idtbl_roles = (
+            None  # si más adelante guardas idtbl_roles en sesión, ajústalo aquí
+        )
 
         # 2) Datos de la petición HTTP
         modulo = request.blueprint
         ip = request.remote_addr or ""
         endpoint = request.endpoint
         path = request.path
-        user_agent = request.headers.get("User-Agent", "")[:250]  # Limitar a 250 caracteres
+        user_agent = request.headers.get("User-Agent", "")[
+            :250
+        ]  # Limitar a 250 caracteres
         request_id = _get_request_id()
 
         # 3) INSERT en audit_log (bd_tbl_comunes)
@@ -340,6 +342,7 @@ def _registrar_audit(accion: str, descripcion: Optional[str] = None) -> None:
 # 5️⃣ DECORADOR BÁSICO: login_required
 # =============================================================================
 
+
 def login_required(func):
     """
     Decorador que exige que exista una sesión activa.
@@ -375,6 +378,7 @@ def login_required(func):
 # 6️⃣ DECORADOR ESPECÍFICO: super_admin_required
 # =============================================================================
 
+
 def super_admin_required(func):
     """
     Decorador que exige:
@@ -391,7 +395,9 @@ def super_admin_required(func):
     def wrapper(*args, **kwargs):
         # 1) Exigir login
         if not is_logged():
-            _registrar_audit("acceso_denegado", "Login requerido (super_admin_required)")
+            _registrar_audit(
+                "acceso_denegado", "Login requerido (super_admin_required)"
+            )
             flash("👶 Primero haz login", "warning")
             return redirect(url_for("auth_bp.login"))
 
@@ -402,7 +408,9 @@ def super_admin_required(func):
             return redirect(url_for("auth_bp.login"))
 
         # 3) Todo OK → registrar acceso y ejecutar vista
-        _registrar_audit("acceso_concedido", "Acceso como super_admin (super_admin_required)")
+        _registrar_audit(
+            "acceso_concedido", "Acceso como super_admin (super_admin_required)"
+        )
         return func(*args, **kwargs)
 
     return wrapper
@@ -411,6 +419,7 @@ def super_admin_required(func):
 # =============================================================================
 # 7️⃣ DECORADOR GENÉRICO: rol_required
 # =============================================================================
+
 
 def rol_required(*roles):
     """
@@ -446,7 +455,9 @@ def rol_required(*roles):
 
             # 3) super_admin → acceso directo
             if rol_actual == "super_admin":
-                _registrar_audit("acceso_concedido", "Acceso como super_admin (rol_required)")
+                _registrar_audit(
+                    "acceso_concedido", "Acceso como super_admin (rol_required)"
+                )
                 return func(*args, **kwargs)
 
             # 4) Comprobar si el rol actual está en la lista permitida
@@ -476,6 +487,7 @@ def rol_required(*roles):
 # 8️⃣ DECORADOR ESPECÍFICO: watcher_web_required
 # =============================================================================
 
+
 def watcher_web_required(func):
     """
     Decorador específico para rutas del "watcher web".
@@ -497,6 +509,7 @@ def watcher_web_required(func):
 # =============================================================================
 # 9️⃣ DECORADOR OPCIONAL: blueprint_required
 # =============================================================================
+
 
 def blueprint_required(*blueprint_names):
     """
@@ -547,6 +560,7 @@ def blueprint_required(*blueprint_names):
 # 🔟 PERMISOS POR TABLA: tiene_permiso
 # =============================================================================
 
+
 def tiene_permiso(tabla: str, rol: str) -> bool:
     """
     Comprueba si un rol tiene permiso sobre una tabla concreta.
@@ -579,7 +593,7 @@ def tiene_permiso(tabla: str, rol: str) -> bool:
         """,
         [tabla, rol],
         devolver_dict=True,
-        database="bd_tbl_comunes"
+        database="bd_tbl_comunes",
     )
 
     return bool(filas and filas[0].get("permitido"))
@@ -588,6 +602,7 @@ def tiene_permiso(tabla: str, rol: str) -> bool:
 # =============================================================================
 # 1️⃣1️⃣ DECORADOR: permiso_tabla_required
 # =============================================================================
+
 
 def permiso_tabla_required(func):
     """
@@ -611,7 +626,9 @@ def permiso_tabla_required(func):
     def wrapper(*args, **kwargs):
         # 1) Exigir login
         if not is_logged():
-            _registrar_audit("acceso_denegado", "Login requerido (permiso_tabla_required)")
+            _registrar_audit(
+                "acceso_denegado", "Login requerido (permiso_tabla_required)"
+            )
             flash("👶 Primero login", "warning")
             return redirect(url_for("auth_bp.login"))
 

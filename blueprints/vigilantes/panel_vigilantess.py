@@ -2,10 +2,11 @@
 from flask import Blueprint, render_template
 
 panel_vigilantes_bp = Blueprint(
-    "panel_vigilantes_bp",     # nombre del blueprint
+    "panel_vigilantes_bp",  # nombre del blueprint
     __name__,
     url_prefix="/panel_vigilantes",
 )
+
 
 @panel_vigilantes_bp.route("/panel")
 def panel_vigilantes():

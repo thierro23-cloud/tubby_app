@@ -78,7 +78,6 @@ import time
 import requests
 import mysql.connector
 
-
 # =============================================================================
 # 2️⃣ CONFIGURACIÓN BÁSICA
 # =============================================================================
@@ -112,15 +111,16 @@ def get_conn_bd_tbl_comunes():
     return mysql.connector.connect(
         host="localhost",
         port=3306,
-        user="root",               # 👈 cambia esto a tu usuario real
-        password="F@Fe1132",    # 👈 cambia esto a tu password real
-        database="bd_tbl_comunes", # 👈 o el nombre real de la BD
+        user="root",  # 👈 cambia esto a tu usuario real
+        password="F@Fe1132",  # 👈 cambia esto a tu password real
+        database="bd_tbl_comunes",  # 👈 o el nombre real de la BD
     )
 
 
 # =============================================================================
 # 3️⃣ FUNCIÓN AUXILIAR · LLAMADA A GEOAPIFY
 # =============================================================================
+
 
 def geocode_geoapify(direccion: str):
     """
@@ -198,6 +198,7 @@ btn_ubicacion_calles_geolocalizacion_bp = Blueprint(
 # =============================================================================
 # 5️⃣ VISTA PRINCIPAL · SUBIR CSV + GEOLOCALIZAR
 # =============================================================================
+
 
 @btn_ubicacion_calles_geolocalizacion_bp.route("/", methods=["GET", "POST"])
 @login_required
@@ -326,7 +327,7 @@ def btn_ubicacion_calles_geolocalizacion():
         errores = 0
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-                        # ---------------------------------------------------------------------
+        # ---------------------------------------------------------------------
         # 5.2.3. Bucle principal: leer CSV y geocodificar
         # ---------------------------------------------------------------------
         log.info("🚀 [calles_geo] Inicio de procesado de filas del CSV...")
@@ -341,7 +342,10 @@ def btn_ubicacion_calles_geolocalizacion():
 
             # Si estás en modo debug y quieres limitar filas, activa esto:
             if MAX_FILAS_DEBUG is not None and filas_leidas > MAX_FILAS_DEBUG:
-                log.info("🛑 [calles_geo] Alcanzado límite de debug: %s filas", MAX_FILAS_DEBUG)
+                log.info(
+                    "🛑 [calles_geo] Alcanzado límite de debug: %s filas",
+                    MAX_FILAS_DEBUG,
+                )
                 break
 
             # Log de progreso cada N filas
@@ -367,7 +371,9 @@ def btn_ubicacion_calles_geolocalizacion():
                 continue
 
             # Dirección completa: "<via_mas_calle>, Ávila, Ávila, España"
-            direccion = f"{via_mas_calle}, {MUNICIPIO_NOMBRE}, {PROVINCIA}, {PAIS_NOMBRE}"
+            direccion = (
+                f"{via_mas_calle}, {MUNICIPIO_NOMBRE}, {PROVINCIA}, {PAIS_NOMBRE}"
+            )
 
             # -------------------------
             # 3) Llamada a Geoapify
@@ -378,7 +384,12 @@ def btn_ubicacion_calles_geolocalizacion():
 
             if filas_leidas <= 5:
                 log.info("🧪 [calles_geo] Dirección: %s", direccion)
-                log.info("🧪 [calles_geo] Resultado Geoapify: lat=%s lon=%s conf=%s", lat, lon, conf)
+                log.info(
+                    "🧪 [calles_geo] Resultado Geoapify: lat=%s lon=%s conf=%s",
+                    lat,
+                    lon,
+                    conf,
+                )
 
             # Pequeña pausa para no saturar el API
             time.sleep(GEOAPIFY_SLEEP)
@@ -399,7 +410,7 @@ def btn_ubicacion_calles_geolocalizacion():
             # -------------------------
             data = {
                 "idtbl_calles": idtbl_calles,
-                "idtbl_tipos_de_vias": None,            # se puede rellenar después
+                "idtbl_tipos_de_vias": None,  # se puede rellenar después
                 "idtbl_municipios": ID_MUNICIPIO,
                 "direccion_texto": direccion,
                 "latitud": float(lat),

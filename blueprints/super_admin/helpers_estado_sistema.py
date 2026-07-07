@@ -12,11 +12,11 @@ import os
 import platform
 import psutil
 
-
 # ================================================================
 # 2️⃣ FUNCIÓN PRINCIPAL
 # obtener_estado_sistema()
 # ================================================================
+
 
 def obtener_estado_sistema():
     """
@@ -55,13 +55,11 @@ def obtener_estado_sistema():
     proceso = psutil.Process(os.getpid())
 
     servidor = {
-
         "pid": proceso.pid,
         "cpu": psutil.cpu_percent(),
         "memoria": proceso.memory_info().rss // (1024 * 1024),
         "python": platform.python_version(),
         "sistema": platform.system(),
-
     }
 
     # ------------------------------------------------------------
@@ -69,19 +67,14 @@ def obtener_estado_sistema():
     # ------------------------------------------------------------
 
     estado = {
-
         "watchers_total": len(watchers),
         "watchers": watchers,
-
         "blueprints_total": len(blueprints),
         "blueprints": blueprints,
-
         "rutas_total": len(rutas),
         "rutas": rutas,
-
         "carpetas_total": len(carpetas),
         "carpetas": carpetas,
-
         "servidor": servidor,
     }
 

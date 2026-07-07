@@ -132,7 +132,6 @@
 
 from core.registry import obtener_paneles
 
-
 # =============================================================================
 # 2️⃣ EXTRACCIÓN DE MÓDULOS · LISTA UNIFICADA DEL SISTEMA
 # =============================================================================
@@ -190,6 +189,7 @@ from core.registry import obtener_paneles
 # la clave "modulos". Esto hace el sistema robusto ante cambios en registry.
 #
 # =============================================================================
+
 
 def obtener_modulos_activos():
     """
@@ -329,6 +329,7 @@ def obtener_modulos_activos():
 # • metricas: endpoints para obtener datos numéricos
 #
 # =============================================================================
+
 
 def obtener_metadatos_tarjetas():
     """
@@ -486,6 +487,7 @@ def obtener_metadatos_tarjetas():
 #   → Consulta tabla de configuración de endpoints
 #
 # =============================================================================
+
 
 def obtener_tarjetas_dashboard(rol_id):
     """
@@ -680,10 +682,7 @@ def obtener_tarjetas_ordenadas(rol_id, criterio="prioridad"):
     # para que vayan al final del listado.
     valor_defecto = 999 if criterio == "prioridad" else "ZZZ"
 
-    tarjetas_ordenadas = sorted(
-        tarjetas,
-        key=lambda t: t.get(criterio, valor_defecto)
-    )
+    tarjetas_ordenadas = sorted(tarjetas, key=lambda t: t.get(criterio, valor_defecto))
 
     return tarjetas_ordenadas
 

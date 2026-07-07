@@ -25,7 +25,6 @@ from functools import wraps
 from flask import session, redirect, url_for, flash, request
 from core.audit import registrar_evento
 
-
 # =============================================================================
 # 2️⃣ MATRIZ DE PERMISOS (ACL EN MEMORIA)
 # =============================================================================
@@ -43,12 +42,10 @@ from core.audit import registrar_evento
 # =============================================================================
 
 PERMISOS = {
-
     # ---------------------------------------------------------
     # 👑 SUPER ADMIN → ACCESO TOTAL
     # ---------------------------------------------------------
     "super_admin": ["*"],
-
     # ---------------------------------------------------------
     # 🧑‍💼 GESTORES → GESTIÓN DE CONTENEDORES
     # ---------------------------------------------------------
@@ -57,7 +54,6 @@ PERMISOS = {
         "crear_contenedor",
         "editar_contenedor",
     ],
-
     # ---------------------------------------------------------
     # 🚓 POLICÍAS → VALIDACIÓN
     # ---------------------------------------------------------
@@ -65,13 +61,10 @@ PERMISOS = {
         "ver_panel",
         "validar_contenedor",
     ],
-
     # ---------------------------------------------------------
     # 👤 USUARIOS → SOLO VISUALIZACIÓN
     # ---------------------------------------------------------
-    "usuarios": [
-        "ver_panel"
-    ]
+    "usuarios": ["ver_panel"],
 }
 
 
@@ -89,6 +82,7 @@ PERMISOS = {
 #     ...
 #
 # =============================================================================
+
 
 def requiere_permiso(permiso):
     """
@@ -134,7 +128,7 @@ def requiere_permiso(permiso):
             registrar_evento(
                 tipo_evento="acceso_denegado",
                 descripcion=f"Intento de acceso a '{permiso}'",
-                idtbl_gestores=user_id
+                idtbl_gestores=user_id,
             )
 
             # ---------------------------------------------------------
@@ -146,7 +140,7 @@ def requiere_permiso(permiso):
                 return {
                     "status": "error",
                     "message": "Forbidden",
-                    "permiso_requerido": permiso
+                    "permiso_requerido": permiso,
                 }, 403
 
             # 👉 WEB (HTML)
@@ -165,6 +159,7 @@ def requiere_permiso(permiso):
 # 🎯 Estas funciones ayudan a reutilizar lógica en otras partes del sistema
 #
 # =============================================================================
+
 
 def usuario_tiene_permiso(permiso):
     """

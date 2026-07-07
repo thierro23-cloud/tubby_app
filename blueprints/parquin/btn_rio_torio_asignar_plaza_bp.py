@@ -65,7 +65,6 @@ from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.shared import Cm
 
-
 btn_rio_torio_asignar_plaza_bp = Blueprint(
     "btn_rio_torio_asignar_plaza_bp",
     __name__,
@@ -85,6 +84,7 @@ PADRON_DIR.mkdir(parents=True, exist_ok=True)
 # =============================================================================
 # FUNCIONES AUXILIARES
 # =============================================================================
+
 
 def _get_orden_plazas():
     """
@@ -336,6 +336,7 @@ def _generar_pdf_y_docx_adjudicacion(id_plaza: int) -> tuple[Path, Path]:
 # VISTA PRINCIPAL
 # =============================================================================
 
+
 @btn_rio_torio_asignar_plaza_bp.route("/asignar_plaza", methods=["GET", "POST"])
 @login_required
 @rol_required("gestor", "super_admin")
@@ -527,7 +528,9 @@ def btn_rio_torio_asignar_plaza():
                 usuario_asignado = cursor.fetchone()
 
                 if not usuario_asignado:
-                    raise ValueError("No se ha encontrado el usuario seleccionado para la asignación.")
+                    raise ValueError(
+                        "No se ha encontrado el usuario seleccionado para la asignación."
+                    )
 
                 id_proveedor_nuevo = usuario_asignado["idtbl_proveedores"]
                 forma_pago_usuario = usuario_asignado["forma_pago"]
@@ -562,7 +565,9 @@ def btn_rio_torio_asignar_plaza():
                     if not solicitud:
                         raise ValueError("La solicitud seleccionada no existe.")
                     if solicitud["estado"] != "pendiente":
-                        raise ValueError("La solicitud seleccionada no está en estado pendiente.")
+                        raise ValueError(
+                            "La solicitud seleccionada no está en estado pendiente."
+                        )
 
                     # Se usan expediente y forma de pago de la solicitud para el histórico.
                     n_expediente_solicitud = solicitud["n_expediente"]
@@ -629,10 +634,16 @@ def btn_rio_torio_asignar_plaza():
                     #        fecha de inicio y expediente (de solicitud o del form).
                     # ----------------------------------------------------------
                     if set_asignar and id_usuario and not id_solicitud_plaza:
-                        raise ValueError("Para asignar plazas es obligatorio seleccionar una solicitud.")
+                        raise ValueError(
+                            "Para asignar plazas es obligatorio seleccionar una solicitud."
+                        )
 
-                    numero_expediente_final = n_expediente_solicitud or numero_expediente_asignacion
-                    exp_solicitud_final = n_expediente_solicitud or fila_plaza["exp_solicitud"]
+                    numero_expediente_final = (
+                        n_expediente_solicitud or numero_expediente_asignacion
+                    )
+                    exp_solicitud_final = (
+                        n_expediente_solicitud or fila_plaza["exp_solicitud"]
+                    )
 
                     cursor.execute(
                         """
@@ -653,7 +664,7 @@ def btn_rio_torio_asignar_plaza():
                             exp_solicitud_final,
                             id_plaza,
                         ),
-                     )
+                    )
 
                     # ----------------------------------------------------------
                     # 2.3.3) Insertar nuevo histórico de alta para la plaza:
@@ -764,7 +775,9 @@ def btn_rio_torio_asignar_plaza():
                 current_app.logger.exception("Error generando informe de adjudicación")
                 flash(f"Error generando el informe: {exc}", "danger")
 
-        return redirect(url_for("btn_rio_torio_asignar_plaza_bp.btn_rio_torio_asignar_plaza"))
+        return redirect(
+            url_for("btn_rio_torio_asignar_plaza_bp.btn_rio_torio_asignar_plaza")
+        )
 
     usuarios_parquin, plazas, sort, dir_param = _cargar_datos_parquin_rio_torio()
     return render_template(
@@ -780,7 +793,10 @@ def btn_rio_torio_asignar_plaza():
 # VISTA INFORME INDIVIDUAL
 # =============================================================================
 
-@btn_rio_torio_asignar_plaza_bp.route("/informe_adjudicacion/<int:id_plaza>", methods=["GET"])
+
+@btn_rio_torio_asignar_plaza_bp.route(
+    "/informe_adjudicacion/<int:id_plaza>", methods=["GET"]
+)
 @login_required
 @rol_required("gestor", "super_admin")
 def rio_torio_informe_adjudicacion(id_plaza: int):
@@ -800,4 +816,6 @@ def rio_torio_informe_adjudicacion(id_plaza: int):
     except Exception as exc:
         current_app.logger.exception("Error generando informe de adjudicación")
         flash(f"Error generando el informe de adjudicación: {exc}", "danger")
-        return redirect(url_for("btn_rio_torio_asignar_plaza_bp.btn_rio_torio_asignar_plaza"))
+        return redirect(
+            url_for("btn_rio_torio_asignar_plaza_bp.btn_rio_torio_asignar_plaza")
+        )

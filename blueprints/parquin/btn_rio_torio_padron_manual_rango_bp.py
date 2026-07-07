@@ -33,7 +33,6 @@ from flask import (
 
 from services.helpers import login_required, rol_required
 
-
 # =============================================================================
 # 1️⃣ DEFINICIÓN DEL BLUEPRINT
 # =============================================================================
@@ -55,6 +54,7 @@ btn_rio_torio_padron_manual_rango_bp = Blueprint(
 # =============================================================================
 # 2️⃣ FUNCIÓN INTERNA · GENERAR INFORME WORD POR RANGO MANUAL
 # =============================================================================
+
 
 def _generar_informe_word_rango(fecha_inicio, fecha_fin):
     """
@@ -85,6 +85,7 @@ def _generar_informe_word_rango(fecha_inicio, fecha_fin):
 #       btn_rio_torio_padron_manual_rango_bp
 # para evitar el NameError que te daba antes.
 
+
 @btn_rio_torio_padron_manual_rango_bp.route(
     "/btn_rio_torio_padron_manual_rango",
     methods=["GET", "POST"],
@@ -108,12 +109,8 @@ def btn_rio_torio_padron_manual_rango():
 
         # Intentamos parsear a objetos date
         try:
-            fecha_inicio = datetime.strptime(
-                fecha_inicio_str, "%Y-%m-%d"
-            ).date()
-            fecha_fin = datetime.strptime(
-                fecha_fin_str, "%Y-%m-%d"
-            ).date()
+            fecha_inicio = datetime.strptime(fecha_inicio_str, "%Y-%m-%d").date()
+            fecha_fin = datetime.strptime(fecha_fin_str, "%Y-%m-%d").date()
         except ValueError:
             flash(
                 "Fechas inválidas. Usa el selector de fecha.",

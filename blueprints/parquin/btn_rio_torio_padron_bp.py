@@ -11,7 +11,6 @@ from flask import Blueprint, current_app
 
 from db import ejecutar_query  # Ajusta si tu helper está en otro módulo
 
-
 # =============================================================================
 # 2) DEFINICIÓN DEL BLUEPRINT
 # =============================================================================
@@ -184,6 +183,8 @@ def construir_padron_principal(filas: list[dict]) -> list[dict]:
         )
 
     return resultado
+
+
 # =============================================================================
 # 6) DETECCIÓN DE VARIACIONES (TABLA DE VARIACIONES)
 # =============================================================================
@@ -263,7 +264,10 @@ def construir_variaciones(
                 if i in usadas_altas:
                     continue
                 # Regla que hemos definido: alta el día siguiente para otra plaza
-                if alta["fecha_inicio"] == d_mas_1 and alta["idtbl_plazas"] != baja["idtbl_plazas"]:
+                if (
+                    alta["fecha_inicio"] == d_mas_1
+                    and alta["idtbl_plazas"] != baja["idtbl_plazas"]
+                ):
                     variaciones.append(
                         {
                             "nombre_proveedor": baja["nombre_proveedor"],
@@ -325,9 +329,12 @@ def construir_variaciones(
                 forma_anterior = forma_actual
 
     # 6.7) Ordenar variaciones por proveedor, fecha y plaza
-    variaciones.sort(key=lambda v: (v["nombre_proveedor"], v["fecha"], v["codigo_plazas"]))
+    variaciones.sort(
+        key=lambda v: (v["nombre_proveedor"], v["fecha"], v["codigo_plazas"])
+    )
 
     return variaciones
+
 
 # =============================================================================
 # 7) ENDPOINT PRINCIPAL: GENERAR PADRÓN RÍO TORÍO

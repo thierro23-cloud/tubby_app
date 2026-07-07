@@ -37,7 +37,6 @@
 # =============================================================================
 
 
-
 # =============================================================================
 # 1️⃣ IMPORTACIONES · DEPENDENCIAS DEL BOTÓN
 # =============================================================================
@@ -58,8 +57,6 @@ import pytesseract
 from flask import Blueprint, render_template, request, jsonify
 
 from db import ejecutar_query
-
-
 
 # =============================================================================
 # 2️⃣ BLUEPRINT DEL BOTÓN · extractor_pdf_obras_bp
@@ -86,7 +83,6 @@ extractor_pdf_obras_bp = Blueprint(
 )
 
 
-
 # =============================================================================
 # 3️⃣ REGEX CSV · PATRÓN PARA DETECTAR EL CÓDIGO SEGURO DE VERIFICACIÓN
 # =============================================================================
@@ -110,7 +106,6 @@ REGEX_CSV = re.compile(
 )
 
 
-
 # =============================================================================
 # 4️⃣ FUNCIONES AUXILIARES · LIMPIEZA Y VALIDACIÓN DE CSV
 # =============================================================================
@@ -122,6 +117,7 @@ REGEX_CSV = re.compile(
 #     - Comprueba que la longitud está entre 12 y 40
 #     - Verifica que solo contiene caracteres alfanuméricos
 # =============================================================================
+
 
 def limpiar_csv(csv):
     if not csv:
@@ -141,7 +137,6 @@ def csv_valido(csv):
     return 12 <= len(csv) <= 40 and csv.isalnum()
 
 
-
 # =============================================================================
 # 5️⃣ BUSCAR CSV EN TEXTO PLANO
 # =============================================================================
@@ -150,6 +145,7 @@ def csv_valido(csv):
 #   - Si encuentra un candidato, lo limpia y devuelve
 #   - Si no, devuelve None
 # =============================================================================
+
 
 def buscar_csv(texto):
     if not texto:
@@ -163,7 +159,6 @@ def buscar_csv(texto):
     return None
 
 
-
 # =============================================================================
 # 6️⃣ EXTRAER TEXTO COMPLETO DEL PDF
 # =============================================================================
@@ -172,6 +167,7 @@ def buscar_csv(texto):
 #   - Usa pdfplumber para extraer texto de cada página
 #   - Concatena el texto en un único string
 # =============================================================================
+
 
 def extraer_texto_pdf(pdf):
     texto = ""
@@ -185,7 +181,6 @@ def extraer_texto_pdf(pdf):
     return texto
 
 
-
 # =============================================================================
 # 7️⃣ BUSCAR CSV EN METADATOS DEL PDF
 # =============================================================================
@@ -193,6 +188,7 @@ def extraer_texto_pdf(pdf):
 #   - Inspecciona los metadatos del PDF
 #   - Si algún campo es texto, intenta localizar un CSV con buscar_csv()
 # =============================================================================
+
 
 def buscar_csv_metadatos(pdf):
     meta = pdf.metadata
@@ -210,7 +206,6 @@ def buscar_csv_metadatos(pdf):
     return None
 
 
-
 # =============================================================================
 # 8️⃣ BUSCAR CSV EN LA ZONA INFERIOR DE LAS PÁGINAS
 # =============================================================================
@@ -222,6 +217,7 @@ def buscar_csv_metadatos(pdf):
 #
 #   - Si lo encuentra, lo devuelve; si no, None
 # =============================================================================
+
 
 def buscar_csv_zona_inferior(pdf):
     for pagina in pdf.pages:
@@ -247,7 +243,6 @@ def buscar_csv_zona_inferior(pdf):
     return None
 
 
-
 # =============================================================================
 # 9️⃣ OCR · BÚSQUEDA DE CSV CON RECONOCIMIENTO ÓPTICO
 # =============================================================================
@@ -256,6 +251,7 @@ def buscar_csv_zona_inferior(pdf):
 #   - Aplica OCR con pytesseract
 #   - Busca un CSV en el texto reconocido
 # =============================================================================
+
 
 def buscar_csv_ocr(pdf):
     for pagina in pdf.pages:
@@ -273,7 +269,6 @@ def buscar_csv_ocr(pdf):
     return None
 
 
-
 # =============================================================================
 # 🔟 FUNCIÓN PRINCIPAL DE EXTRACCIÓN · procesar_pdf(ruta_pdf)
 # =============================================================================
@@ -287,6 +282,7 @@ def buscar_csv_ocr(pdf):
 # En cuanto encuentra un CSV válido, lo devuelve.
 # Si ninguna estrategia tiene éxito, devuelve None.
 # =============================================================================
+
 
 def procesar_pdf(ruta_pdf):
     with pdfplumber.open(ruta_pdf) as pdf:
@@ -320,7 +316,6 @@ def procesar_pdf(ruta_pdf):
     return None
 
 
-
 # =============================================================================
 # 1️⃣1️⃣ PANTALLA PRINCIPAL DEL BOTÓN · btn_obras_extract_pdf
 # =============================================================================
@@ -329,6 +324,7 @@ def procesar_pdf(ruta_pdf):
 # - Muestra los últimos 100 PDF procesados desde la tabla tbl_obras_pdf
 # - Sirve como UI principal para el botón "Extracción PDF Obras"
 # =============================================================================
+
 
 @extractor_pdf_obras_bp.route("/", methods=["GET"])
 def btn_obras_extract_pdf():
@@ -353,7 +349,6 @@ def btn_obras_extract_pdf():
     )
 
 
-
 # =============================================================================
 # 1️⃣2️⃣ ENDPOINT DE SUBIDA · PROCESAR PDF Y EXTRAER CSV
 # =============================================================================
@@ -370,16 +365,19 @@ def btn_obras_extract_pdf():
 #         - Devuelve JSON con estado "ok" y el CSV encontrado
 # =============================================================================
 
+
 @extractor_pdf_obras_bp.route("/subir", methods=["POST"])
 def subir_pdf():
 
     archivo = request.files.get("pdf")
 
     if not archivo:
-        return jsonify({
-            "estado": "error",
-            "mensaje": "No se recibió archivo",
-        })
+        return jsonify(
+            {
+                "estado": "error",
+                "mensaje": "No se recibió archivo",
+            }
+        )
 
     carpeta = "contenedores/entrada_pdf"
     os.makedirs(carpeta, exist_ok=True)
@@ -394,10 +392,12 @@ def subir_pdf():
     csv = procesar_pdf(ruta_pdf)
 
     if not csv:
-        return jsonify({
-            "estado": "error",
-            "mensaje": "No se pudo detectar CSV",
-        })
+        return jsonify(
+            {
+                "estado": "error",
+                "mensaje": "No se pudo detectar CSV",
+            }
+        )
 
     # -------------------------------------------------------------
     # EVITAR DUPLICADOS
@@ -413,10 +413,12 @@ def subir_pdf():
     )
 
     if existe:
-        return jsonify({
-            "estado": "duplicado",
-            "csv": csv,
-        })
+        return jsonify(
+            {
+                "estado": "duplicado",
+                "csv": csv,
+            }
+        )
 
     # -------------------------------------------------------------
     # GUARDAR JSON
@@ -450,10 +452,13 @@ def subir_pdf():
         ),
     )
 
-    return jsonify({
-        "estado": "ok",
-        "csv": csv,
-    })
+    return jsonify(
+        {
+            "estado": "ok",
+            "csv": csv,
+        }
+    )
+
 
 # =============================================================================
 # ✅ FIN BOTÓN OBRAS · EXTRACCIÓN AUTOMÁTICA DE CSV DESDE PDF

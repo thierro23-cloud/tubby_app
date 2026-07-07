@@ -129,9 +129,7 @@ def log_accion_datos(
     ----------------------
     Log para acciones sobre datos (SELECT, INSERT, UPDATE, DELETE).
     """
-    msg = (
-        f"[ADMIN_AUTO_DATOS] schema={schema} tabla={tabla} accion={accion} sql={sql}"
-    )
+    msg = f"[ADMIN_AUTO_DATOS] schema={schema} tabla={tabla} accion={accion} sql={sql}"
     if params:
         msg += f" params={params}"
     msg += f" resultado={resultado}"
@@ -150,6 +148,7 @@ def log_accion_datos(
 # 🧠 3️⃣ FUNCIONES AUXILIARES
 # =============================================================================
 
+
 def obtener_tablas_por_esquema() -> dict[str, list[str]]:
     """
     3.1️⃣ obtener_tablas_por_esquema
@@ -157,8 +156,7 @@ def obtener_tablas_por_esquema() -> dict[str, list[str]]:
     Devuelve dict agrupando tablas por esquema para ESQUEMAS_PERMITIDOS.
     """
     esquemas = "', '".join(ESQUEMAS_PERMITIDOS)
-    filas = ejecutar_query(
-        f"""
+    filas = ejecutar_query(f"""
         SELECT
             table_schema AS schema_name,
             table_name   AS table_name
@@ -166,8 +164,7 @@ def obtener_tablas_por_esquema() -> dict[str, list[str]]:
         WHERE table_schema IN ('{esquemas}')
           AND table_type = 'BASE TABLE'
         ORDER BY table_schema, table_name
-        """
-    )
+        """)
 
     tablas_por_esquema: dict[str, list[str]] = {}
     for fila in filas:
@@ -280,7 +277,7 @@ def obtener_id_principal(fila: dict, columnas: list[dict]) -> any:
     for col in columnas:
         if col["COLUMN_KEY"] == "PRI":
             return fila[col["COLUMN_NAME"]]
-    
+
     # Si no hay PK, usa la primera columna
     return fila[columnas[0]["COLUMN_NAME"]]
 
@@ -300,6 +297,7 @@ btn_tablas_admin_auto_bp = Blueprint(
 # 🧩 5️⃣ RUTA PRINCIPAL · SELECTOR DE TABLAS
 # =============================================================================
 
+
 @btn_tablas_admin_auto_bp.route("/admin_auto", methods=["GET"])
 @login_required
 @rol_required("super_admin")
@@ -317,6 +315,7 @@ def btn_tablas_admin_auto():
 # =============================================================================
 # 🧩 6️⃣ DETALLE DE TABLA · DATOS + ACCIONES (añadir/editar/borrar)
 # =============================================================================
+
 
 @btn_tablas_admin_auto_bp.route("/admin_auto_detalle", methods=["GET"])
 @login_required
@@ -371,6 +370,7 @@ def admin_auto_detalle():
 # 🧩 7️⃣ FORMULARIO DE REGISTRO · ALTA / EDICIÓN
 # =============================================================================
 
+
 @btn_tablas_admin_auto_bp.route(
     "/registro_form/<schema>/<tabla>", methods=["GET", "POST"]
 )
@@ -393,19 +393,17 @@ def admin_auto_registro_form(schema: str, tabla: str, reg_id: any = None):
 
     if schema not in ESQUEMAS_PERMITIDOS:
         flash("Esquema no permitido.", "danger")
-        return redirect(
-            url_for("btn_tablas_admin_auto_bp.btn_tablas_admin_auto")
-        )
+        return redirect(url_for("btn_tablas_admin_auto_bp.btn_tablas_admin_auto"))
 
     columnas = obtener_columnas(schema, tabla)
-    
+
     # Detectar columna primaria
     col_primary = None
     for col in columnas:
         if col["COLUMN_KEY"] == "PRI":
             col_primary = col["COLUMN_NAME"]
             break
-    
+
     if not col_primary:
         col_primary = columnas[0]["COLUMN_NAME"]
 
@@ -574,6 +572,7 @@ def admin_auto_registro_form(schema: str, tabla: str, reg_id: any = None):
 # 🧩 8️⃣ CONFIRMACIÓN Y ELIMINACIÓN DE REGISTRO(S)
 # =============================================================================
 
+
 @btn_tablas_admin_auto_bp.route(
     "/registro_confirm/<schema>/<tabla>/<reg_id>", methods=["GET", "POST"]
 )
@@ -593,19 +592,17 @@ def admin_auto_registro_confirm(schema: str, tabla: str, reg_id: any):
 
     if schema not in ESQUEMAS_PERMITIDOS:
         flash("Esquema no permitido.", "danger")
-        return redirect(
-            url_for("btn_tablas_admin_auto_bp.btn_tablas_admin_auto")
-        )
+        return redirect(url_for("btn_tablas_admin_auto_bp.btn_tablas_admin_auto"))
 
     columnas = obtener_columnas(schema, tabla)
-    
+
     # Detectar columna primaria
     col_primary = None
     for col in columnas:
         if col["COLUMN_KEY"] == "PRI":
             col_primary = col["COLUMN_NAME"]
             break
-    
+
     if not col_primary:
         col_primary = columnas[0]["COLUMN_NAME"]
 
@@ -719,7 +716,7 @@ def admin_auto_registro_confirm_multiple(schema: str, tabla: str):
     schema = request.values.get("schema", schema).strip()
     tabla = request.values.get("tabla", tabla).strip()
     origen = request.values.get("origen", "")
-    
+
     # Recoger IDs (puede venir como lista o como string separado por comas)
     ids_lista = request.form.getlist("ids[]")
     if not ids_lista:
@@ -740,19 +737,17 @@ def admin_auto_registro_confirm_multiple(schema: str, tabla: str):
 
     if schema not in ESQUEMAS_PERMITIDOS:
         flash("Esquema no permitido.", "danger")
-        return redirect(
-            url_for("btn_tablas_admin_auto_bp.btn_tablas_admin_auto")
-        )
+        return redirect(url_for("btn_tablas_admin_auto_bp.btn_tablas_admin_auto"))
 
     columnas = obtener_columnas(schema, tabla)
-    
+
     # Detectar columna primaria
     col_primary = None
     for col in columnas:
         if col["COLUMN_KEY"] == "PRI":
             col_primary = col["COLUMN_NAME"]
             break
-    
+
     if not col_primary:
         col_primary = columnas[0]["COLUMN_NAME"]
 
@@ -762,7 +757,7 @@ def admin_auto_registro_confirm_multiple(schema: str, tabla: str):
         DELETE FROM `{schema}`.`{tabla}`
         WHERE `{col_primary}` IN ({placeholders})
     """
-    
+
     params = {f"id{i}": ids_lista[i] for i in range(len(ids_lista))}
 
     try:
@@ -807,9 +802,8 @@ def admin_auto_registro_confirm_multiple(schema: str, tabla: str):
 # 🧩 9️⃣ FORMULARIO DE ESQUEMA · ALTER TABLE
 # =============================================================================
 
-@btn_tablas_admin_auto_bp.route(
-    "/admin_auto_esquema", methods=["GET", "POST"]
-)
+
+@btn_tablas_admin_auto_bp.route("/admin_auto_esquema", methods=["GET", "POST"])
 @login_required
 @rol_required("super_admin")
 def admin_auto_esquema_form():
@@ -823,15 +817,11 @@ def admin_auto_esquema_form():
 
     if not schema or not tabla:
         flash("Esquema y tabla son obligatorios.", "warning")
-        return redirect(
-            url_for("btn_tablas_admin_auto_bp.btn_tablas_admin_auto")
-        )
+        return redirect(url_for("btn_tablas_admin_auto_bp.btn_tablas_admin_auto"))
 
     if schema not in ESQUEMAS_PERMITIDOS:
         flash("Esquema no permitido para admin automático.", "danger")
-        return redirect(
-            url_for("btn_tablas_admin_auto_bp.btn_tablas_admin_auto")
-        )
+        return redirect(url_for("btn_tablas_admin_auto_bp.btn_tablas_admin_auto"))
 
     if es_tabla_solo_esquema(schema, tabla):
         flash("Esta tabla está en modo solo lectura de esquema.", "warning")
@@ -957,9 +947,7 @@ def admin_auto_esquema_form():
     )
 
 
-@btn_tablas_admin_auto_bp.route(
-    "/admin_auto_esquema_apply", methods=["POST"]
-)
+@btn_tablas_admin_auto_bp.route("/admin_auto_esquema_apply", methods=["POST"])
 @login_required
 @rol_required("super_admin")
 def admin_auto_esquema_apply():
@@ -976,7 +964,9 @@ def admin_auto_esquema_apply():
     usuario = session.get("usuario", "unknown") if session else "unknown"
 
     if not confirmar:
-        flash("Debes marcar la casilla de confirmación para aplicar el cambio.", "warning")
+        flash(
+            "Debes marcar la casilla de confirmación para aplicar el cambio.", "warning"
+        )
         return redirect(
             url_for(
                 "btn_tablas_admin_auto_bp.admin_auto_detalle",
@@ -987,9 +977,7 @@ def admin_auto_esquema_apply():
 
     if schema not in ESQUEMAS_PERMITIDOS:
         flash("Esquema no permitido para admin automático.", "danger")
-        return redirect(
-            url_for("btn_tablas_admin_auto_bp.btn_tablas_admin_auto")
-        )
+        return redirect(url_for("btn_tablas_admin_auto_bp.btn_tablas_admin_auto"))
 
     if accion == "add_column":
         nombre_columna = request.form.get("nombre_columna", "").strip()
@@ -1116,8 +1104,7 @@ def admin_auto_esquema_apply():
             )
 
         sql_full = (
-            f"ALTER TABLE `{schema}`.`{tabla}` "
-            f"DROP COLUMN `{columna_objetivo}`;"
+            f"ALTER TABLE `{schema}`.`{tabla}` " f"DROP COLUMN `{columna_objetivo}`;"
         )
 
         try:

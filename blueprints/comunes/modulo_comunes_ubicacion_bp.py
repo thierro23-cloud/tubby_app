@@ -15,7 +15,6 @@ Módulo ligero cuyo único propósito es:
 from flask import Blueprint, render_template
 from services.helpers import login_required, rol_required
 
-
 # =============================================================================
 # 1️⃣ BLUEPRINT DEL MÓDULO
 # =============================================================================
@@ -31,6 +30,7 @@ modulo_comunes_ubicacion_bp = Blueprint(
 # =============================================================================
 # 2️⃣ VISTA DEL MÓDULO (SIN LÓGICA, SOLO CONTENEDOR)
 # =============================================================================
+
 
 @modulo_comunes_ubicacion_bp.route("/", methods=["GET"])
 @login_required

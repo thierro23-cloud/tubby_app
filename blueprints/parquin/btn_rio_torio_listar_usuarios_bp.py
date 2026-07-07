@@ -14,7 +14,6 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash
 from services.helpers import login_required, rol_required
 from db import ejecutar_query, ejecutar_non_query
 
-
 # =============================================================================
 # 1 BLUEPRINT DEL BOTÓN
 # =============================================================================
@@ -29,6 +28,7 @@ btn_rio_torio_listar_usuarios_bp = Blueprint(
 # =============================================================================
 # 2 HELPERS SQL · LISTAR, ACTUALIZAR USUARIOS Y OBTENER PLAZAS
 # =============================================================================
+
 
 def _rt_listar_usuarios_parquin():
     """
@@ -95,6 +95,7 @@ def _rt_obtener_plazas_por_usuario(id_usuario: int):
 # 3 VISTA PRINCIPAL · LISTADO DE USUARIOS RIO_TORIO
 # =============================================================================
 
+
 @btn_rio_torio_listar_usuarios_bp.route(
     "/btn_rio_torio_listar_usuarios",
     methods=["GET"],
@@ -116,6 +117,7 @@ def btn_rio_torio_listar_usuarios():
 # =============================================================================
 # 4 VISTA · VER PLAZAS DE UN USUARIO
 # =============================================================================
+
 
 @btn_rio_torio_listar_usuarios_bp.route(
     "/usuarios/<int:id_usuario>/plazas",
@@ -139,6 +141,7 @@ def btn_rio_torio_ver_plazas(id_usuario: int):
 # =============================================================================
 # 5 VISTA · EDITAR USUARIO RIO_TORIO
 # =============================================================================
+
 
 @btn_rio_torio_listar_usuarios_bp.route(
     "/usuarios/<int:id_usuario>/editar",
@@ -168,9 +171,7 @@ def btn_rio_torio_editar_usuario(id_usuario: int):
 
         flash("Usuario actualizado correctamente.", "success")
         return redirect(
-            url_for(
-                "btn_rio_torio_listar_usuarios_bp.btn_rio_torio_listar_usuarios"
-            )
+            url_for("btn_rio_torio_listar_usuarios_bp.btn_rio_torio_listar_usuarios")
         )
 
     # -------------------------------------------------------------------------

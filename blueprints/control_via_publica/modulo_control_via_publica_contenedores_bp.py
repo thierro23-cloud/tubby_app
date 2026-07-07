@@ -13,6 +13,7 @@ modulo_control_via_publica_contenedores_bp = Blueprint(
     template_folder="templates/modulos/contenedores",
 )
 
+
 @modulo_control_via_publica_contenedores_bp.route("/", methods=["GET"])
 @rol_required("gestor_via_publica")
 def modulo_control_via_publica_contenedores():

@@ -1,85 +1,6 @@
 <!-- =============================================================================
 👑 SUPER ADMIN · 4 COLUMNAS · PANEL / MÓDULOS / BOTONES / DETALLE + AUDITORÍA
 - Archivo: templates/super_admin/super_admin.html
-
-DATOS QUE ESPERA DEL BACKEND (super_admin_bp.super_admin):
-    paneles: [
-        {"nombre": "panel_comunes_bp"},
-        {"nombre": "panel_control_via_publica_bp"},
-        ...
-    ]
-
-    modulos: [
-        {"nombre": "modulo_parquin_rio_torio_bp", "texto": "Parquin Rio Torio"},
-        ...
-    ]
-
-    botones: [
-        {"nombre": "btn_rio_torio_padron", "texto": "Padrón mensual (Word)", "url": "/..."},
-        ...
-    ]
-
-    panel_seleccionado:        "panel_parquin_bp"
-    modulo_seleccionado:       "modulo_parquin_rio_torio_bp"
-
-    stats: (opcional, según módulo)
-      - Para contenedores:
-        {
-          "tipo": "contenedores",
-          "titulo": "Contenedores",
-          "resumen": {
-              "instalados": 10,
-              "retirados": 5,
-              "totales": 15,
-          },
-          "por_anio": [
-              {"anio": 2026, "total": 7},
-              ...
-          ],
-          "iconos": {
-              "instalados": "/static/imagen/contenedor_verde.png",
-              "retirados":  "/static/imagen/contenedor_azul.png"
-          }
-        }
-
-      - Para parquin Río Torio:
-        {
-          "tipo": "parquin_rio_torio",
-          "titulo": "Parquin Rio Torio",
-          "resumen": {
-              "totales": 120,
-              "libres": 50,
-              "ocupadas": 70,
-          },
-          "iconos": {
-              "ocupada":          "/static/imagen/camion_rojo.png",
-              "libre":            "/static/imagen/camion_verde.png",
-              "ocupada_especial": "/static/imagen/camion_azul.png"
-          }
-        }
-
-    resumen_auditoria:
-      {
-        "intentos_7d":           42,
-        "exitosos_7d":           30,
-        "fallidos_7d":           12,
-        "gestores_activos_30d":  8,
-        "ultimo_login_actual":   datetime o None
-      }
-
-    ultimos_eventos: lista con últimos movimientos de audit_log:
-      [
-        {
-          "fecha": "2026-05-13 20:01:02",
-          "accion": "acceso_concedido",
-          "modulo": "btn_rio_torio_accesos_bp",
-          "endpoint": "btn_rio_torio_accesos_bp.btn_rio_torio_accesos",
-          "ip": "127.0.0.1"
-        },
-        ...
-      ]
-
-- Esta plantilla se limita a MOSTRAR, no hace lógica de negocio.
 ============================================================================= -->
 <!DOCTYPE html>
 <html lang="es">
@@ -128,10 +49,6 @@ body{
 
 /* ============================================================================
 🎩 2. ENCABEZADO (HEADER)
-- Ahora incluye tarjetas de auditoría:
-    · Intentos de login (7 días)
-    · Gestores activos (30 días)
-    · Último login del super_admin
 ============================================================================= */
 .header{
     height:92px;
@@ -400,7 +317,6 @@ body{
     display:flex;align-items:center;gap:8px;
 }
 </style>
-<!-- 🎨 FIN BLOQUE DE DISEÑO -->
 </head>
 
 <body>
@@ -421,78 +337,96 @@ body{
             </div>
 
             <div class="header-right">
-    <!-- Botón de acceso directo a la agenda -->
-    <a
-      href="{{ url_for('agenda_bp.agenda_principal') }}"
-      style="
-        display:inline-flex;
-        align-items:center;
-        gap:6px;
-        padding:4px 10px;
-        border-radius:999px;
-        border:1px solid rgba(59,130,246,.9);
-        background:
-          radial-gradient(circle at top left, rgba(59,130,246,.30), transparent 55%),
-          linear-gradient(135deg, rgba(15,23,42,.98), rgba(15,23,42,.94));
-        color:#e5e7eb;
-        font-size:.72rem;
-        text-decoration:none;
-        text-transform:uppercase;
-        letter-spacing:.12em;
-        cursor:pointer;
-        box-shadow:0 4px 14px rgba(15,23,42,.9);
-        transition:
-            border-color .15s ease,
-            box-shadow .15s ease,
-            transform .12s ease,
-            background .15s ease;
-      "
-    >
-        <span style="font-size:.9rem;">📅</span>
-        <span>Agenda vía pública</span>
-    </a>
+                <!-- Botón de acceso directo a la agenda -->
+                <a
+                  href="{{ url_for('agenda_bp.agenda_principal') }}"
+                  style="
+                    display:inline-flex;
+                    align-items:center;
+                    gap:6px;
+                    padding:4px 10px;
+                    border-radius:999px;
+                    border:1px solid rgba(59,130,246,.9);
+                    background:
+                      radial-gradient(circle at top left, rgba(59,130,246,.30), transparent 55%),
+                      linear-gradient(135deg, rgba(15,23,42,.98), rgba(15,23,42,.94));
+                    color:#e5e7eb;
+                    font-size:.72rem;
+                    text-decoration:none;
+                    text-transform:uppercase;
+                    letter-spacing:.12em;
+                    cursor:pointer;
+                    box-shadow:0 4px 14px rgba(15,23,42,.9);
+                    transition:
+                        border-color .15s ease,
+                        box-shadow .15s ease,
+                        transform .12s ease,
+                        background .15s ease;
+                  "
+                >
+                    <span style="font-size:.9rem;">📅</span>
+                    <span>Agenda vía pública</span>
+                </a>
 
-    <!-- Botón de diagnóstico: ver endpoints -->
-    <a
-      href="{{ url_for('super_admin_bp.super_admin_endpoints') }}"
-      style="
-        display:inline-flex;
-        align-items:center;
-        gap:6px;
-        padding:4px 10px;
-        border-radius:999px;
-        border:1px solid rgba(34,197,94,.9);
-        background:
-          radial-gradient(circle at top left, rgba(34,197,94,.30), transparent 55%),
-          linear-gradient(135deg, rgba(15,23,42,.98), rgba(15,23,42,.94));
-        color:#e5e7eb;
-        font-size:.72rem;
-        text-decoration:none;
-        text-transform:uppercase;
-        letter-spacing:.12em;
-        cursor:pointer;
-        box-shadow:0 4px 14px rgba(15,23,42,.9);
-        margin-left:8px;
-        transition:
-            border-color .15s ease,
-            box-shadow .15s ease,
-            transform .12s ease,
-            background .15s ease;
-      "
-    >
-        <span style="font-size:.9rem;">🧭</span>
-        <span>Ver endpoints</span>
-    </a>
+                <!-- Botón de diagnóstico: ver endpoints -->
+                <a
+                  href="{{ url_for('super_admin_bp.super_admin_endpoints') }}"
+                  style="
+                    display:inline-flex;
+                    align-items:center;
+                    gap:6px;
+                    padding:4px 10px;
+                    border-radius:999px;
+                    border:1px solid rgba(34,197,94,.9);
+                    background:
+                      radial-gradient(circle at top left, rgba(34,197,94,.30), transparent 55%),
+                      linear-gradient(135deg, rgba(15,23,42,.98), rgba(15,23,42,.94));
+                    color:#e5e7eb;
+                    font-size:.72rem;
+                    text-decoration:none;
+                    text-transform:uppercase;
+                    letter-spacing:.12em;
+                    cursor:pointer;
+                    box-shadow:0 4px 14px rgba(15,23,42,.9);
+                    margin-left:8px;
+                    transition:
+                        border-color .15s ease,
+                        box-shadow .15s ease,
+                        transform .12s ease,
+                        background .15s ease;
+                  "
+                >
+                    <span style="font-size:.9rem;">🧭</span>
+                    <span>Ver endpoints</span>
+                </a>
 
-    <!-- Texto auxiliar de auditoría (lo mantenemos) -->
-    <span class="header-placeholder" style="margin-left:10px;">
-        AUDITORÍA
-    </span>
-</div>
+                <span class="header-placeholder" style="margin-left:10px;">
+                    AUDITORÍA
+                </span>
+            </div>
+        </div>
 
         <!-- 5.2 Fila inferior: tarjetas de auditoría -->
         <div class="header-stats">
-            <!-- ... resto de tarjetas exactamente igual que lo tienes ... -->
+            <!-- Aquí va tu render de resumen_auditoria, igual que lo tenías -->
+            <!-- Ejemplo mínimo: -->
+            {% if resumen_auditoria %}
+            <div class="header-card">
+                <div class="header-card-title">Intentos últimos 7 días</div>
+                <div class="header-card-main">{{ resumen_auditoria.intentos_7d }}</div>
+                <div class="header-card-sub">
+                    <span>✔ {{ resumen_auditoria.exitosos_7d }}</span>
+                    <span>✖ {{ resumen_auditoria.fallidos_7d }}</span>
+                </div>
+            </div>
+            <div class="header-card">
+                <div class="header-card-title">Gestores activos 30 días</div>
+                <div class="header-card-main">{{ resumen_auditoria.gestores_activos_30d }}</div>
+                <div class="header-card-sub">
+                    Último login: {{ resumen_auditoria.ultimo_login_actual or 'N/D' }}
+                </div>
+            </div>
+            {% endif %}
         </div>
     </header>
 
@@ -623,13 +557,23 @@ body{
                                         </span>
 
                                         {% if b.url %}
-                                            <a
-                                              href="{{ b.url }}"
-                                              class="endpoint-action"
-                                              target="{% if b.tipo_accion == 'url_externa' %}_blank{% else %}_self{% endif %}"
-                                            >
-                                                Ejecutar
-                                            </a>
+                                            {% if b.nombre == 'btn_contenedores_emparejar' %}
+                                                <!-- Botón especial: ejecuta por POST -->
+                                                <form action="{{ b.url }}" method="post" style="margin:0;">
+                                                    <button type="submit" class="endpoint-action">
+                                                        Ejecutar
+                                                    </button>
+                                                </form>
+                                            {% else %}
+                                                <!-- Otros botones: GET normal -->
+                                                <a
+                                                  href="{{ b.url }}"
+                                                  class="endpoint-action"
+                                                  target="{% if b.tipo_accion == 'url_externa' %}_blank{% else %}_self{% endif %}"
+                                                >
+                                                    Ejecutar
+                                                </a>
+                                            {% endif %}
                                         {% endif %}
                                     </div>
 
@@ -655,7 +599,7 @@ body{
             </div>
         </section>
 
-                       <!-- 6.4 COLUMNA 4 · DETALLE / ESTADÍSTICAS + ACTIVIDAD -->
+        <!-- 6.4 COLUMNA 4 · DETALLE / ESTADÍSTICAS + ACTIVIDAD -->
         <section class="panel panel-4">
             <div class="panel-head">
                 <h2>Detalle</h2>
@@ -845,28 +789,20 @@ body{
     </footer>
 
 </div>
+
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-  console.log("DEBUG_CHAT: DOMContentLoaded ejecutado");
-
   const inputEl  = document.getElementById("chat_input");
   const sendBtn  = document.getElementById("send_btn");
   const replyEl  = document.getElementById("chat_reply");
   const statusEl = document.getElementById("chat_status");
-
-  console.log("DEBUG_CHAT: elementos",
-              inputEl, sendBtn, replyEl, statusEl);
 
   if (!inputEl || !sendBtn || !replyEl || !statusEl) {
     console.warn("Chat LLM: no se encontraron los elementos");
     return;
   }
 
-  console.log("DEBUG_CHAT: listener click va a añadirse");
-
   async function enviarMensaje() {
-    console.log("DEBUG_CHAT: click en Enviar detectado");
-
     const message = (inputEl.value || "").trim();
     if (!message) {
       replyEl.textContent = "";
@@ -906,7 +842,6 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
-  // Muy importante: este listener va fuera del try, pero dentro de DOMContentLoaded
   sendBtn.addEventListener("click", enviarMensaje);
 });
 </script>

@@ -36,9 +36,10 @@ import datetime
 from pathlib import Path
 from typing import Dict, Any, List
 
-import fitz              # PyMuPDF
+import fitz  # PyMuPDF
 from PIL import Image
-import pytesseract       # OCR Tesseract
+import pytesseract  # OCR Tesseract
+
 # PyMuPDF y pytesseract se usan para extraer texto y aplicar OCR.[web:144][web:149]
 
 
@@ -67,8 +68,9 @@ import pytesseract       # OCR Tesseract
 #       · Si incluso tras OCR la longitud es inferior a este valor, la
 #         página se descarta (se considera "vacía").
 # -----------------------------------------------------------------------------
-def extraer_texto_con_ocr(pdf_path: str | Path,
-                          idioma_ocr: str = "spa") -> Dict[str, Any]:
+def extraer_texto_con_ocr(
+    pdf_path: str | Path, idioma_ocr: str = "spa"
+) -> Dict[str, Any]:
     pdf_path = Path(pdf_path)
     doc = fitz.open(pdf_path)
 
@@ -112,6 +114,8 @@ def extraer_texto_con_ocr(pdf_path: str | Path,
         "paginas": paginas,
         "texto_completo": "\n\n".join(texto_full),
     }
+
+
 # 1.1) extraer_texto_con_ocr(pdf_path, idioma_ocr) (TERMINA)
 # -----------------------------------------------------------------------------
 
@@ -158,6 +162,8 @@ def siguiente_nombre_salida(carpeta: Path) -> Path:
     siguiente = max_n + 1
     nombre = f"{year}_prueba_extraccion_{siguiente:03d}.txt"
     return carpeta / nombre
+
+
 # 2.1) siguiente_nombre_salida(carpeta) (TERMINA)
 # -----------------------------------------------------------------------------
 
@@ -213,6 +219,8 @@ def procesar_carpeta_pdfs(carpeta_pdfs: str | Path) -> Path:
             f.write(linea + "\n")
 
     return salida
+
+
 # 3.1) procesar_carpeta_pdfs(carpeta_pdfs) (TERMINA)
 # -----------------------------------------------------------------------------
 
@@ -240,9 +248,7 @@ def procesar_carpeta_pdfs(carpeta_pdfs: str | Path) -> Path:
 # -----------------------------------------------------------------------------
 if __name__ == "__main__":
     usuario = os.getlogin()
-    carpeta_pdfs = Path(
-        f"C:/Users/{usuario}/Desktop/tubby_app/watchers/pruebas_pdf"
-    )
+    carpeta_pdfs = Path(f"C:/Users/{usuario}/Desktop/tubby_app/watchers/pruebas_pdf")
     ruta_txt = procesar_carpeta_pdfs(carpeta_pdfs)
     print(f"TXT generado: {ruta_txt}")
 # 4.1) Punto de entrada para pruebas locales (TERMINA)

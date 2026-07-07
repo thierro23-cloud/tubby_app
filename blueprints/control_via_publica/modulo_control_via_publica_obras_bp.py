@@ -15,7 +15,6 @@ modulo_control_via_publica_obras_bp = Blueprint(
 )
 
 
-
 @modulo_control_via_publica_obras_bp.route("/", methods=["GET"])
 @rol_required("gestor_via_publicica")
 def modulo_control_via_publica_obras():
@@ -55,7 +54,11 @@ def api_crear_evento_agenda_obra(id_obra: int):
 
     obra = filas[0]
 
-    if not obra["idtbl_calles"] or not obra["fecha_obras_inicio"] or not obra["fecha_obras_fin"]:
+    if (
+        not obra["idtbl_calles"]
+        or not obra["fecha_obras_inicio"]
+        or not obra["fecha_obras_fin"]
+    ):
         return jsonify({"error": "La obra no tiene calle o fechas definidas"}), 400
 
     id_calle = obra["idtbl_calles"]

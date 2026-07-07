@@ -23,6 +23,7 @@ btn_ubicacion_calles_editar_bp = Blueprint(
 # FUNCIONES AUXILIARES
 # ================================================
 
+
 def obtener_calle_por_id(idtbl_calles):
     """
     Devuelve los datos completos de una calle dada su ID.
@@ -100,9 +101,11 @@ def obtener_lista_barrios():
     """
     return ejecutar_query(sql, nombre_bd="bd_tbl_comunes") or []
 
+
 # ================================================
 # RUTAS
 # ================================================
+
 
 @btn_ubicacion_calles_editar_bp.route("/<int:idtbl_calles>", methods=["GET"])
 @login_required
@@ -123,7 +126,9 @@ def btn_ubicacion_calles_editar_form(idtbl_calles):
     calle = obtener_calle_por_id(idtbl_calles)
 
     # DEBUG opcional: ver qué llega a la plantilla
-    print("DEBUG btn_ubicacion_calles_editar_form calle =", calle, "type =", type(calle))
+    print(
+        "DEBUG btn_ubicacion_calles_editar_form calle =", calle, "type =", type(calle)
+    )
 
     if not calle:
         return redirect(
@@ -192,7 +197,7 @@ def btn_ubicacion_calles_editar_update(idtbl_calles):
                 idtbl_tipos_de_vias,
                 calles,
                 Codigopostal,
-                Barrio,          # puede ser None → NULL
+                Barrio,  # puede ser None → NULL
                 idtbl_barrios,
                 idtbl_calles,
             ),
@@ -252,7 +257,7 @@ def btn_ubicacion_calles_crear():
                 idtbl_tipos_de_vias,
                 calles,
                 Codigopostal,
-                Barrio,      # puede ser None → NULL
+                Barrio,  # puede ser None → NULL
                 idtbl_barrios,
             ),
             nombre_bd="bd_tbl_comunes",

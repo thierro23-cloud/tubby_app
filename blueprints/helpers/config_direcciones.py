@@ -5,9 +5,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent  # subes desde blueprints/...
 DATA_DIR = BASE_DIR / "data"
 CONFIG_DIRECCIONES_XML = DATA_DIR / "config_direcciones.xml"
 
+
 def cargar_config_direcciones():
     with CONFIG_DIRECCIONES_XML.open("r", encoding="utf-8") as f:
         xml_texto = f.read()
     # Aquí parseas el XML (ElementTree, lxml, etc.)
     return xml_texto
-

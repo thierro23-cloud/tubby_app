@@ -20,9 +20,22 @@
 #       - Camión azul (ocupada especial) → pendiente de icono físico.
 # =============================================================================
 
-from flask import Blueprint, request, render_template, current_app, session, url_for
+from flask import (
+    Blueprint,
+    request,
+    render_template,
+    current_app,
+    session,
+    url_for,
+    redirect,
+    flash,
+)
+from flask_login import login_required, current_user
+
 from db import ejecutar_query, get_connection
-from tools.utils import obtener_todos_los_endpoints  # <-- añade esto
+from tools.utils import obtener_todos_los_endpoints
+
+
 
 # =============================================================================
 # 1️⃣ BLUEPRINT DEL SUPER ADMIN
@@ -38,6 +51,7 @@ super_admin_bp = Blueprint(
 # =============================================================================
 # 2️⃣ SERVICIO · SUPER ADMIN DISCOVERY POR CONVENCIÓN
 # =============================================================================
+
 
 class SuperAdminSimpleService:
     """
@@ -111,11 +125,13 @@ class SuperAdminSimpleService:
         if not panel_seleccionado:
             return []
 
-        if not (panel_seleccionado.startswith("panel_")
-                and panel_seleccionado.endswith("_bp")):
+        if not (
+            panel_seleccionado.startswith("panel_")
+            and panel_seleccionado.endswith("_bp")
+        ):
             return []
 
-        panel_id = panel_seleccionado[len("panel_"):-len("_bp")]
+        panel_id = panel_seleccionado[len("panel_"): -len("_bp")]
         prefijo_modulo = f"modulo_{panel_id}_"
 
         modulos: set[str] = set()
@@ -182,8 +198,9 @@ class SuperAdminSimpleService:
     # 2.5️⃣ obtener_botones → 3ª columna (BOTONES)
     # -------------------------------------------------------------------------
     @staticmethod
-    def obtener_botones(panel_seleccionado: str | None,
-                        modulo_seleccionado: str | None) -> list[dict]:
+    def obtener_botones(
+        panel_seleccionado: str | None, modulo_seleccionado: str | None
+    ) -> list[dict]:
 
         if not panel_seleccionado or not modulo_seleccionado:
             return []
@@ -226,15 +243,20 @@ class SuperAdminSimpleService:
 
             texto = SuperAdminSimpleService.humanizar(nombre_btn_sin_modulo)
 
-            botones.append({
-                "nombre": view_name,
-                "blueprint": bp_name,
-                "url": url,
-                "texto": texto,
-            })
+            botones.append(
+                {
+                    "nombre": view_name,
+                    "blueprint": bp_name,
+                    "url": url,
+                    "texto": texto,
+                }
+            )
 
         botones.sort(key=lambda b: (b["texto"] or b["nombre"]).lower())
         return botones
+
+
+# 
 
 
 # =============================================================================
@@ -297,7 +319,6 @@ def obtener_stats_contenedores() -> dict:
         "por_anio": por_anio,
         "iconos": {
             "instalados": url_for("static", filename="imagen/contenedor_verde.png"),
-            # Preparado para contenedor azul en el futuro:
             "retirados": url_for("static", filename="imagen/contenedor_azul.png"),
         },
     }
@@ -323,15 +344,13 @@ def obtener_stats_parquin_rio_torio() -> dict:
     conn = get_connection("parquin_camiones")
     cursor = conn.cursor(dictionary=True)
 
-    cursor.execute(
-        """
+    cursor.execute("""
         SELECT
             COUNT(*) AS total,
             SUM(CASE WHEN idtbl_usuarios IS NULL THEN 1 ELSE 0 END) AS libres,
             SUM(CASE WHEN idtbl_usuarios IS NOT NULL THEN 1 ELSE 0 END) AS ocupadas
         FROM tbl_plazas
-        """
-    )
+        """)
     row = cursor.fetchone() or {"total": 0, "libres": 0, "ocupadas": 0}
 
     cursor.close()
@@ -348,7 +367,6 @@ def obtener_stats_parquin_rio_torio() -> dict:
         "iconos": {
             "ocupada": url_for("static", filename="imagen/camion_rojo.png"),
             "libre": url_for("static", filename="imagen/camion_verde.png"),
-            # Preparado para cuando tengas el archivo:
             "ocupada_especial": url_for("static", filename="imagen/camion_azul.png"),
         },
     }
@@ -385,35 +403,28 @@ def obtener_resumen_auditoria() -> dict:
 
     cursor = conn.cursor(dictionary=True)
     try:
-        # 1) Intentos de login últimos 7 días
-        cursor.execute(
-            """
+        cursor.execute("""
             SELECT
                 COUNT(*) AS total,
                 SUM(exito = 1) AS exitosos,
                 SUM(exito = 0) AS fallidos
             FROM tbl_auditoria_intentos
             WHERE fecha >= DATE_SUB(NOW(), INTERVAL 7 DAY)
-            """
-        )
+            """)
         row = cursor.fetchone() or {}
         resumen["intentos_7d"] = row.get("total", 0) or 0
         resumen["exitosos_7d"] = row.get("exitosos", 0) or 0
         resumen["fallidos_7d"] = row.get("fallidos", 0) or 0
 
-        # 2) Gestores activos últimos 30 días
-        cursor.execute(
-            """
+        cursor.execute("""
             SELECT COUNT(DISTINCT idtbl_gestores) AS activos
             FROM tbl_auditoria_intentos
             WHERE exito = 1
               AND fecha >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-            """
-        )
+            """)
         row = cursor.fetchone() or {}
         resumen["gestores_activos_30d"] = row.get("activos", 0) or 0
 
-        # 3) Último login del gestor actual (super_admin)
         id_gestor = session.get("idtbl_gestores")
         if id_gestor:
             cursor.execute(
@@ -492,42 +503,31 @@ def super_admin():
     8) Recupera actividad reciente desde audit_log.
     9) Renderiza super_admin.html.
     """
-    # 1) Paneles disponibles
     paneles = SuperAdminSimpleService.obtener_paneles()
 
-    # 2) Panel seleccionado (por querystring o 1º panel por defecto)
     panel_seleccionado = request.args.get("panel")
     if not panel_seleccionado and paneles:
         panel_seleccionado = paneles[0]["nombre"]
 
-    # 3) Módulos disponibles para ese panel
     modulos = SuperAdminSimpleService.obtener_modulos(panel_seleccionado)
 
-    # 4) Módulo seleccionado (por querystring o 1º módulo por defecto)
     modulo_seleccionado = request.args.get("modulo")
     if not modulo_seleccionado and modulos:
         modulo_seleccionado = modulos[0]["nombre"]
 
-    # 5) Botones del módulo
     botones = SuperAdminSimpleService.obtener_botones(
         panel_seleccionado,
         modulo_seleccionado,
     )
 
-    # 6) Stats dinámicas según el módulo seleccionado
     stats = None
-    if modulo_seleccionado == "modulo_control_via_publica_contenedores_bp":
-        stats = obtener_stats_contenedores()
-    elif modulo_seleccionado == "modulo_parquin_rio_torio_bp":
+    
+    if modulo_seleccionado == "modulo_parquin_rio_torio_bp":
         stats = obtener_stats_parquin_rio_torio()
 
-    # 7) Resumen profesional de auditoría
     resumen_auditoria = obtener_resumen_auditoria()
-
-    # 8) Actividad reciente
     ultimos_eventos = obtener_actividad_reciente(limit=10)
 
-    # 9) Render de HTML
     return render_template(
         "super_admin/super_admin.html",
         paneles=paneles,
@@ -539,27 +539,15 @@ def super_admin():
         resumen_auditoria=resumen_auditoria,
         ultimos_eventos=ultimos_eventos,
     )
+
+
 @super_admin_bp.route("/endpoints")
 def super_admin_endpoints():
     """
     Vista de diagnóstico que muestra todos los endpoints registrados
     en la aplicación Flask.
     """
-    # Obtiene todos los endpoints registrados en la app
     endpoints = obtener_todos_los_endpoints()
-
-    # Opcional: si solo quieres los del blueprint super_admin_bp,
-    # puedes filtrar así:
-    #
-    # endpoints = [
-    #     ep for ep in obtener_todos_los_endpoints()
-    #     if ep["endpoint"].startswith("super_admin_bp.")
-    # ]
-
-    # Ordenar por ruta (rule)
     endpoints_ordenados = sorted(endpoints, key=lambda e: e["rule"])
 
-    return render_template(
-        "diagnostico/endpoints.html",
-        endpoints=endpoints_ordenados
-    )
+    return render_template("diagnostico/endpoints.html", endpoints=endpoints_ordenados)

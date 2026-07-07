@@ -9,7 +9,9 @@ def _construir_modulos_lista():
     modulos_lista: list[dict] = []
 
     for rule in app.url_map.iter_rules():
-        endpoint = rule.endpoint  # ej: 'panel_control_vias_publicas_bp.modulo_control_vias_publicas'
+        endpoint = (
+            rule.endpoint
+        )  # ej: 'panel_control_vias_publicas_bp.modulo_control_vias_publicas'
         ruta = str(rule.rule)
 
         if endpoint.startswith("static"):
@@ -22,7 +24,11 @@ def _construir_modulos_lista():
             bp_name, view_name = None, partes[0]
 
         # blueprint tipo panel_*_bp (igual que tus paneles)
-        if not bp_name or not bp_name.startswith("panel_") or not bp_name.endswith("_bp"):
+        if (
+            not bp_name
+            or not bp_name.startswith("panel_")
+            or not bp_name.endswith("_bp")
+        ):
             continue
 
         # vista tipo modulo_*
@@ -39,7 +45,7 @@ def _construir_modulos_lista():
         modulos_lista.append(
             {
                 "blueprint": bp_name,
-                "titulo": view_name,   # lo “bonificas” en plantilla
+                "titulo": view_name,  # lo “bonificas” en plantilla
                 "url": url,
                 "ruta": ruta,
                 "categoria": categoria,

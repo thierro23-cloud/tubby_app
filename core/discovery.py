@@ -45,10 +45,7 @@ def descubrir_sistema():
         if bp_name.startswith("panel_") and bp_name.endswith("_bp"):
             panel_id = bp_name.replace("panel_", "", 1).replace("_bp", "")
             if panel_id not in sistema:
-                sistema[panel_id] = {
-                    "panel": panel_id,
-                    "modulos": {}
-                }
+                sistema[panel_id] = {"panel": panel_id, "modulos": {}}
 
     # 2️⃣ SEGUNDO PASO: recorrer TODAS las reglas de URL
     for rule in current_app.url_map.iter_rules():
@@ -69,49 +66,50 @@ def descubrir_sistema():
         # ---------------------------------------------------------------------
         if func_name.startswith("modulo_"):
             # Ej: modulo_control_via_publica_contenedores
-            resto = func_name.replace("modulo_", "", 1)        # control_via_publica_contenedores
+            resto = func_name.replace(
+                "modulo_", "", 1
+            )  # control_via_publica_contenedores
             trozos = resto.split("_")
             if len(trozos) < 2:
                 continue
 
             # panel_id = todo menos el último fragmento
-            panel_id = "_".join(trozos[:-1])                   # control_via_publica
-            modulo_id = trozos[-1]                             # contenedores
+            panel_id = "_".join(trozos[:-1])  # control_via_publica
+            modulo_id = trozos[-1]  # contenedores
 
-            panel = sistema.setdefault(panel_id, {
-                "panel": panel_id,
-                "modulos": {}
-            })
+            panel = sistema.setdefault(panel_id, {"panel": panel_id, "modulos": {}})
 
-            modulo = panel["modulos"].setdefault(modulo_id, {
-                "nombre": modulo_id,
-                "endpoints_modulo": [],
-                "botones": []
-            })
+            modulo = panel["modulos"].setdefault(
+                modulo_id, {"nombre": modulo_id, "endpoints_modulo": [], "botones": []}
+            )
 
-            modulo["endpoints_modulo"].append({
-                "url": url,
-                "endpoint": endpoint,
-                "metodos": metodos,
-            })
+            modulo["endpoints_modulo"].append(
+                {
+                    "url": url,
+                    "endpoint": endpoint,
+                    "metodos": metodos,
+                }
+            )
 
         # ---------------------------------------------------------------------
         # 2.2️⃣ BOTONES: funciones btn_yyyy_zzzz...
         # ---------------------------------------------------------------------
         if func_name.startswith("btn_"):
             # Ej: btn_contenedores_listado → modulo_id = contenedores
-            resto = func_name.replace("btn_", "", 1)           # contenedores_listado
-            modulo_id = resto.split("_", 1)[0]                 # contenedores
+            resto = func_name.replace("btn_", "", 1)  # contenedores_listado
+            modulo_id = resto.split("_", 1)[0]  # contenedores
 
             # El botón se asocia a TODOS los paneles que tengan este módulo
             for panel in sistema.values():
                 if modulo_id in panel["modulos"]:
-                    panel["modulos"][modulo_id]["botones"].append({
-                        "nombre": func_name,
-                        "url": url,
-                        "endpoint": endpoint,
-                        "metodos": metodos,
-                    })
+                    panel["modulos"][modulo_id]["botones"].append(
+                        {
+                            "nombre": func_name,
+                            "url": url,
+                            "endpoint": endpoint,
+                            "metodos": metodos,
+                        }
+                    )
 
     # 3️⃣ Convertir modulos dict → lista para facilitar las plantillas
     paneles = []

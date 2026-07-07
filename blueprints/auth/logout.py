@@ -2,6 +2,7 @@
 # 🚪 LOGOUT SIMPLE · REGISTRO EN AUDITORÍA
 # =====================================================
 
+
 @auth_bp.route("/logout")
 def logout():
     """

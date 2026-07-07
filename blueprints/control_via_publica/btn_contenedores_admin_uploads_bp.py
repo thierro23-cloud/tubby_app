@@ -21,7 +21,6 @@ from services.helpers import login_required, rol_required
 from db import ejecutar_non_query, ejecutar_query
 from watchers.utils_async import procesar_pdf_entrada
 
-
 # =============================================================================
 # 1️⃣ DEFINICIÓN DEL BLUEPRINT
 # =============================================================================
@@ -36,6 +35,7 @@ btn_contenedores_admin_uploads_bp = Blueprint(
 # =============================================================================
 # 2️⃣ FUNCIONES AUXILIARES
 # =============================================================================
+
 
 def _carpeta_entrada_contenedores() -> str:
     """
@@ -89,6 +89,7 @@ def _actualizar_upload(
 # 3️⃣ GET /admin/contenedores/uploads · FORMULARIO
 # =============================================================================
 
+
 @btn_contenedores_admin_uploads_bp.route("/uploads", methods=["GET"])
 @login_required
 @rol_required("gestor", "super_admin", "policia")  # ajusta roles si hace falta
@@ -102,6 +103,7 @@ def btn_contenedores_formulario_subida():
 # =============================================================================
 # 4️⃣ POST /admin/contenedores/uploads · SUBIDA Y PROCESO
 # =============================================================================
+
 
 @btn_contenedores_admin_uploads_bp.route("/uploads", methods=["POST"])
 @login_required
@@ -138,9 +140,7 @@ def subir_pdf_contenedores():
         nombre_original = fichero.filename or ""
 
         if not nombre_original:
-            resultados.append(
-                {"nombre_original": None, "error": "Archivo sin nombre"}
-            )
+            resultados.append({"nombre_original": None, "error": "Archivo sin nombre"})
             continue
 
         # Solo permitir PDFs

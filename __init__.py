@@ -21,11 +21,12 @@
 import importlib
 import pkgutil
 from flask import Flask, Blueprint
-from db import init_db   # 👈 tu función actual
+from db import init_db  # 👈 tu función actual
 
 # =============================================================================
 # 1️⃣ REGISTRO AUTOMÁTICO DE BLUEPRINTS
 # =============================================================================
+
 
 def registrar_blueprints_auto(app: Flask, paquete_blueprints: str = "app.blueprints"):
     """
@@ -51,9 +52,11 @@ def registrar_blueprints_auto(app: Flask, paquete_blueprints: str = "app.bluepri
             app.register_blueprint(bp)
             print(f"✅ Blueprint registrado automáticamente: {bp.name} ({ruta_modulo})")
 
+
 # =============================================================================
 # 2️⃣ FUNCIÓN PRINCIPAL create_app()
 # =============================================================================
+
 
 def create_app():
     """
@@ -73,6 +76,7 @@ def create_app():
     registrar_blueprints_auto(app, "app.blueprints")
 
     return app
+
 
 # =============================================================================
 # 3️⃣ OPCIONAL · MODO DEBUG DIRECTO (python app/__init__.py)

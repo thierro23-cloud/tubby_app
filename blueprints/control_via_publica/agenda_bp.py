@@ -43,14 +43,15 @@ agenda_bp = Blueprint(
 # 2. FUNCIONES AUXILIARES
 # =============================================================================
 
+
 def calcular_rango_fechas(vista: str, fecha_ref: date) -> tuple:
     """
     Calcula el rango de fechas según la vista y fecha de referencia.
-    
+
     Args:
         vista: "dia", "semana" o "mes"
         fecha_ref: Fecha base para el cálculo
-        
+
     Returns:
         tuple: (fecha_desde, fecha_hasta, prev_ref, next_ref)
     """
@@ -59,78 +60,86 @@ def calcular_rango_fechas(vista: str, fecha_ref: date) -> tuple:
         fecha_hasta = datetime.combine(fecha_ref, datetime.max.time())
         prev_ref = fecha_ref - timedelta(days=1)
         next_ref = fecha_ref + timedelta(days=1)
-        
+
     elif vista == "mes":
         primer_dia_mes = fecha_ref.replace(day=1)
         fecha_desde = datetime.combine(primer_dia_mes, datetime.min.time())
-        
+
         # Calcular último día del mes correctamente
         if primer_dia_mes.month == 12:
-            primer_dia_mes_siguiente = primer_dia_mes.replace(year=primer_dia_mes.year + 1, month=1)
+            primer_dia_mes_siguiente = primer_dia_mes.replace(
+                year=primer_dia_mes.year + 1, month=1
+            )
         else:
-            primer_dia_mes_siguiente = primer_dia_mes.replace(month=primer_dia_mes.month + 1)
-        
+            primer_dia_mes_siguiente = primer_dia_mes.replace(
+                month=primer_dia_mes.month + 1
+            )
+
         ultimo_dia_mes = primer_dia_mes_siguiente - timedelta(days=1)
         fecha_hasta = datetime.combine(ultimo_dia_mes, datetime.max.time())
-        
+
         # Navegación mensual
         if primer_dia_mes.month == 1:
             prev_ref = primer_dia_mes.replace(year=primer_dia_mes.year - 1, month=12)
         else:
             prev_ref = primer_dia_mes.replace(month=primer_dia_mes.month - 1)
-            
+
         next_ref = primer_dia_mes_siguiente
-        
+
     else:  # semana (por defecto)
         # Calcular inicio de semana (lunes)
         dias_desde_lunes = fecha_ref.weekday()
         inicio_semana = fecha_ref - timedelta(days=dias_desde_lunes)
         fin_semana = inicio_semana + timedelta(days=6)
-        
+
         fecha_desde = datetime.combine(inicio_semana, datetime.min.time())
         fecha_hasta = datetime.combine(fin_semana, datetime.max.time())
-        
+
         prev_ref = inicio_semana - timedelta(days=7)
         next_ref = inicio_semana + timedelta(days=7)
-    
+
     return fecha_desde, fecha_hasta, prev_ref, next_ref
 
 
 def normalizar_calles(calles_raw: list, id_tipo_via_seleccionado: int = None) -> list:
     """
     NO hace nada, devuelve las calles tal como vienen de cargar_calles().
-    
+
     El template agenda_principal.html espera:
         - idtbl_calles
         - calles
         - idtbl_tipos_de_vias (si existe)
-    
+
     Args:
         calles_raw: Lista de calles desde cargar_calles()
         id_tipo_via_seleccionado: ID del tipo de vía (no usado)
-        
+
     Returns:
         list: Misma lista sin cambios
     """
     return calles_raw
 
+
 def normalizar_tipos_via(tipos_via_raw: list) -> list:
     """
     NO hace nada, devuelve los tipos tal como vienen.
-    
+
     El template espera:
         - idtbl_tipos_de_vias
         - tipos_de_vias
-    
+
     Args:
         tipos_via_raw: Lista desde cargar_tipos_via()
-        
+
     Returns:
         list: Misma lista sin cambios
     """
-    return tipos_via_raw# =============================================================================
+    return tipos_via_raw  # =============================================================================
+
+
 # 3. RUTA PRINCIPAL
 # =============================================================================
+
 
 @agenda_bp.route("/")
 @login_required
@@ -138,14 +147,14 @@ def normalizar_tipos_via(tipos_via_raw: list) -> list:
 def agenda_principal():
     """
     Vista principal de la agenda de vía pública.
-    
+
     Query params:
         - vista: "dia" | "semana" | "mes" (default: "semana")
         - fecha_ref: YYYY-MM-DD (default: hoy)
         - id_tipo_via: int (filtro tipo de vía)
         - id_calle: int (filtro calle específica)
         - codigos_tipo: list[str] (tipos de evento seleccionados)
-        
+
     Template context:
         - fecha_desde, fecha_hasta: Rango de fechas calculado
         - fecha_ref: Fecha base de navegación
@@ -156,15 +165,15 @@ def agenda_principal():
         - tipos_evento: Lista de tipos de evento con colores
         - eventos: Lista de eventos en el rango (de agenda_core)
     """
-    
+
     # -------------------------------------------------------------------------
     # 3.1 Procesar parámetros de entrada
     # -------------------------------------------------------------------------
-    
+
     vista = request.args.get("vista", "semana").lower()
     if vista not in ["dia", "semana", "mes"]:
         vista = "semana"
-    
+
     # Fecha de referencia
     fecha_ref_str = request.args.get("fecha_ref")
     if fecha_ref_str:
@@ -174,29 +183,31 @@ def agenda_principal():
             fecha_ref = date.today()
     else:
         fecha_ref = date.today()
-    
+
     # Filtros
     id_tipo_via = request.args.get("id_tipo_via", type=int)
     id_calle = request.args.get("id_calle", type=int)
     codigos_tipo = request.args.getlist("codigos_tipo")
-    
+
     # -------------------------------------------------------------------------
     # 3.2 Calcular rango de fechas
     # -------------------------------------------------------------------------
-    
-    fecha_desde, fecha_hasta, prev_ref, next_ref = calcular_rango_fechas(vista, fecha_ref)
-    
+
+    fecha_desde, fecha_hasta, prev_ref, next_ref = calcular_rango_fechas(
+        vista, fecha_ref
+    )
+
     # -------------------------------------------------------------------------
     # 3.3 Cargar tipos de vía
     # -------------------------------------------------------------------------
-    
+
     tipos_via_raw = cargar_tipos_via(texto="")
     tipos_via = normalizar_tipos_via(tipos_via_raw)
-    
+
     # -------------------------------------------------------------------------
     # 3.4 Cargar calles (solo si hay tipo de vía seleccionado)
     # -------------------------------------------------------------------------
-    
+
     if id_tipo_via:
         calles_raw = cargar_calles(
             id_municipio=ID_MUNICIPIO_AVILA,
@@ -206,11 +217,11 @@ def agenda_principal():
         calles = normalizar_calles(calles_raw, id_tipo_via)
     else:
         calles = []
-    
+
     # -------------------------------------------------------------------------
     # 3.5 Cargar tipos de evento
     # -------------------------------------------------------------------------
-    
+
     tipos_evento_raw = ejecutar_query(
         """
         SELECT
@@ -224,7 +235,7 @@ def agenda_principal():
         (),
         nombre_bd="control_via_publica",
     )
-    
+
     tipos_evento = [
         {
             "codigo": t["codigo"],
@@ -233,11 +244,11 @@ def agenda_principal():
         }
         for t in tipos_evento_raw
     ]
-    
+
     # -------------------------------------------------------------------------
     # 3.6 Cargar eventos (desde agenda_core)
     # -------------------------------------------------------------------------
-    
+
     # TODO: Descomentar cuando agenda_core esté completamente implementado
     """
     from agenda_core.backend_agenda import obtener_agenda_general
@@ -263,25 +274,25 @@ def agenda_principal():
         current_app.logger.error(f"Error cargando eventos de agenda: {e}", exc_info=True)
         eventos = []
     """
-    
+
     # Mientras tanto, lista vacía
     eventos = []
-    
+
     # -------------------------------------------------------------------------
     # 3.7 Preparar contexto de filtros
     # -------------------------------------------------------------------------
-    
+
     filtros = {
         "vista": vista,
         "id_tipo_via": id_tipo_via,
         "id_calle": id_calle,
         "codigos_tipo": codigos_tipo,
     }
-    
+
     # -------------------------------------------------------------------------
     # 3.8 Renderizar template
     # -------------------------------------------------------------------------
-    
+
     return render_template(
         "super_admin/agenda.html",
         fecha_desde=fecha_desde.strftime("%d/%m/%Y"),

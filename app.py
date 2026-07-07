@@ -85,9 +85,11 @@ from flask import (
 import logging
 import importlib.util
 import traceback
+
 # Imports de autenticación Flask-Login (COMIENZA)
 # -----------------------------------------------------------------------------
 from flask_login import LoginManager
+
 # Imports de autenticación Flask-Login (TERMINA)
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
@@ -100,9 +102,10 @@ from flask_login import LoginManager
 # =============================================================================
 # 3.1) Configuración, seguridad y auditoría (COMIENZA)
 # -----------------------------------------------------------------------------
-from config import Config                  # Configuración personalizada de la app
-from core.permisos import endpoint_activo, tiene_permiso   # Seguridad y permisos
-from core.audit import registrar_evento                     # Auditoría
+from config import Config  # Configuración personalizada de la app
+from core.permisos import endpoint_activo, tiene_permiso  # Seguridad y permisos
+from core.audit import registrar_evento  # Auditoría
+
 # 3.1) Configuración, seguridad y auditoría (TERMINA)
 # -----------------------------------------------------------------------------
 
@@ -229,6 +232,8 @@ def iniciar_watchers(app):
             app.logger.info("ℹ Watcher de obras ya estaba activo")
 
         app.logger.info("✅ Todos los watchers necesarios han sido iniciados")
+
+
 # =============================================================================
 # 3.2) Watchers de PDFs y gestor genérico de watchers (TERMINA)
 # =============================================================================
@@ -380,6 +385,8 @@ def load_user(user_id: str) -> UsuarioLogin | None:
         nombre_proveedor=fila.get("nombre_proveedor"),
         numero_cuenta=fila.get("numero_cuenta"),
     )
+
+
 # 4.3) MODELO LIGERO DE USUARIO + user_loader PARA FLASK-LOGIN (TERMINA)
 # ----------------------------------------------------------------------------------------------------------------------------------------------------------
 # =============================================================================
@@ -427,47 +434,48 @@ app.jinja_env.globals["url_segura"] = url_segura
 from datetime import datetime
 
 
-@app.template_filter('fecha')
+@app.template_filter("fecha")
 def formato_fecha(valor):
     """
     Convierte string o datetime a formato dd/mm/yyyy.
-    
+
     Uso en plantillas:
         {{ fecha_desde|fecha }}
         {{ fecha_hasta|fecha }}
-    
+
     Parámetros:
         valor: Puede ser:
             - datetime object
             - string en formato 'YYYY-MM-DD'
             - string en formato 'YYYY-MM-DD HH:MM:SS'
-    
+
     Devuelve:
         string: Fecha en formato 'dd/mm/yyyy'
     """
     if valor is None:
-        return ''
-    
+        return ""
+
     if isinstance(valor, str):
         # Intentar parsear diferentes formatos de fecha
-        for fmt in ['%Y-%m-%d', '%Y-%m-%d %H:%M:%S', '%d/%m/%Y']:
+        for fmt in ["%Y-%m-%d", "%Y-%m-%d %H:%M:%S", "%d/%m/%Y"]:
             try:
                 valor = datetime.strptime(valor, fmt)
                 break
             except ValueError:
                 continue
-    
+
     if isinstance(valor, datetime):
-        return valor.strftime('%d/%m/%Y')
-    
+        return valor.strftime("%d/%m/%Y")
+
     # Si no se pudo convertir, devolver el valor original
     return str(valor)
 
 
 # Registrar el filtro en Jinja
-app.jinja_env.filters['fecha'] = formato_fecha
+app.jinja_env.filters["fecha"] = formato_fecha
 # 6.2) Filtro personalizado para formateo de fechas (TERMINA)
 # -----------------------------------------------------------------------------
+
 
 # =============================================================================
 # 7️⃣ DEBUG TEMPLATE · RENDER DINÁMICO
@@ -483,6 +491,8 @@ def debug_template():
         return render_template(tpl)
     except Exception as e:
         return f"<pre>{e}</pre>"
+
+
 # 7.1) Ruta de debug de templates (TERMINA)
 # -----------------------------------------------------------------------------
 
@@ -552,67 +562,76 @@ def debug_template():
 def cargar_blueprints(app):
     """
     Descubre e importa todos los blueprints *_bp.py del proyecto y los registra.
-    
+
     Escanea recursivamente TODA la estructura del proyecto desde BASE_DIR,
     importa dinámicamente cada archivo *_bp.py que encuentre y registra
     todos los objetos Blueprint que contenga.
-    
+
     Args:
         app: Instancia de la aplicación Flask
     """
     from flask import Blueprint
-    
+
     # =========================================================================
     # CONFIGURACIÓN DE EXCLUSIONES
     # =========================================================================
     # Carpetas que NO deben escanearse (mejora rendimiento y evita errores)
     CARPETAS_EXCLUIDAS = {
-        'venv', 'env', '.venv', '.env',          # Entornos virtuales
-        '__pycache__', '.pytest_cache',           # Cache de Python
-        '.git', '.svn', '.hg',                    # Control de versiones
-        'node_modules',                           # Dependencias JS
-        'static', 'templates',                    # Archivos Flask estáticos
-        'instance',                               # Configuración de instancia
-        'migrations',                             # Migraciones de BD (Alembic)
-        '.idea', '.vscode',                       # IDEs
-        'dist', 'build', '*.egg-info',           # Builds y distribuciones
+        "venv",
+        "env",
+        ".venv",
+        ".env",  # Entornos virtuales
+        "__pycache__",
+        ".pytest_cache",  # Cache de Python
+        ".git",
+        ".svn",
+        ".hg",  # Control de versiones
+        "node_modules",  # Dependencias JS
+        "static",
+        "templates",  # Archivos Flask estáticos
+        "instance",  # Configuración de instancia
+        "migrations",  # Migraciones de BD (Alembic)
+        ".idea",
+        ".vscode",  # IDEs
+        "dist",
+        "build",
+        "*.egg-info",  # Builds y distribuciones
     }
-    
+
     blueprints_encontrados = 0
     blueprints_registrados = 0
     blueprints_duplicados = 0
     errores = 0
-    
+
     app.logger.info("🔍 Iniciando escaneo universal de blueprints...")
-    
+
     # =========================================================================
     # ESCANEO RECURSIVO DESDE LA RAÍZ DEL PROYECTO
     # =========================================================================
     for root, dirs, files in os.walk(BASE_DIR):
-        
+
         # =====================================================================
         # FILTRAR CARPETAS EXCLUIDAS (modifica dirs in-place para no entrar)
         # =====================================================================
         # Nota: modificar 'dirs' in-place hace que os.walk NO entre en esas carpetas
         dirs[:] = [
-            d for d in dirs 
-            if d not in CARPETAS_EXCLUIDAS and not d.startswith('.')
+            d for d in dirs if d not in CARPETAS_EXCLUIDAS and not d.startswith(".")
         ]
-        
+
         # =====================================================================
         # PROCESAR ARCHIVOS *_bp.py EN LA CARPETA ACTUAL
         # =====================================================================
         for file in files:
             if not file.endswith("_bp.py"):
                 continue
-            
+
             blueprints_encontrados += 1
             path = os.path.join(root, file)
-            
+
             # Calcular ruta relativa para logging más legible
             ruta_relativa = os.path.relpath(path, BASE_DIR)
             module_name = file[:-3]  # Quitar extensión .py
-            
+
             try:
                 # =============================================================
                 # IMPORTACIÓN DINÁMICA DEL MÓDULO
@@ -622,25 +641,25 @@ def cargar_blueprints(app):
                     app.logger.error(f"❌ No se pudo crear spec para: {ruta_relativa}")
                     errores += 1
                     continue
-                
+
                 module = importlib.util.module_from_spec(spec)
                 spec.loader.exec_module(module)
-                
+
                 # =============================================================
                 # BÚSQUEDA Y REGISTRO DE BLUEPRINTS EN EL MÓDULO
                 # =============================================================
                 blueprints_en_modulo = 0
-                
+
                 for attr in dir(module):
                     # Ignorar atributos privados y especiales
-                    if attr.startswith('_'):
+                    if attr.startswith("_"):
                         continue
-                    
+
                     obj = getattr(module, attr)
-                    
+
                     if isinstance(obj, Blueprint):
                         blueprints_en_modulo += 1
-                        
+
                         # =================================================
                         # REGISTRO CON PROTECCIÓN ANTI-DUPLICADOS
                         # =================================================
@@ -655,13 +674,13 @@ def cargar_blueprints(app):
                             app.logger.warning(
                                 f"⚠️  Blueprint duplicado ignorado: {obj.name:30s} <- {ruta_relativa}"
                             )
-                
+
                 # Advertir si el archivo *_bp.py no contenía blueprints
                 if blueprints_en_modulo == 0:
                     app.logger.warning(
                         f"⚠️  Archivo *_bp.py sin blueprints: {ruta_relativa}"
                     )
-            
+
             except Exception as e:
                 errores += 1
                 app.logger.error(
@@ -669,7 +688,7 @@ def cargar_blueprints(app):
                     f"   {str(e)}\n"
                     f"{traceback.format_exc()}"
                 )
-    
+
     # =========================================================================
     # RESUMEN FINAL DEL ESCANEO
     # =========================================================================
@@ -681,7 +700,7 @@ def cargar_blueprints(app):
     app.logger.info(f"   ⚠️  Blueprints duplicados:      {blueprints_duplicados}")
     app.logger.info(f"   ❌ Errores:                     {errores}")
     app.logger.info("=" * 80)
-    
+
     if errores > 0:
         app.logger.warning(
             f"⚠️  Se encontraron {errores} errores durante la carga de blueprints. "
@@ -711,7 +730,7 @@ with app.app_context():
                 rule.endpoint,
                 "methods:",
                 rule.methods,
-            )# -----------------------------------------------------------------------------
+            )  # -----------------------------------------------------------------------------
 
 
 # -----------------------------------------------------------------------------
@@ -725,7 +744,7 @@ with app.app_context():
 #       · "🚀 Watcher iniciado: ..."
 #       · "👁 [entrada_pdf] Vigilando carpeta: ..."
 # -----------------------------------------------------------------------------
-#with app.app_context():
+# with app.app_context():
 #   if not watcher_activo:
 #        iniciar_watcher_contenedores(app)
 #       app.logger.info("🚀 Watcher contenedores iniciado explícitamente")
@@ -823,6 +842,8 @@ def seguridad_global():
 
     # ACCESO CORRECTO → AUDITORÍA POSITIVA
     registrar_evento("acceso_permitido", endpoint)
+
+
 # 9.1) seguridad_global · único @before_request (TERMINA)
 # -----------------------------------------------------------------------------
 
@@ -838,6 +859,8 @@ def index():
     🔹 Redirige siempre al login principal.
     """
     return redirect(url_for("auth_bp.login"))
+
+
 # 10.1) index → redirección a login (TERMINA)
 # -----------------------------------------------------------------------------
 

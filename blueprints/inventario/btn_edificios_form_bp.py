@@ -59,7 +59,7 @@ from flask import (
     abort,
 )
 from db import ejecutar_query, ejecutar_non_query
-import re  
+import re
 
 # ============================================================
 # 1. DEFINICIÓN DEL BLUEPRINT
@@ -81,6 +81,7 @@ btn_edificios_form_bp = Blueprint(
 #  - GET /inventario/edificios/form/<id>     → editar registro
 #  Esta función solo delega en _renderizar_formulario.
 # ============================================================
+
 
 @btn_edificios_form_bp.route("/form", methods=["GET"], defaults={"edificio_id": None})
 @btn_edificios_form_bp.route("/form/<int:edificio_id>", methods=["GET"])
@@ -124,6 +125,7 @@ def btn_edificios_form(edificio_id):
 #  Decide automáticamente si hace INSERT o UPDATE según
 #  venga o no "edificio_id" en el formulario.
 # ============================================================
+
 
 @btn_edificios_form_bp.route("/form/guardar", methods=["POST"])
 def edificios_guardar():
@@ -173,13 +175,15 @@ def edificios_guardar():
         "calefaccion": request.form.get("calefaccion") or None,
         "numero_calderas": request.form.get("numero_calderas") or None,
         "ascensores": request.form.get("ascensores") or None,
-        "numero_registro_ascensor": request.form.get("numero_registro_ascensor") or None,
+        "numero_registro_ascensor": request.form.get("numero_registro_ascensor")
+        or None,
         "idtbl_ascensor": request.form.get("idtbl_ascensor") or None,
         "idtbl_calefaccion": request.form.get("idtbl_calefaccion") or None,
         "documentos_adjuntos": request.form.get("documentos_adjuntos") or None,
         "idtbl_numero_catastro": request.form.get("idtbl_numero_catastro") or None,
         "escaleras_mecanicas": request.form.get("escaleras_mecanicas") or None,
-        "numero_escaleras_mecanicas": request.form.get("numero_escaleras_mecanicas") or None,
+        "numero_escaleras_mecanicas": request.form.get("numero_escaleras_mecanicas")
+        or None,
         "altura": request.form.get("altura") or None,
         "perimetro_canalones": request.form.get("perimetro_canalones") or None,
         "numero_edificio": request.form.get("numero_edificio") or None,
@@ -285,12 +289,17 @@ def edificios_guardar():
     # 3.7 Ejecutar y redirigir
     ejecutar_non_query(sql, params, nombre_bd="inventario")
     flash(f"Edificio {accion} correctamente", "success")
-    return redirect(url_for("btn_edificios_form_bp.btn_edificios_form"))# ============================================================
+    return redirect(
+        url_for("btn_edificios_form_bp.btn_edificios_form")
+    )  # ============================================================
+
+
 # 4. ELIMINAR
 # ------------------------------------------------------------
 #  - POST /inventario/edificios/form/eliminar
 #  Recibe el ID por POST y borra el registro.
 # ============================================================
+
 
 @btn_edificios_form_bp.route("/form/eliminar", methods=["POST"])
 def edificios_eliminar():
@@ -332,6 +341,7 @@ def edificios_eliminar():
 #  Y devuelve la plantilla "inventario/edificios_form.html".
 # ============================================================
 
+
 def _renderizar_formulario(edificio_id):
     """
     Carga todos los datos necesarios para pintar el formulario:
@@ -347,7 +357,7 @@ def _renderizar_formulario(edificio_id):
     next_id = None
     accion = "nuevo"
 
-        # 5.1 Si hay ID, cargar el edificio concreto y preparar navegación
+    # 5.1 Si hay ID, cargar el edificio concreto y preparar navegación
     if edificio_id:
         # 5.1.1 Cargar datos del edificio
         filas = ejecutar_query(
@@ -391,7 +401,9 @@ def _renderizar_formulario(edificio_id):
             nombre_bd="inventario",
         )
 
-        print("DEBUG EDIFICIO:", edificio_id, "len(filas) =", len(filas), "filas =", filas)
+        print(
+            "DEBUG EDIFICIO:", edificio_id, "len(filas) =", len(filas), "filas =", filas
+        )
 
         if not filas:
             abort(404, f"Edificio {edificio_id} no encontrado")

@@ -25,11 +25,10 @@
 
 from typing import Any, Dict, List, Optional  # 🧩 Tipos para escribir código claro
 
-import mysql.connector                        # 🔌 Cliente MySQL
-from mysql.connector import Error             # 🚨 Tipo de error de MySQL
+import mysql.connector  # 🔌 Cliente MySQL
+from mysql.connector import Error  # 🚨 Tipo de error de MySQL
 
-from flask import current_app                 # 📋 Config y logger de la app Flask
-
+from flask import current_app  # 📋 Config y logger de la app Flask
 
 # =============================================================================
 # 📗 2️⃣ SECCIÓN – LIBRO DE DIRECCIONES: current_app.config["DATABASES"]
@@ -74,7 +73,9 @@ from flask import current_app                 # 📋 Config y logger de la app F
 # =============================================================================
 # 🔑 3️⃣ SECCIÓN – FUNCIÓN get_connection(): ABRIR LA PUERTA DE UNA “CASA”
 # =============================================================================
-def get_connection(nombre_bd: str = "bd_tbl_comunes") -> mysql.connector.MySQLConnection:
+def get_connection(
+    nombre_bd: str = "bd_tbl_comunes",
+) -> mysql.connector.MySQLConnection:
     """
     3.0️⃣ DESCRIPCIÓN GENERAL
     ------------------------
@@ -113,7 +114,9 @@ def get_connection(nombre_bd: str = "bd_tbl_comunes") -> mysql.connector.MySQLCo
     """
 
     # 3.4️⃣ Leemos el "libro de direcciones" de todas las casas
-    libro_casas: Optional[Dict[str, Dict[str, Any]]] = current_app.config.get("DATABASES")
+    libro_casas: Optional[Dict[str, Dict[str, Any]]] = current_app.config.get(
+        "DATABASES"
+    )
 
     # 3.5️⃣ Si no hay DATABASES en la config, no podemos continuar
     if not libro_casas:
@@ -135,11 +138,11 @@ def get_connection(nombre_bd: str = "bd_tbl_comunes") -> mysql.connector.MySQLCo
         )
 
     # 3.8️⃣ Extraemos los datos de conexión de esa casa
-    host = casa["HOST"]           # 🌐 Dirección IP o nombre de host (ej: localhost)
-    user = casa["USER"]           # 👤 Usuario de la BD (ej: root)
-    password = casa["PASSWORD"]   # 🔑 Contraseña
-    database = casa["DB"]         # 🏠 Nombre de la base de datos (schema)
-    port = casa.get("PORT", 3306) # 🚪 Puerto de MySQL (3306 por defecto)
+    host = casa["HOST"]  # 🌐 Dirección IP o nombre de host (ej: localhost)
+    user = casa["USER"]  # 👤 Usuario de la BD (ej: root)
+    password = casa["PASSWORD"]  # 🔑 Contraseña
+    database = casa["DB"]  # 🏠 Nombre de la base de datos (schema)
+    port = casa.get("PORT", 3306)  # 🚪 Puerto de MySQL (3306 por defecto)
 
     try:
         # 3.9️⃣ Intentamos abrir la conexión con MySQL
@@ -217,9 +220,7 @@ def ejecutar_query(
     try:
         # 4.5️⃣ Determinar tipo de sentencia: lectura vs escritura
         sql_strip = sql.lstrip().upper()
-        es_lectura = sql_strip.startswith(
-            ("SELECT", "SHOW", "DESCRIBE", "EXPLAIN")
-        )
+        es_lectura = sql_strip.startswith(("SELECT", "SHOW", "DESCRIBE", "EXPLAIN"))
 
         # 4.6️⃣ Registrar en el log la consulta y sus parámetros (si los hay)
         #       → Esto es clave para depurar errores tipo 1054 y ver el SQL real.

@@ -14,11 +14,12 @@
 # =============================================================================
 # 1️⃣ IMPORTACIONES PRINCIPALES
 # =============================================================================
-from flask import Blueprint, request, jsonify          # 🌐 Peticiones y JSON
+from flask import Blueprint, request, jsonify  # 🌐 Peticiones y JSON
 from services.helpers import login_required, rol_required  # 🔐 Seguridad
 
-import importlib.util                                  # 🧩 Carga dinámica
-import os                                              # 📁 Rutas de archivos
+import importlib.util  # 🧩 Carga dinámica
+import os  # 📁 Rutas de archivos
+
 # =============================================================================
 
 
@@ -57,7 +58,7 @@ generar_codigo = modulo_ia.generar_codigo  # 🧠 Función de IA que usaremos
 # TERMINA: justo antes de la función de vista.
 # -----------------------------------------------------------------------------
 generador_ia_bp = Blueprint(
-    "generador_ia_bp",                 # 🏷 Nombre interno del blueprint
+    "generador_ia_bp",  # 🏷 Nombre interno del blueprint
     __name__,
     url_prefix="/super_admin/generador_ia",  # 🌐 Prefijo de URL
 )
@@ -87,14 +88,18 @@ def generador_ia():
     try:
         codigo = generar_codigo(prompt)
     except Exception as e:
-        return jsonify({
-            "ok": False,
-            "error": f"Error generando código: {str(e)}"
-        }), 500
+        return jsonify({"ok": False, "error": f"Error generando código: {str(e)}"}), 500
 
     # 4.3 RESPUESTA OK
-    return jsonify({
-        "ok": True,
-        "codigo": codigo,
-    }), 200
+    return (
+        jsonify(
+            {
+                "ok": True,
+                "codigo": codigo,
+            }
+        ),
+        200,
+    )
+
+
 # =============================================================================

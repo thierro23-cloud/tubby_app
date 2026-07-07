@@ -34,10 +34,10 @@ from datetime import datetime, timedelta
 
 from db import ejecutar_query, ejecutar_non_query
 
-
 # =============================================================================
 # 1️⃣ UTILIDADES INTERNAS (NO EXPUESTAS FUERA DEL MÓDULO)
 # =============================================================================
+
 
 def _obtener_id_tipo_evento(codigo_tipo: str) -> int:
     """
@@ -100,6 +100,7 @@ def _last_insert_id() -> int:
 # =============================================================================
 # 2️⃣ CREAR EVENTO (SIN CALLES TODAVÍA)
 # =============================================================================
+
 
 def crear_evento_agenda(
     codigo_tipo: str,
@@ -204,6 +205,7 @@ def crear_evento_agenda(
 # 3️⃣ AÑADIR CALLES A UN EVENTO
 # =============================================================================
 
+
 def añadir_calle_a_evento(
     id_agenda: int,
     id_calle: int,
@@ -288,6 +290,7 @@ def añadir_varias_calles_a_evento(
 # 4️⃣ CONSULTA · AGENDA POR CALLE (VW)
 # =============================================================================
 
+
 def obtener_agenda_por_calle(
     id_calle: int,
     fecha_desde: Optional[datetime] = None,
@@ -359,6 +362,7 @@ def obtener_agenda_por_calle(
 # =============================================================================
 # 5️⃣ CONSULTA · AGENDA GENERAL (POR FECHA)
 # =============================================================================
+
 
 def obtener_agenda_general(
     fecha_desde: datetime,
@@ -445,6 +449,7 @@ def obtener_agenda_general(
 # =============================================================================
 # 7️⃣ SINCRONIZACIÓN CON TABLAS ORIGEN (EJEMPLO OBRAS)
 # =============================================================================
+
 
 def sincronizar_agenda_para(codigo_tipo_evento: str) -> int:
     """
@@ -546,7 +551,11 @@ def sincronizar_agenda_para(codigo_tipo_evento: str) -> int:
         )
 
         # 7.7 Asociar calle opcionalmente
-        if campo_id_calle and campo_id_calle in fila and fila[campo_id_calle] is not None:
+        if (
+            campo_id_calle
+            and campo_id_calle in fila
+            and fila[campo_id_calle] is not None
+        ):
             añadir_calle_a_evento(
                 id_agenda=id_agenda,
                 id_calle=fila[campo_id_calle],
@@ -686,9 +695,7 @@ def generar_instancias_recurrentes(
 
         # 8.4 Generar ocurrencias en el rango
         try:
-            fechas_inicio = list(
-                rule.between(fecha_desde, fecha_hasta, inc=True)
-            )
+            fechas_inicio = list(rule.between(fecha_desde, fecha_hasta, inc=True))
         except Exception:
             continue
 
@@ -742,12 +749,15 @@ def generar_instancias_recurrentes(
             creados += 1
 
     return creados
+
+
 # =============================================================================
 # 9️⃣ UTILIDADES ESPECÍFICAS · CONTENEDORES
 # =============================================================================
 # Helpers para trabajar con eventos de tipo CONTENEDORES a partir de
 # tbl_control_contenedores, usando siempre idtbl_contenedor como origen_id.
 # =============================================================================
+
 
 def cerrar_evento_contenedor_por_id(
     idtbl_contenedor: int,

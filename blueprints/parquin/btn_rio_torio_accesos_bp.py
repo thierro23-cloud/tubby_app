@@ -26,7 +26,6 @@ from flask import (
 
 from db import ejecutar_query, ejecutar_non_query
 
-
 # =============================================================================
 # 🏗️ 1️⃣ BLUEPRINT (BTN RIO_TORIO)
 # =============================================================================
@@ -47,6 +46,7 @@ btn_rio_torio_accesos_bp = Blueprint(
 # 🔐 2️⃣ SEGURIDAD
 # =============================================================================
 
+
 def _requiere_login():
     """
     Comprueba si hay un user_id en sesión.
@@ -65,6 +65,7 @@ def _requiere_login():
 # =============================================================================
 # 🧠 3️⃣ LÓGICA DE NEGOCIO
 # =============================================================================
+
 
 def rt_buscar_camiones_por_matricula_parcial(matricula: str, limite: int = 10):
     """
@@ -145,6 +146,7 @@ def rt_registrar_salida(id_camion: int):
 # 🎥 4️⃣ API LPR (CÁMARA)
 # =============================================================================
 
+
 @btn_rio_torio_accesos_bp.route("/api/lpr", methods=["POST"])
 def btn_rio_torio_accesos_api_lpr():
     """
@@ -177,6 +179,7 @@ def btn_rio_torio_accesos_api_lpr():
 # =============================================================================
 # 🚚 5️⃣ ENTRADA MANUAL
 # =============================================================================
+
 
 @btn_rio_torio_accesos_bp.route("/entrada", methods=["GET", "POST"])
 def btn_rio_torio_accesos_entrada():
@@ -217,6 +220,7 @@ def btn_rio_torio_accesos_entrada():
 # =============================================================================
 # 📊 6️⃣ PANEL ACCESOS (PRINCIPAL)
 # =============================================================================
+
 
 @btn_rio_torio_accesos_bp.route("/", methods=["GET"])
 def btn_rio_torio_accesos():

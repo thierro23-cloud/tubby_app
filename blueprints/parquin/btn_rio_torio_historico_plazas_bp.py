@@ -38,7 +38,6 @@ from flask import (
 from db import ejecutar_query, ejecutar_non_query
 from services.helpers import rol_required
 
-
 # =============================================================================
 # 1. BLUEPRINT: HISTÓRICO DE PLAZAS RÍO TORÍO
 # =============================================================================
@@ -90,6 +89,7 @@ SQL_HISTORICO_PLAZAS = """
 # =============================================================================
 # 3. HELPERS DE FECHAS E INTERVALOS
 # =============================================================================
+
 
 def _parse_fecha(fecha_str: str | None) -> date | None:
     """
@@ -282,6 +282,7 @@ def _validar_historico_plaza(
 # 4. VISTA: LISTADO GLOBAL DEL HISTÓRICO
 # =============================================================================
 
+
 @btn_rio_torio_historico_plazas_bp.route("/", methods=["GET"])
 @rol_required("super_admin")
 def btn_rio_torio_historico_plazas():
@@ -359,6 +360,7 @@ def btn_rio_torio_historico_plazas():
 # =============================================================================
 # 5. VISTA: DETALLE Y EDICIÓN POR PLAZA
 # =============================================================================
+
 
 @btn_rio_torio_historico_plazas_bp.route(
     "/plaza/<int:id_plaza>",
@@ -537,9 +539,7 @@ def rio_torio_historico_plazas(id_plaza: int) -> str:
             nombre_bd="parquin_camiones",
         )
     except Exception as e:
-        current_app.logger.exception(
-            "Error al cargar plazas para detalle (Río Torío)"
-        )
+        current_app.logger.exception("Error al cargar plazas para detalle (Río Torío)")
         plazas = []
         error = (error or "") + f" Error al cargar plazas: {e}"
 

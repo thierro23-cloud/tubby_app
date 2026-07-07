@@ -17,6 +17,7 @@ btn_edificios_listado_bp = Blueprint(
     url_prefix="/inventario/edificios",
 )
 
+
 @btn_edificios_listado_bp.route("/listado", methods=["GET"])
 def btn_edificios_listado():
     """

@@ -35,7 +35,6 @@
 
 from core.db import get_connection
 
-
 # =============================================================================
 # 2️⃣ VALIDACIÓN DE ENDPOINT ACTIVO
 # =============================================================================
@@ -52,6 +51,7 @@ from core.db import get_connection
 # 👉 Sistema auto-regenerativo (no necesitas registrar endpoints manualmente)
 #
 # =============================================================================
+
 
 def endpoint_activo(endpoint):
     """
@@ -70,12 +70,15 @@ def endpoint_activo(endpoint):
     # ---------------------------------------------------------
     # 🧩 2.2 CONSULTAR ESTADO DEL ENDPOINT
     # ---------------------------------------------------------
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT activo
         FROM tbl_endpoints
         WHERE endpoint = %s
         LIMIT 1
-    """, (endpoint,))
+    """,
+        (endpoint,),
+    )
 
     row = cursor.fetchone()
 
@@ -121,6 +124,7 @@ def endpoint_activo(endpoint):
 #
 # =============================================================================
 
+
 def tiene_permiso(endpoint, rol_id):
     """
     🔐 Verifica si un rol puede acceder a un endpoint.
@@ -145,14 +149,17 @@ def tiene_permiso(endpoint, rol_id):
     # ---------------------------------------------------------
     # 🧩 3.3 CONSULTA DE PERMISOS
     # ---------------------------------------------------------
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT 1
         FROM tbl_roles_permisos rp
         JOIN tbl_endpoints e ON rp.idtbl_endpoints = e.idtbl_endpoints
         WHERE rp.idtbl_roles = %s
         AND e.endpoint = %s
         LIMIT 1
-    """, (rol_id, endpoint))
+    """,
+        (rol_id, endpoint),
+    )
 
     permitido = cursor.fetchone() is not None
 
@@ -184,6 +191,7 @@ def tiene_permiso(endpoint, rol_id):
 #
 # =============================================================================
 
+
 def registrar_endpoint(endpoint):
     """
     🧩 Registra un endpoint en la BD si no existe.
@@ -200,10 +208,13 @@ def registrar_endpoint(endpoint):
     # ---------------------------------------------------------
     # 🧩 4.2 INSERTAR ENDPOINT
     # ---------------------------------------------------------
-    cursor.execute("""
+    cursor.execute(
+        """
         INSERT IGNORE INTO tbl_endpoints (endpoint, activo)
         VALUES (%s, 1)
-    """, (endpoint,))
+    """,
+        (endpoint,),
+    )
 
     # ---------------------------------------------------------
     # 🧩 4.3 CONFIRMAR CAMBIOS

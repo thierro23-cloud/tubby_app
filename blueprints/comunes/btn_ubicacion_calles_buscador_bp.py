@@ -37,6 +37,7 @@ btn_ubicacion_calles_buscador_bp = Blueprint(
     url_prefix="/comunes/calles",
 )
 
+
 # ================================================
 # PÁGINA PRINCIPAL DEL BUSCADOR
 # ================================================
@@ -72,6 +73,7 @@ def btn_ubicacion_calles_buscador():
         "comunes/calles/buscador_calles.html",
         provincias=provincias or [],
     )
+
 
 # ================================================
 # API: MUNICIPIOS POR PROVINCIA
@@ -122,6 +124,7 @@ def api_municipios_por_provincia():
     )
 
     return jsonify({"ok": True, "data": municipios or []})
+
 
 # ================================================
 # API: BUSCADOR DE CALLES

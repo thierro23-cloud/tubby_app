@@ -1,4 +1,4 @@
-#==============================================================================
+# ==============================================================================
 # 🧩 FORMULARIO ÚNICO PROVEEDORES - BLUEPRINT COMPLETO
 # =============================================================================
 # Módulo completo con:
@@ -8,7 +8,7 @@
 # ✅ Validación, logging, error handling profesional
 # ✅ Patrón PRG (POST/REDIRECT/GET)
 # ✅ Safe int conversion para todos los idtbl_*
-#==============================================================================
+# ==============================================================================
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from services.helpers import login_required, rol_required
@@ -17,18 +17,19 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-#==============================================================================
+# ==============================================================================
 # 1️⃣ BLUEPRINT DEFINICIÓN
-#==============================================================================
+# ==============================================================================
 btn_proveedores_gestionar_bp = Blueprint(
     "btn_proveedores_gestionar_bp",
     __name__,
     url_prefix="/comunes/proveedores",
 )
 
-#==============================================================================
+# ==============================================================================
 # 2️⃣ HELPERS DE NORMALIZACIÓN
-#==============================================================================
+# ==============================================================================
+
 
 def _to_int_or_none(v):
     """Convierte a int si es válido, si no → None (para columnas INT opcionales)."""
@@ -37,9 +38,10 @@ def _to_int_or_none(v):
     v = str(v).strip()
     return int(v) if v.isdigit() else None
 
-#==============================================================================
+
+# ==============================================================================
 # 3️⃣ FORMULARIO PRINCIPAL (GET/POST) - PANTALLA ÚNICA
-#==============================================================================
+# ==============================================================================
 @btn_proveedores_gestionar_bp.route("/formulario", methods=["GET", "POST"])
 @login_required
 @rol_required("super_admin")
@@ -88,7 +90,9 @@ def _procesar_post_proveedor():
         "idtbl_productos_grupos": _to_int_or_none(f.get("idtbl_productos_grupos")),
         "Persona_contacto_comercial": f.get("Persona_contacto_comercial", "").strip(),
         "telefono_movil": f.get("telefono_movil", "").strip(),
-        "correo_electronico_comercial": f.get("correo_electronico_comercial", "").strip(),
+        "correo_electronico_comercial": f.get(
+            "correo_electronico_comercial", ""
+        ).strip(),
         "telefono_fijo_admin": f.get("telefono_fijo_admin", "").strip(),
         "telefono_movil_admin": f.get("telefono_movil_admin", "").strip(),
         "Persona_contacto_admin": f.get("Persona_contacto_admin", "").strip(),
@@ -108,15 +112,26 @@ def _procesar_post_proveedor():
     }
 
     bool_campos = [
-        "parquin", "coloca_contenedores", "empresa_construccion",
-        "vende_material_construccion", "es_bar", "terraza_fija",
-        "terraza_desmontable", "restuarante", "recibir_informe_pendientes",
+        "parquin",
+        "coloca_contenedores",
+        "empresa_construccion",
+        "vende_material_construccion",
+        "es_bar",
+        "terraza_fija",
+        "terraza_desmontable",
+        "restuarante",
+        "recibir_informe_pendientes",
     ]
     for campo in bool_campos:
         datos[campo] = 1 if f.get(campo) in ("1", "on", "true", "True", "TRUE") else 0
 
     try:
-        logger.info("[PROVEEDORES] %s ID=%s datos=%r", "INSERT" if prov_id is None else "UPDATE", prov_id, datos)
+        logger.info(
+            "[PROVEEDORES] %s ID=%s datos=%r",
+            "INSERT" if prov_id is None else "UPDATE",
+            prov_id,
+            datos,
+        )
 
         if prov_id is None:
             # INSERT
@@ -229,9 +244,11 @@ def _cargar_formulario(prov_id=None, proveedor_override=None):
         tipos_de_terceros=listas["tipos_de_terceros"],
     )
 
-#==============================================================================  
+
+# ==============================================================================
 # 4️⃣ APIs AUTOCOMPLETAR (NOMBER sin tildes, NIF con tol. ceros iniciales)
-#==============================================================================
+# ==============================================================================
+
 
 @btn_proveedores_gestionar_bp.route("/api/buscar_por_nombre")
 @login_required
@@ -240,11 +257,16 @@ def api_buscar_proveedor_por_nombre():
     texto = request.args.get("texto", "").strip()
 
     if len(texto) < 2:
-        return jsonify({
-            "success": False,
-            "results": [],
-            "message": "Mínimo 2 caracteres para buscar por nombre"
-        }), 400
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "results": [],
+                    "message": "Mínimo 2 caracteres para buscar por nombre",
+                }
+            ),
+            400,
+        )
 
     try:
         sql = """
@@ -255,11 +277,7 @@ def api_buscar_proveedor_por_nombre():
             LIMIT 50
         """
 
-        rows = ejecutar_query(
-            sql,
-            params=(f"%{texto}%",),
-            nombre_bd="bd_tbl_comunes"
-        )
+        rows = ejecutar_query(sql, params=(f"%{texto}%",), nombre_bd="bd_tbl_comunes")
 
         results = [
             {
@@ -270,19 +288,21 @@ def api_buscar_proveedor_por_nombre():
             for r in rows
         ]
 
-        return jsonify({
-            "success": True,
-            "results": results,
-            "message": f"{len(results)} resultados"
-        })
+        return jsonify(
+            {
+                "success": True,
+                "results": results,
+                "message": f"{len(results)} resultados",
+            }
+        )
 
     except Exception as e:
         logger.error(f"ERROR API nombre '{texto}': {str(e)}")
-        return jsonify({
-            "success": False,
-            "results": [],
-            "message": "Error servidor"
-        }), 500
+        return (
+            jsonify({"success": False, "results": [], "message": "Error servidor"}),
+            500,
+        )
+
 
 @btn_proveedores_gestionar_bp.route("/api/buscar_por_nif")
 @login_required
@@ -291,16 +311,23 @@ def api_buscar_proveedor_por_nif():
     texto = request.args.get("texto", "").strip()
 
     if not texto:
-        return jsonify({
-            "success": False,
-            "results": [],
-            "message": "Introduce NIF para buscar"
-        }), 400
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "results": [],
+                    "message": "Introduce NIF para buscar",
+                }
+            ),
+            400,
+        )
 
     # Normalizamos para quitar ceros a la izquierda,
     # y construimos el patrón de búsqueda parcial
     texto_norm = texto.lstrip("0") or "0"
-    patron_like = f"{texto_norm}%"  # prefijo: empieza por los dígitos que pone el usuario
+    patron_like = (
+        f"{texto_norm}%"  # prefijo: empieza por los dígitos que pone el usuario
+    )
 
     try:
         sql = """
@@ -320,9 +347,7 @@ def api_buscar_proveedor_por_nif():
         """
 
         rows = ejecutar_query(
-            sql,
-            params=(texto, texto_norm, patron_like),
-            nombre_bd="bd_tbl_comunes"
+            sql, params=(texto, texto_norm, patron_like), nombre_bd="bd_tbl_comunes"
         )
 
         results = [
@@ -334,21 +359,25 @@ def api_buscar_proveedor_por_nif():
             for r in rows
         ]
 
-        return jsonify({
-            "success": True,
-            "results": results,
-            "message": f"{len(results)} resultados"
-        })
+        return jsonify(
+            {
+                "success": True,
+                "results": results,
+                "message": f"{len(results)} resultados",
+            }
+        )
 
     except Exception as e:
         logger.error(f"ERROR API NIF '{texto}': {str(e)}")
-        return jsonify({
-            "success": False,
-            "results": [],
-            "message": "Error servidor"
-        }), 500#==============================================================================  
+        return (
+            jsonify({"success": False, "results": [], "message": "Error servidor"}),
+            500,
+        )  # ==============================================================================
+
+
 # 5️⃣ APIs COMBOS DEPENDIENTES (DIRECCIÓN)
-#==============================================================================
+# ==============================================================================
+
 
 @btn_proveedores_gestionar_bp.route("/api/provincias")
 @login_required
@@ -357,9 +386,10 @@ def api_provincias():
     rows = ejecutar_query(
         "SELECT idtbl_provincias AS id, provincias AS nombre "
         "FROM bd_tbl_comunes.tbl_provincias ORDER BY provincias",
-        nombre_bd="bd_tbl_comunes"
+        nombre_bd="bd_tbl_comunes",
     )
     return jsonify([{"id": r["id"], "nombre": r["nombre"]} for r in rows])
+
 
 @btn_proveedores_gestionar_bp.route("/api/municipios")
 @login_required
@@ -371,7 +401,8 @@ def api_municipios():
             "SELECT idtbl_municipios AS id, municipios AS nombre "
             "FROM bd_tbl_comunes.tbl_municipios "
             "WHERE idtbl_provincias=%s ORDER BY municipios",
-            params=(int(prov_id),), nombre_bd="bd_tbl_comunes"
+            params=(int(prov_id),),
+            nombre_bd="bd_tbl_comunes",
         )
     else:
         rows = ejecutar_query(
@@ -379,9 +410,10 @@ def api_municipios():
             "FROM bd_tbl_comunes.tbl_municipios "
             "WHERE idtbl_provincias IS NOT NULL "
             "ORDER BY municipios",
-            nombre_bd="bd_tbl_comunes"
+            nombre_bd="bd_tbl_comunes",
         )
     return jsonify([{"id": r["id"], "nombre": r["nombre"]} for r in rows])
+
 
 @btn_proveedores_gestionar_bp.route("/api/tipos_vias")
 @login_required
@@ -390,9 +422,10 @@ def api_tipos_vias():
     rows = ejecutar_query(
         "SELECT idtbl_tipos_de_vias AS id, tipos_de_vias AS nombre "
         "FROM bd_tbl_comunes.tbl_tipos_de_vias ORDER BY tipos_de_vias",
-        nombre_bd="bd_tbl_comunes"
+        nombre_bd="bd_tbl_comunes",
     )
     return jsonify([{"id": r["id"], "nombre": r["nombre"]} for r in rows])
+
 
 @btn_proveedores_gestionar_bp.route("/api/calles")
 @login_required
@@ -415,16 +448,21 @@ def api_calles():
     rows = ejecutar_query(
         f"SELECT idtbl_calles AS id, calles AS nombre, Codigopostal "
         f"FROM bd_tbl_comunes.tbl_calles {where_str} ORDER BY calles",
-        params=tuple(params), nombre_bd="bd_tbl_comunes"
+        params=tuple(params),
+        nombre_bd="bd_tbl_comunes",
     )
-    return jsonify([
-        {"id": r["id"], "nombre": f"{r['nombre']} ({r.get('Codigopostal', '')})"}
-        for r in rows
-    ])
+    return jsonify(
+        [
+            {"id": r["id"], "nombre": f"{r['nombre']} ({r.get('Codigopostal', '')})"}
+            for r in rows
+        ]
+    )
 
-#==============================================================================  
+
+# ==============================================================================
 # 6️⃣ API: OBTENER PROVEEDOR POR ID (PARA RELLENAR FORM DESDE JS)
-#==============================================================================
+# ==============================================================================
+
 
 @btn_proveedores_gestionar_bp.route("/api/proveedor/<int:prov_id>")
 @login_required
@@ -445,54 +483,72 @@ def api_get_proveedor(prov_id):
             nombre_bd="bd_tbl_comunes",
         )
         if not rows:
-            return jsonify({
-                "success": False,
-                "message": "Proveedor no encontrado",
-            }), 404
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "message": "Proveedor no encontrado",
+                    }
+                ),
+                404,
+            )
 
         p = rows[0]
 
-        return jsonify({
-            "success": True,
-            "proveedor": {
-                "Idtbl_proveedores": p["Idtbl_proveedores"],
-                "NIF": p.get("NIF"),
-                "Nombre_Razon_Social": p.get("Nombre_Razon_Social"),
-                "Telefono": p.get("Telefono"),
-                "ALIAS": p.get("ALIAS"),
-                "idtbl_provincias": p.get("idtbl_provincias"),
-                "idtbl_municipios": p.get("idtbl_municipios"),
-                "idtbl_tipos_de_vias": p.get("idtbl_tipos_de_vias"),
-                "idtbl_calles": p.get("idtbl_calles"),
-                "Domicilio": p.get("Domicilio"),
-                "Poblacion": p.get("Poblacion"),
-                "Codigo_Postal": p.get("Codigo_Postal"),
-                "Provincia": p.get("Provincia"),
-                "numero_portal": p.get("numero_portal"),
-                "Persona_contacto_comercial": p.get("Persona_contacto_comercial"),
-                "telefono_movil": p.get("telefono_movil"),
-                "correo_electronico_comercial": p.get("correo_electronico_comercial"),
-                "Persona_contacto_admin": p.get("Persona_contacto_admin"),
-                "telefono_fijo_admin": p.get("telefono_fijo_admin"),
-                "telefono_movil_admin": p.get("telefono_movil_admin"),
-                "correo_electronico_admin": p.get("correo_electronico_admin"),
-                "numero_cuenta": p.get("numero_cuenta"),
-                "idtbl_Tipo_de_Tercero": p.get("idtbl_Tipo_de_Tercero"),
-                "idtbl_productos_grupos": p.get("idtbl_productos_grupos"),
-                "parquin": bool(p.get("parquin")),
-                "coloca_contenedores": bool(p.get("coloca_contenedores")),
-                "empresa_construccion": bool(p.get("empresa_construccion")),
-                "vende_material_construccion": bool(p.get("vende_material_construccion")),
-                "es_bar": bool(p.get("es_bar")),
-                "terraza_fija": bool(p.get("terraza_fija")),
-                "terraza_desmontable": bool(p.get("terraza_desmontable")),
-                "restuarante": bool(p.get("restuarante")),
-                "recibir_informe_pendientes": bool(p.get("recibir_informe_pendientes")),
+        return jsonify(
+            {
+                "success": True,
+                "proveedor": {
+                    "Idtbl_proveedores": p["Idtbl_proveedores"],
+                    "NIF": p.get("NIF"),
+                    "Nombre_Razon_Social": p.get("Nombre_Razon_Social"),
+                    "Telefono": p.get("Telefono"),
+                    "ALIAS": p.get("ALIAS"),
+                    "idtbl_provincias": p.get("idtbl_provincias"),
+                    "idtbl_municipios": p.get("idtbl_municipios"),
+                    "idtbl_tipos_de_vias": p.get("idtbl_tipos_de_vias"),
+                    "idtbl_calles": p.get("idtbl_calles"),
+                    "Domicilio": p.get("Domicilio"),
+                    "Poblacion": p.get("Poblacion"),
+                    "Codigo_Postal": p.get("Codigo_Postal"),
+                    "Provincia": p.get("Provincia"),
+                    "numero_portal": p.get("numero_portal"),
+                    "Persona_contacto_comercial": p.get("Persona_contacto_comercial"),
+                    "telefono_movil": p.get("telefono_movil"),
+                    "correo_electronico_comercial": p.get(
+                        "correo_electronico_comercial"
+                    ),
+                    "Persona_contacto_admin": p.get("Persona_contacto_admin"),
+                    "telefono_fijo_admin": p.get("telefono_fijo_admin"),
+                    "telefono_movil_admin": p.get("telefono_movil_admin"),
+                    "correo_electronico_admin": p.get("correo_electronico_admin"),
+                    "numero_cuenta": p.get("numero_cuenta"),
+                    "idtbl_Tipo_de_Tercero": p.get("idtbl_Tipo_de_Tercero"),
+                    "idtbl_productos_grupos": p.get("idtbl_productos_grupos"),
+                    "parquin": bool(p.get("parquin")),
+                    "coloca_contenedores": bool(p.get("coloca_contenedores")),
+                    "empresa_construccion": bool(p.get("empresa_construccion")),
+                    "vende_material_construccion": bool(
+                        p.get("vende_material_construccion")
+                    ),
+                    "es_bar": bool(p.get("es_bar")),
+                    "terraza_fija": bool(p.get("terraza_fija")),
+                    "terraza_desmontable": bool(p.get("terraza_desmontable")),
+                    "restuarante": bool(p.get("restuarante")),
+                    "recibir_informe_pendientes": bool(
+                        p.get("recibir_informe_pendientes")
+                    ),
+                },
             }
-        })
+        )
     except Exception as e:
         logger.exception(f"Error API proveedor {prov_id}: {e}")
-        return jsonify({
-            "success": False,
-            "message": "Error servidor",
-        }), 500
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Error servidor",
+                }
+            ),
+            500,
+        )

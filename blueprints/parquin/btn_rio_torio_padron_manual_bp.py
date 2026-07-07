@@ -110,6 +110,7 @@ btn_rio_torio_padron_manual_bp = Blueprint(
 # 3️⃣ HELPER: CÁLCULO DEL PERIODO DEL PADRÓN (JSON)
 # =============================================================================
 
+
 def obtener_periodo_padron(fecha_base: date | None = None) -> dict:
     """
     Calcula el periodo del padrón técnico.
@@ -182,6 +183,7 @@ def obtener_periodo_padron(fecha_base: date | None = None) -> dict:
 # 4️⃣ CONSULTA ÚNICA: HISTÓRICO + PLAZAS + USUARIOS + PROVEEDORES
 # =============================================================================
 
+
 def obtener_historico_periodo(inicio_mes: date, fin_mes: date) -> list[dict]:
     sql = (
         "SELECT "
@@ -213,9 +215,12 @@ def obtener_historico_periodo(inicio_mes: date, fin_mes: date) -> list[dict]:
         nombre_bd="parquin_camiones",
     )
     return filas
-#=============================================================================
+
+
+# =============================================================================
 # 5️⃣ PADRÓN PRINCIPAL (AGREGADO POR PROVEEDOR)
 # =============================================================================
+
 
 def construir_padron_principal(filas: list[dict]) -> list[dict]:
     por_proveedor: dict[int, dict] = {}
@@ -227,10 +232,12 @@ def construir_padron_principal(filas: list[dict]) -> list[dict]:
                 "nombre_proveedor": f["nombre_proveedor"],
                 "nif": f["nif_proveedor"],
                 "plazas": set(),
-                "forma_pago": (f.get("forma_pago") 
-                               or f.get("forma_pago_proveedor") 
-                               or f.get("forma_pago_usuario") 
-                               or ""),
+                "forma_pago": (
+                    f.get("forma_pago")
+                    or f.get("forma_pago_proveedor")
+                    or f.get("forma_pago_usuario")
+                    or ""
+                ),
             }
         por_proveedor[id_prov]["plazas"].add(f["codigo_plazas"])
 
@@ -249,9 +256,11 @@ def construir_padron_principal(filas: list[dict]) -> list[dict]:
 
     return resultado
 
+
 # =============================================================================
 # 6️⃣ VARIACIONES: BAJA, CAMBIO DE PLAZA, FORMA DE PAGO
 # =============================================================================
+
 
 def construir_variaciones(
     filas: list[dict],
@@ -322,11 +331,12 @@ def construir_variaciones(
                             "nombre_proveedor": baja["nombre_proveedor"],
                             "nif": baja["nif_proveedor"],
                             "numero_plaza": (
-            f"{baja['codigo_plazas']} -> {alta['codigo_plazas']}"
-        ),
+                                f"{baja['codigo_plazas']} -> {alta['codigo_plazas']}"
+                            ),
                             "tipo_cambio": "Cambio de plaza",
                             "fecha": ff,
-                            "forma_pago": baja.get("forma_pago") or baja.get("forma_pago_usuario"),
+                            "forma_pago": baja.get("forma_pago")
+                            or baja.get("forma_pago_usuario"),
                         }
                     )
                     usadas_bajas.add(baja["idtbl_historico_plazas"])
@@ -345,7 +355,8 @@ def construir_variaciones(
                     "numero_plaza": baja["codigo_plazas"],
                     "tipo_cambio": "BAJA",
                     "fecha": baja["fecha_fin"],
-                    "forma_pago": baja.get("forma_pago") or baja.get("forma_pago_usuario"),
+                    "forma_pago": baja.get("forma_pago")
+                    or baja.get("forma_pago_usuario"),
                 }
             )
 
@@ -383,9 +394,11 @@ def construir_variaciones(
     )
     return variaciones
 
+
 # =============================================================================
 # 7️⃣ RESUMEN PLAZAS (TOTAL / LIBRES / OCUPADAS)
 # =============================================================================
+
 
 def _obtener_resumen_plazas_rio_torio(inicio_mes: date, fin_mes: date) -> dict:
     """
@@ -420,6 +433,7 @@ def _obtener_resumen_plazas_rio_torio(inicio_mes: date, fin_mes: date) -> dict:
 # 8️⃣ GENERAR INFORME WORD · PADRÓN MENSUAL (CON CONTADOR POR TIPO DE PAGO)
 # =============================================================================
 
+
 def _generar_informe_word(mes_informe: int, anio_informe: int) -> Path:
     """
     Genera el Word del padrón mensual Río Torío.
@@ -449,9 +463,7 @@ def _generar_informe_word(mes_informe: int, anio_informe: int) -> Path:
     fecha_fin_periodo = fecha_inicio_mes_siguiente - timedelta(days=1)
 
     nombre_mes = MESES_ES[mes_informe].capitalize()
-    nombre_fichero = (
-        f"{nombre_mes}_{anio_informe}_Padron_de_parking_Rio_Torio.docx"
-    )
+    nombre_fichero = f"{nombre_mes}_{anio_informe}_Padron_de_parking_Rio_Torio.docx"
 
     RUTA_DESTINO.mkdir(parents=True, exist_ok=True)
     ruta_completa = RUTA_DESTINO / nombre_fichero
@@ -481,7 +493,9 @@ def _generar_informe_word(mes_informe: int, anio_informe: int) -> Path:
 
     for f in filas:
         # Preferimos forma_pago del histórico; si no, la del usuario
-        forma_raw = (f.get("forma_pago") or f.get("forma_pago_usuario") or "").strip().lower()
+        forma_raw = (
+            (f.get("forma_pago") or f.get("forma_pago_usuario") or "").strip().lower()
+        )
         plaza = f.get("codigo_plazas")
 
         # Si no hay plaza, no tiene sentido contarla
@@ -649,9 +663,7 @@ def _generar_informe_word(mes_informe: int, anio_informe: int) -> Path:
     p_final = document.add_paragraph()
     p_final.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
     p_final.paragraph_format.first_line_indent = Cm(2)
-    p_final.add_run(
-        "Lo que comunico a Vd., para su conocimiento y efectos oportunos."
-    )
+    p_final.add_run("Lo que comunico a Vd., para su conocimiento y efectos oportunos.")
 
     document.add_paragraph()
     p_firma_fecha = document.add_paragraph()
@@ -680,6 +692,7 @@ def _generar_informe_word(mes_informe: int, anio_informe: int) -> Path:
 # =============================================================================
 # 9️⃣ ENDPOINT JSON: PADRÓN TÉCNICO
 # =============================================================================
+
 
 @btn_rio_torio_padron_manual_bp.route("/padron/generar", methods=["GET"])
 @login_required
@@ -726,6 +739,7 @@ def btn_rio_torio_padron_generar_json():
 #   Acceso restringido a roles: gestor, super_admin
 # =============================================================================
 
+
 @btn_rio_torio_padron_manual_bp.route(
     "/btn_rio_torio_padron_manual",
     methods=["GET", "POST"],
@@ -744,9 +758,7 @@ def btn_rio_torio_padron_manual():
         · Genera el Word.
         · Devuelve el fichero como descarga.
     """
-    current_app.logger.info(
-        "Entrando en btn_rio_torio_padron_manual (padron manual)."
-    )
+    current_app.logger.info("Entrando en btn_rio_torio_padron_manual (padron manual).")
 
     # GET: mostrar formulario con mes/año por defecto
     if request.method == "GET":
@@ -778,9 +790,7 @@ def btn_rio_torio_padron_manual():
     except Exception:
         flash("Mes o año no válidos.", "danger")
         return redirect(
-            url_for(
-                "btn_rio_torio_padron_manual_bp.btn_rio_torio_padron_manual"
-            )
+            url_for("btn_rio_torio_padron_manual_bp.btn_rio_torio_padron_manual")
         )
 
     # Generar informe Word
@@ -801,7 +811,5 @@ def btn_rio_torio_padron_manual():
         current_app.logger.error(f"Error generando padrón Rio Torío: {e}")
         flash("Error generando el informe de padrón.", "danger")
         return redirect(
-            url_for(
-                "btn_rio_torio_padron_manual_bp.btn_rio_torio_padron_manual"
-            )
+            url_for("btn_rio_torio_padron_manual_bp.btn_rio_torio_padron_manual")
         )

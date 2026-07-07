@@ -6,6 +6,7 @@ from db import ejecutar_query
 
 NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
 
+
 def geocodificar_direccion(direccion: str):
     params = {
         "format": "json",
@@ -22,6 +23,7 @@ def geocodificar_direccion(direccion: str):
     if not data:
         return None, None
     return float(data[0]["lat"]), float(data[0]["lon"])
+
 
 def obtener_contenedores_pendientes():
     sql = """
@@ -40,6 +42,7 @@ def obtener_contenedores_pendientes():
     """
     return ejecutar_query(sql, nombre_bd="control_via_publica")
 
+
 def actualizar_coordenadas_contenedor(id_contenedor, lat, lon):
     sql = """
     UPDATE control_via_publica.tbl_control_contenedores
@@ -53,6 +56,7 @@ def actualizar_coordenadas_contenedor(id_contenedor, lat, lon):
         nombre_bd="control_via_publica",
         commit=True,
     )
+
 
 def main():
     filas = obtener_contenedores_pendientes()
@@ -92,6 +96,7 @@ def main():
 
         # Respetar política de Nominatim
         time.sleep(1.1)
+
 
 if __name__ == "__main__":
     main()

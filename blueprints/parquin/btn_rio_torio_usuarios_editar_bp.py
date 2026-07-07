@@ -49,7 +49,6 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash
 from services.helpers import login_required, rol_required
 from db import ejecutar_query, ejecutar_non_query
 
-
 # =============================================================================
 # 1️⃣ BLUEPRINT · RIO_TORIO · EDITAR USUARIO
 # =============================================================================
@@ -85,6 +84,7 @@ btn_rio_torio_usuarios_editar_bp = Blueprint(
 #   - Tabla:
 #       parquin_camiones.tbl_usuarios
 # =============================================================================
+
 
 def _rt_obtener_usuario_por_id(idtbl_usuarios: int):
     """
@@ -176,6 +176,7 @@ def _rt_actualizar_usuario(idtbl_usuarios: int, datos: dict) -> None:
 #       que usa la plantilla:
 #           parquin/rio_torio/rio_torio_listar_usuarios.html
 # =============================================================================
+
 
 @btn_rio_torio_usuarios_editar_bp.route(
     "/rio_torio_usuarios_editar/<int:idtbl_usuarios>",

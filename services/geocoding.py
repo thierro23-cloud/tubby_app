@@ -365,7 +365,9 @@ def resolver_lat_long(
         if lat_final is not None and lon_final is not None:
             # Enriquecemos la caché con fuente='PDF' para esta calle/portal
             try:
-                portal_int = int(numero_portal) if numero_portal not in (None, "") else 1
+                portal_int = (
+                    int(numero_portal) if numero_portal not in (None, "") else 1
+                )
             except ValueError:
                 portal_int = 1
 

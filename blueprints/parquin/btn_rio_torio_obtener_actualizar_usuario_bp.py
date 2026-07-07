@@ -48,7 +48,6 @@ from flask import (
 from services.helpers import login_required, rol_required
 from db import ejecutar_query, ejecutar_non_query
 
-
 # =============================================================================
 # 1 BLUEPRINT DEL BOTÓN
 # =============================================================================
@@ -76,6 +75,7 @@ btn_rio_torio_listar_usuarios_bp = Blueprint(
 # =============================================================================
 # 2 HELPERS SQL · LISTAR Y ACTUALIZAR USUARIOS
 # =============================================================================
+
 
 def _rt_listar_usuarios_parquin():
     """
@@ -147,6 +147,7 @@ def _rt_actualizar_usuario(id_usuario: int, datos: dict) -> None:
 #   - Descubrirá este botón porque:
 #       · el endpoint empieza por "btn_".
 # =============================================================================
+
 
 @btn_rio_torio_listar_usuarios_bp.route(
     "/btn_rio_torio_listar_usuarios",

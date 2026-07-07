@@ -38,7 +38,6 @@ from flask import jsonify, request
 import uuid
 import datetime
 
-
 # =============================================================================
 # 2️⃣ GENERADOR DE METADATOS
 # =============================================================================
@@ -52,6 +51,7 @@ import datetime
 #
 # =============================================================================
 
+
 def _build_meta(extra_meta=None):
     """
     🧠 Genera metadatos estándar para cada respuesta.
@@ -60,7 +60,7 @@ def _build_meta(extra_meta=None):
     meta = {
         "request_id": str(uuid.uuid4()),
         "timestamp": datetime.datetime.utcnow().isoformat(),
-        "path": request.path
+        "path": request.path,
     }
 
     if extra_meta:
@@ -72,6 +72,7 @@ def _build_meta(extra_meta=None):
 # =============================================================================
 # 3️⃣ RESPUESTA EXITOSA
 # =============================================================================
+
 
 def success(data=None, message="OK", code=200, meta=None):
     """
@@ -87,7 +88,7 @@ def success(data=None, message="OK", code=200, meta=None):
         "status": "success",
         "message": message,
         "data": data,
-        "meta": _build_meta(meta)
+        "meta": _build_meta(meta),
     }
 
     return jsonify(response), code
@@ -96,6 +97,7 @@ def success(data=None, message="OK", code=200, meta=None):
 # =============================================================================
 # 4️⃣ RESPUESTA DE ERROR
 # =============================================================================
+
 
 def error(message="Error", code=400, data=None, error_code=None):
     """
@@ -112,7 +114,7 @@ def error(message="Error", code=400, data=None, error_code=None):
         "message": message,
         "error_code": error_code,
         "data": data,
-        "meta": _build_meta()
+        "meta": _build_meta(),
     }
 
     return jsonify(response), code
@@ -126,6 +128,7 @@ def error(message="Error", code=400, data=None, error_code=None):
 # Evitar repetir código en casos comunes
 #
 # =============================================================================
+
 
 def created(data=None, message="Recurso creado"):
     return success(data, message, 201)
@@ -164,6 +167,7 @@ def server_error(message="Error interno del servidor"):
 #
 # =============================================================================
 
+
 def paginated(data, page, per_page, total):
     """
     📊 Respuesta paginada estándar
@@ -174,7 +178,7 @@ def paginated(data, page, per_page, total):
             "page": page,
             "per_page": per_page,
             "total": total,
-            "total_pages": (total // per_page) + (1 if total % per_page else 0)
+            "total_pages": (total // per_page) + (1 if total % per_page else 0),
         }
     }
 
@@ -191,6 +195,7 @@ def paginated(data, page, per_page, total):
 # - Monitorización
 #
 # =============================================================================
+
 
 def log_response(response_body):
     """

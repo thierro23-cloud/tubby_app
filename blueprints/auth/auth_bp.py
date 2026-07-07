@@ -25,17 +25,18 @@ from flask import (
     flash,
     current_app,
 )
-from db import get_connection        # 🔌 Conexión a base de datos
-import bcrypt                        # 🔐 Seguridad de contraseñas
+from db import get_connection  # 🔌 Conexión a base de datos
+import bcrypt  # 🔐 Seguridad de contraseñas
 
 # =============================================================================
 # 2️⃣ DEFINICIÓN DEL BLUEPRINT
 # =============================================================================
 auth_bp = Blueprint(
-    "auth_bp",        # 🏷️ Nombre interno del blueprint
+    "auth_bp",  # 🏷️ Nombre interno del blueprint
     __name__,
-    url_prefix=""     # 🚪 Sin prefijo, login directo en /login
+    url_prefix="",  # 🚪 Sin prefijo, login directo en /login
 )
+
 
 # =============================================================================
 # 3️⃣ FUNCIÓN AUXILIAR · REGISTRAR INTENTOS DE LOGIN
@@ -92,6 +93,7 @@ def registrar_intento_login(idtbl_gestores, exito):
     finally:
         cursor.close()
         conn.close()
+
 
 # =============================================================================
 # 4️⃣ RUTA /login · CONTROLADOR PRINCIPAL DE LOGIN
@@ -228,6 +230,7 @@ def login():
     # -------------------------------------------------
     return render_template("auth/login.html", preview_user=preview_user, error=error)
 
+
 # =============================================================================
 # 5️⃣ FUNCIÓN AUXILIAR: REDIRECCIÓN POR ROL
 # =============================================================================
@@ -259,6 +262,7 @@ def _redirigir_por_rol(rol: str):
 
     flash(f"Rol no reconocido: {rol}", "danger")
     return redirect(url_for("auth_bp.login"))
+
 
 # =============================================================================
 # 6️⃣ LOGOUT
@@ -302,6 +306,7 @@ def logout():
     current_app.logger.info("👋 Logout completado desde IP %s", ip_cliente)
     return redirect(url_for("auth_bp.login"))
 
+
 # =============================================================================
 # 7️⃣ DEBUG ENDPOINTS
 # =============================================================================
@@ -311,8 +316,11 @@ def debug_endpoints():
     🔍 Muestra todos los endpoints cargados en Flask.
     """
     items = [f"{rule.endpoint} → {rule}" for rule in current_app.url_map.iter_rules()]
-    html = "<h2>🔍 Endpoints:</h2><ul>" + "".join(f"<li>{i}</li>" for i in items) + "</ul>"
+    html = (
+        "<h2>🔍 Endpoints:</h2><ul>" + "".join(f"<li>{i}</li>" for i in items) + "</ul>"
+    )
     return html
+
 
 # =============================================================================
 # 8️⃣ RECUPERAR CONTRASEÑA

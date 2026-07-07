@@ -18,6 +18,7 @@ ESQUEMAS_PERMITIDOS = {
     "plan_de_emergencias",
 }
 
+
 def obtener_tablas_permitidas():
     esquemas = "', '".join(ESQUEMAS_PERMITIDOS)
     filas = ejecutar_query(f"""

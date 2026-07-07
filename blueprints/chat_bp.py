@@ -37,7 +37,6 @@ from flask import Blueprint, render_template, request, session, current_app, jso
 import requests
 import json
 
-
 # =============================================================================
 # 1️⃣ DEFINICIÓN DEL BLUEPRINT
 # =============================================================================
@@ -52,6 +51,7 @@ chat_bp = Blueprint(
 # =============================================================================
 # 2️⃣ HELPERS INTERNOS · PERMISOS Y LLAMADA A OLLAMA
 # =============================================================================
+
 
 def _es_super_admin() -> bool:
     """
@@ -91,7 +91,9 @@ def _llamar_ollama(prompt: str) -> str:
     """
     backend = current_app.config.get("LLM_BACKEND", "ollama")
     if backend != "ollama":
-        raise RuntimeError(f"LLM_BACKEND={backend!r} no es compatible con _llamar_ollama")
+        raise RuntimeError(
+            f"LLM_BACKEND={backend!r} no es compatible con _llamar_ollama"
+        )
 
     model = current_app.config.get("LLM_MODEL")
     if not model:
@@ -134,8 +136,8 @@ def _llamar_ollama(prompt: str) -> str:
 # 3️⃣ VISTA HTML DEL CHAT
 # =============================================================================
 
-@chat_bp.route("/chat_llm", methods=["GET"])
 
+@chat_bp.route("/chat_llm", methods=["GET"])
 def chat_llm_view():
     """
     Vista HTML del chat de asistencia jurídico‑administrativa para super_admin.
@@ -163,8 +165,8 @@ def chat_llm_view():
 # 4️⃣ API AJAX · CHAT JURÍDICO‑ADMINISTRATIVO
 # =============================================================================
 
-@chat_bp.route("/api/chat_llm", methods=["POST"])
 
+@chat_bp.route("/api/chat_llm", methods=["POST"])
 def api_chat_llm():
     """
     Endpoint AJAX para el chatbot jurídico‑administrativo.
@@ -211,11 +213,14 @@ def api_chat_llm():
     # (Opcional) Control de longitud máxima para evitar prompts excesivos
     max_chars = current_app.config.get("CHAT_LLM_MAX_INPUT_CHARS", 4000)
     if len(message) > max_chars:
-        return jsonify(
-            {
-                "error": f"El mensaje es demasiado largo (máx. {max_chars} caracteres).",
-            }
-        ), 400
+        return (
+            jsonify(
+                {
+                    "error": f"El mensaje es demasiado largo (máx. {max_chars} caracteres).",
+                }
+            ),
+            400,
+        )
 
     current_app.logger.info(
         "[CHAT_LLM_SUPER_ADMIN] Petición de chat recibida (longitud=%d caracteres)",
@@ -251,9 +256,12 @@ def api_chat_llm():
                 "[CHAT_LLM_SUPER_ADMIN] Respuesta vacía de Ollama para prompt de longitud=%d",
                 len(prompt_completo),
             )
-            return jsonify(
-                {"error": "El modelo no ha devuelto respuesta. Inténtalo de nuevo."}
-            ), 500
+            return (
+                jsonify(
+                    {"error": "El modelo no ha devuelto respuesta. Inténtalo de nuevo."}
+                ),
+                500,
+            )
 
         return jsonify({"reply": reply})
 

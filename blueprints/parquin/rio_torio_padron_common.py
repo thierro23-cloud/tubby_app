@@ -15,7 +15,6 @@ from docx.shared import Cm
 
 from db import ejecutar_query
 
-
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
@@ -143,7 +142,9 @@ def obtener_historico_periodo(inicio_mes: date, fin_mes: date) -> list[dict]:
         "    AND (h.fecha_fin IS NULL OR h.fecha_fin >= %s) "
         "ORDER BY p.apellidos, p.nombre, pl.codigo_plazas, h.fecha_inicio"
     )
-    return ejecutar_query(sql, params=(fin_mes, inicio_mes), nombre_bd="parquin_camiones")
+    return ejecutar_query(
+        sql, params=(fin_mes, inicio_mes), nombre_bd="parquin_camiones"
+    )
 
 
 def construir_padron_principal(filas: list[dict]) -> list[dict]:
@@ -175,7 +176,9 @@ def construir_padron_principal(filas: list[dict]) -> list[dict]:
     return resultado
 
 
-def construir_variaciones(filas: list[dict], inicio_mes: date, fin_mes: date) -> list[dict]:
+def construir_variaciones(
+    filas: list[dict], inicio_mes: date, fin_mes: date
+) -> list[dict]:
     variaciones: list[dict] = []
     por_prov: dict[int, list[dict]] = defaultdict(list)
 
@@ -264,7 +267,9 @@ def construir_variaciones(filas: list[dict], inicio_mes: date, fin_mes: date) ->
                         )
                 forma_anterior = forma_actual
 
-    variaciones.sort(key=lambda v: (v["nombre_proveedor"], v["fecha"], v["numero_plaza"]))
+    variaciones.sort(
+        key=lambda v: (v["nombre_proveedor"], v["fecha"], v["numero_plaza"])
+    )
     return variaciones
 
 
@@ -336,7 +341,9 @@ def contar_formas_pago(filas: list[dict]) -> dict:
     return {k: len(v) for k, v in plazas.items()}
 
 
-def generar_informe_word_periodo(inicio_periodo: date, fin_periodo: date, sufijo: str = "") -> Path:
+def generar_informe_word_periodo(
+    inicio_periodo: date, fin_periodo: date, sufijo: str = ""
+) -> Path:
     """
     Genera exactamente el mismo informe para cualquier origen:
       - Manual mes/año.
@@ -345,7 +352,9 @@ def generar_informe_word_periodo(inicio_periodo: date, fin_periodo: date, sufijo
     Lo único que cambia es el periodo recibido.
     """
     RUTA_DESTINO.mkdir(parents=True, exist_ok=True)
-    ruta_completa = RUTA_DESTINO / nombre_fichero_periodo(inicio_periodo, fin_periodo, sufijo=sufijo)
+    ruta_completa = RUTA_DESTINO / nombre_fichero_periodo(
+        inicio_periodo, fin_periodo, sufijo=sufijo
+    )
     periodo_texto = etiqueta_periodo(inicio_periodo, fin_periodo)
 
     filas = obtener_historico_periodo(inicio_periodo, fin_periodo)

@@ -36,10 +36,10 @@ import io
 
 from db import ejecutar_query
 
-
 # =============================================================================
 # 2️⃣ GENERAR DATOS
 # =============================================================================
+
 
 def obtener_datos(sql, parametros=(), bd="control_via_publica"):
 
@@ -50,6 +50,7 @@ def obtener_datos(sql, parametros=(), bd="control_via_publica"):
 # 3️⃣ EXPORTAR JSON
 # =============================================================================
 
+
 def exportar_json(datos):
 
     return json.dumps(datos, indent=4, ensure_ascii=False)
@@ -58,6 +59,7 @@ def exportar_json(datos):
 # =============================================================================
 # 4️⃣ EXPORTAR CSV
 # =============================================================================
+
 
 def exportar_csv(datos):
 
@@ -78,6 +80,7 @@ def exportar_csv(datos):
 # =============================================================================
 # 5️⃣ EXPORTAR EXCEL
 # =============================================================================
+
 
 def exportar_excel(datos):
 
@@ -103,6 +106,7 @@ def exportar_excel(datos):
 # =============================================================================
 # 6️⃣ EXPORTAR PDF
 # =============================================================================
+
 
 def exportar_pdf(datos, titulo="Informe"):
 
@@ -151,6 +155,7 @@ def exportar_pdf(datos, titulo="Informe"):
 # =============================================================================
 # 7️⃣ GENERADOR PRINCIPAL
 # =============================================================================
+
 
 def generar_informe(sql, parametros=(), formato="html", titulo="Informe"):
 

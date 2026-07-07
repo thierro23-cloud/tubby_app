@@ -26,7 +26,6 @@
 # =============================================================================
 
 
-
 # =============================================================================
 # 🌍 SECCIÓN 1 — BASE GLOBAL DE TEMPLATES
 # =============================================================================
@@ -35,8 +34,8 @@
 # Estas plantillas se usan en múltiples módulos o son base del sistema.
 # -----------------------------------------------------------------------------
 
-TPL_BASE = "base.html"              # 🧱 Plantilla base (layout general)
-TPL_LOGIN = "login.html"            # 🔐 Pantalla de login
+TPL_BASE = "base.html"  # 🧱 Plantilla base (layout general)
+TPL_LOGIN = "login.html"  # 🔐 Pantalla de login
 
 
 # =============================================================================
@@ -45,9 +44,9 @@ TPL_LOGIN = "login.html"            # 🔐 Pantalla de login
 # 📌 Plantillas relacionadas con usuarios, acceso y recuperación de cuenta
 # -----------------------------------------------------------------------------
 
-TPL_AUTH_REGISTER = "auth/register.html"           # 📝 Registro de usuario
-TPL_AUTH_FORGOT = "auth/forgot_password.html"      # 🔑 Recuperar contraseña
-TPL_AUTH_RESET = "auth/reset_password.html"        # 🔁 Resetear contraseña
+TPL_AUTH_REGISTER = "auth/register.html"  # 📝 Registro de usuario
+TPL_AUTH_FORGOT = "auth/forgot_password.html"  # 🔑 Recuperar contraseña
+TPL_AUTH_RESET = "auth/reset_password.html"  # 🔁 Resetear contraseña
 
 
 # =============================================================================
@@ -87,7 +86,6 @@ PARQUIN_PLANO_HTML = TPL_PARQUIN_PLANO
 TPL_ADMIN_PANEL = "super_admin/super_admin.html"
 
 
-
 # =============================================================================
 # 🔐 SECCIÓN 5 — MAPEO DE PERMISOS POR PANEL (CLAVE DEL SISTEMA)
 # =============================================================================
@@ -104,16 +102,13 @@ TPL_ADMIN_PANEL = "super_admin/super_admin.html"
 # -----------------------------------------------------------------------------
 
 PERMISOS_PANELES = {
-
     # 🚛 PARQUIN
     TPL_PARQUIN_PANEL: "panel_parquin",
     TPL_PARQUIN_GESTIONAR: "panel_gestion_plazas",
     TPL_PARQUIN_PLANO: "panel_plano_camiones",
-
     # 👑 ADMIN
     TPL_ADMIN_PANEL: "panel_super_admin",
 }
-
 
 
 # =============================================================================
@@ -123,12 +118,10 @@ PERMISOS_PANELES = {
 # -----------------------------------------------------------------------------
 
 PERMISOS_MODULOS = {
-
     "parquin": "modulo_parquin",
     "super_admin": "modulo_admin",
     "auth": "modulo_auth",
 }
-
 
 
 # =============================================================================
@@ -142,6 +135,7 @@ PERMISOS_MODULOS = {
 #
 # -----------------------------------------------------------------------------
 
+
 def permiso_por_template(template):
     """
     🔍 Devuelve el permiso asociado a un template
@@ -150,7 +144,6 @@ def permiso_por_template(template):
     :return: str | None
     """
     return PERMISOS_PANELES.get(template, None)
-
 
 
 # =============================================================================
@@ -162,6 +155,7 @@ def permiso_por_template(template):
 #    "parquin/parquin.html" → "parquin"
 # -----------------------------------------------------------------------------
 
+
 def obtener_modulo_desde_template(template):
     """
     🔍 Extrae el módulo desde la ruta del template
@@ -172,12 +166,12 @@ def obtener_modulo_desde_template(template):
     return template.split("/")[0] if "/" in template else "base"
 
 
-
 # =============================================================================
 # ⚙️ SECCIÓN 9 — FUNCIÓN COMBINADA (PERMISO + MÓDULO)
 # =============================================================================
 # 📌 Devuelve ambos niveles de control para usar en seguridad avanzada
 # -----------------------------------------------------------------------------
+
 
 def obtener_contexto_seguridad(template):
     """
@@ -192,9 +186,8 @@ def obtener_contexto_seguridad(template):
 
     return {
         "permiso_panel": PERMISOS_PANELES.get(template),
-        "permiso_modulo": PERMISOS_MODULOS.get(modulo)
+        "permiso_modulo": PERMISOS_MODULOS.get(modulo),
     }
-
 
 
 # =============================================================================
@@ -212,7 +205,6 @@ def parquin():
     return render_template(TPL_PARQUIN_PANEL)
 """
 # =============================================================================
-
 
 
 # =============================================================================

@@ -18,22 +18,78 @@ from flask import current_app
 
 # 📦 BASES DE DATOS DE FALLBACK
 FALLBACK_DATABASES = {
-    "bd_tbl_comunes": {"HOST":"localhost","USER":"root","PASSWORD":"F@Fe1132","DB":"bd_tbl_comunes","PORT":3306},
-    "parquin_camiones": {"HOST":"localhost","USER":"root","PASSWORD":"F@Fe1132","DB":"parquin_camiones","PORT":3306},
-    "control_via_publica": {"HOST":"localhost","USER":"root","PASSWORD":"F@Fe1132","DB":"control_via_publica","PORT":3306},
-"gis_municipal": {"HOST":"localhost","USER":"root","PASSWORD":"F@Fe1132","DB":"gis_municipal","PORT":3306},
-"inventario": {"HOST":"localhost","USER":"root","PASSWORD":"F@Fe1132","DB":"inventario","PORT":3306},
-"patrulla_verde": 
-{"HOST":"localhost","USER":"root","PASSWORD":"F@Fe1132","DB":"patrulla_verde","PORT":3306},
-"plan_de_emergencias": {"HOST":"localhost","USER":"root","PASSWORD":"F@Fe1132","DB":"plan_de_emergencias","PORT":3306},
-"personal_vestuario": {"HOST":"localhost","USER":"root","PASSWORD":"F@Fe1132","DB":"personal_vestuario","PORT":3306},
-"mobiliario_urbano": {"HOST":"localhost","USER":"root","PASSWORD":"F@Fe1132","DB":"mobiliario_urbano","PORT":3306},
+    "bd_tbl_comunes": {
+        "HOST": "localhost",
+        "USER": "root",
+        "PASSWORD": "F@Fe1132",
+        "DB": "bd_tbl_comunes",
+        "PORT": 3306,
+    },
+    "parquin_camiones": {
+        "HOST": "localhost",
+        "USER": "root",
+        "PASSWORD": "F@Fe1132",
+        "DB": "parquin_camiones",
+        "PORT": 3306,
+    },
+    "control_via_publica": {
+        "HOST": "localhost",
+        "USER": "root",
+        "PASSWORD": "F@Fe1132",
+        "DB": "control_via_publica",
+        "PORT": 3306,
+    },
+    "gis_municipal": {
+        "HOST": "localhost",
+        "USER": "root",
+        "PASSWORD": "F@Fe1132",
+        "DB": "gis_municipal",
+        "PORT": 3306,
+    },
+    "inventario": {
+        "HOST": "localhost",
+        "USER": "root",
+        "PASSWORD": "F@Fe1132",
+        "DB": "inventario",
+        "PORT": 3306,
+    },
+    "patrulla_verde": {
+        "HOST": "localhost",
+        "USER": "root",
+        "PASSWORD": "F@Fe1132",
+        "DB": "patrulla_verde",
+        "PORT": 3306,
+    },
+    "plan_de_emergencias": {
+        "HOST": "localhost",
+        "USER": "root",
+        "PASSWORD": "F@Fe1132",
+        "DB": "plan_de_emergencias",
+        "PORT": 3306,
+    },
+    "personal_vestuario": {
+        "HOST": "localhost",
+        "USER": "root",
+        "PASSWORD": "F@Fe1132",
+        "DB": "personal_vestuario",
+        "PORT": 3306,
+    },
+    "mobiliario_urbano": {
+        "HOST": "localhost",
+        "USER": "root",
+        "PASSWORD": "F@Fe1132",
+        "DB": "mobiliario_urbano",
+        "PORT": 3306,
+    },
 }
+
 
 # =============================================================================
 # 🔑 SECCIÓN 1: CONEXIÓN CON CREACIÓN AUTOMÁTICA DE BD Y TABLAS
 # =============================================================================
-def get_connection(nombre_bd: str = "bd_tbl_comunes") -> mysql.connector.MySQLConnection:
+def get_connection(
+    nombre_bd: str = "bd_tbl_comunes",
+) -> mysql.connector.MySQLConnection:
     """
     🔑 Abre conexión a la BD.
     - Crea la base si no existe.
@@ -52,7 +108,9 @@ def get_connection(nombre_bd: str = "bd_tbl_comunes") -> mysql.connector.MySQLCo
     casa = libro_casas.get(nombre_bd)
     if not casa:
         disponibles = ", ".join(sorted(libro_casas.keys()))
-        raise RuntimeError(f"❌ No encuentro la base '{nombre_bd}'! Casas disponibles: {disponibles}")
+        raise RuntimeError(
+            f"❌ No encuentro la base '{nombre_bd}'! Casas disponibles: {disponibles}"
+        )
 
     host = casa["HOST"]
     user = casa["USER"]
@@ -62,25 +120,34 @@ def get_connection(nombre_bd: str = "bd_tbl_comunes") -> mysql.connector.MySQLCo
 
     # 2️⃣ Intentar conexión normal
     try:
-        conn = mysql.connector.connect(host=host,user=user,password=password,database=database,port=port)
+        conn = mysql.connector.connect(
+            host=host, user=user, password=password, database=database, port=port
+        )
         # Si está todo bien, crear tablas básicas si no existen
         _crear_tablas_basicas(conn, database)
         return conn
     except Error as e:
         if e.errno == 1049:  # BD desconocida
             # Conexión temporal para crear base
-            temp_conn = mysql.connector.connect(host=host,user=user,password=password,port=port)
+            temp_conn = mysql.connector.connect(
+                host=host, user=user, password=password, port=port
+            )
             cursor = temp_conn.cursor()
-            cursor.execute(f"CREATE DATABASE IF NOT EXISTS `{database}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;")
+            cursor.execute(
+                f"CREATE DATABASE IF NOT EXISTS `{database}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+            )
             temp_conn.commit()
             cursor.close()
             temp_conn.close()
             # Reconectar sobre la base recién creada
-            conn = mysql.connector.connect(host=host,user=user,password=password,database=database,port=port)
+            conn = mysql.connector.connect(
+                host=host, user=user, password=password, database=database, port=port
+            )
             _crear_tablas_basicas(conn, database)
             return conn
         else:
             raise
+
 
 # =============================================================================
 # 📗 SECCIÓN 2: CREACIÓN AUTOMÁTICA DE TABLAS BÁSICAS
@@ -116,7 +183,7 @@ def _crear_tablas_basicas(conn: mysql.connector.MySQLConnection, database: str):
                 estado ENUM('abierta','cerrada') DEFAULT 'abierta',
                 fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-        """
+        """,
     }
 
     cursor = conn.cursor()
@@ -125,10 +192,13 @@ def _crear_tablas_basicas(conn: mysql.connector.MySQLConnection, database: str):
     conn.commit()
     cursor.close()
 
+
 # =============================================================================
 # 📗 SECCIÓN 3: EJECUTAR CONSULTAS (LECTURA)
 # =============================================================================
-def ejecutar_query(sql: str, params: Optional[tuple] = None, nombre_bd: str = "bd_tbl_comunes") -> List[Dict[str, Any]]:
+def ejecutar_query(
+    sql: str, params: Optional[tuple] = None, nombre_bd: str = "bd_tbl_comunes"
+) -> List[Dict[str, Any]]:
     conn = get_connection(nombre_bd)
     cursor = conn.cursor(dictionary=True)
     try:
@@ -137,7 +207,7 @@ def ejecutar_query(sql: str, params: Optional[tuple] = None, nombre_bd: str = "b
         else:
             cursor.execute(sql)
         sql_strip = sql.lstrip().upper()
-        if sql_strip.startswith(("SELECT","SHOW","DESCRIBE","EXPLAIN")):
+        if sql_strip.startswith(("SELECT", "SHOW", "DESCRIBE", "EXPLAIN")):
             return cursor.fetchall()
         else:
             conn.commit()
@@ -146,10 +216,13 @@ def ejecutar_query(sql: str, params: Optional[tuple] = None, nombre_bd: str = "b
         cursor.close()
         conn.close()
 
+
 # =============================================================================
 # 📗 SECCIÓN 4: EJECUTAR CONSULTAS (MODIFICACIÓN)
 # =============================================================================
-def ejecutar_non_query(sql: str, params: Optional[tuple] = None, nombre_bd: str = "bd_tbl_comunes") -> int:
+def ejecutar_non_query(
+    sql: str, params: Optional[tuple] = None, nombre_bd: str = "bd_tbl_comunes"
+) -> int:
     conn = get_connection(nombre_bd)
     cursor = conn.cursor()
     try:
@@ -162,6 +235,7 @@ def ejecutar_non_query(sql: str, params: Optional[tuple] = None, nombre_bd: str 
     finally:
         cursor.close()
         conn.close()
+
 
 # =============================================================================
 # 📘 SECCIÓN 5: EJEMPLOS DE USO

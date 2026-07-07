@@ -33,6 +33,7 @@ POPPLER_PATH = r"C:\\poppler\\Library\\bin"
 # 2️⃣ EXTRACCIÓN DE DATOS DEL PDF
 # =============================================================================
 
+
 def extraer_numero_expediente(texto: str) -> Optional[str]:
     linea = " ".join(texto.split())
     m = re.search(r"(\d{1,4})\s*/\s*(\d{4})", linea)
@@ -223,6 +224,7 @@ def extraer_nif(texto: str) -> Optional[str]:
 # 3️⃣ DIRECCIÓN Y FECHAS
 # =============================================================================
 
+
 def extraer_via_y_calle(texto: str) -> tuple[Optional[str], Optional[str]]:
     texto_mayus = texto.upper()
 
@@ -235,7 +237,7 @@ def extraer_via_y_calle(texto: str) -> tuple[Optional[str], Optional[str]]:
             return None, None
 
     inicio_bloque = idx + len(marcador)
-    bloque_crudo = texto_mayus[inicio_bloque: inicio_bloque + 200]
+    bloque_crudo = texto_mayus[inicio_bloque : inicio_bloque + 200]
 
     bloque = bloque_crudo.replace("\r", " ").replace("\n", " ").replace("\t", " ")
     bloque = " ".join(bloque.split())
@@ -391,6 +393,7 @@ def extraer_fecha_retirada(texto: str) -> Optional[str]:
 # 4️⃣ RESOLUCIÓN DE DATOS EN BD COMUNES
 # =============================================================================
 
+
 def obtener_proveedor(nif: Optional[str]) -> Optional[int]:
     if not nif:
         return None
@@ -489,6 +492,7 @@ def obtener_calle(nombre_calle: str, id_tipo_via: int) -> Optional[int]:
 # 5️⃣ CONTROL DE DUPLICADOS (CSV)
 # =============================================================================
 
+
 def csv_existe(csv: Optional[str]) -> bool:
     if not csv:
         return False
@@ -512,6 +516,7 @@ def csv_existe(csv: Optional[str]) -> bool:
 # =============================================================================
 # 6️⃣ OPERACIONES BD (control_via_publica)
 # =============================================================================
+
 
 def insertar_colocacion(datos: dict) -> None:
     """
@@ -582,7 +587,7 @@ def insertar_colocacion(datos: dict) -> None:
             datos.get("numero_portal"),
             datos.get("csv"),
             datos.get("numero_expediente"),
-            datos.get("numero_solicitud"),   # numero_colocacion
+            datos.get("numero_solicitud"),  # numero_colocacion
             datos.get("numero_solicitud"),
             datos.get("anio_solicitud"),
             datos.get("idtbl_gestor_subida"),
@@ -664,7 +669,10 @@ def encontrar_colocacion_para_retirada(
 # 7️⃣ NORMALIZACIÓN Y VALIDACIÓN DE NEGOCIO
 # =============================================================================
 
-def _normalizar_solicitud_con_anio(valor: Optional[str]) -> tuple[Optional[str], Optional[str]]:
+
+def _normalizar_solicitud_con_anio(
+    valor: Optional[str],
+) -> tuple[Optional[str], Optional[str]]:
     if not valor:
         return None, None
 
@@ -710,6 +718,7 @@ def validar_datos_contenedor(
 # =============================================================================
 # 8️⃣ PROCESADOR PRINCIPAL: procesar_pdf_core
 # =============================================================================
+
 
 def procesar_pdf_core(pdf_path, id_gestor_subida: Optional[int] = None):
     """
@@ -841,7 +850,11 @@ def procesar_pdf_core(pdf_path, id_gestor_subida: Optional[int] = None):
 
         logger.info(
             "VALIDAR >> retirada=%s csv=%r num_sol=%r num_exp=%r fecha_col=%r",
-            retirada, csv, numero_solicitud_num, numero_expediente, fecha_colocacion,
+            retirada,
+            csv,
+            numero_solicitud_num,
+            numero_expediente,
+            fecha_colocacion,
         )
 
         estado, motivo = validar_datos_contenedor(
@@ -871,7 +884,10 @@ def procesar_pdf_core(pdf_path, id_gestor_subida: Optional[int] = None):
             if not id_colocacion:
                 logger.warning(
                     "Retirada sin colocacion asociada (num_sol=%r, anio=%r, num_exp=%r, csv=%r)",
-                    numero_solicitud_num, anio_solicitud, numero_expediente, csv,
+                    numero_solicitud_num,
+                    anio_solicitud,
+                    numero_expediente,
+                    csv,
                 )
                 return {
                     "estado": "solo_retirada",
@@ -942,11 +958,14 @@ import concurrent.futures
 executor = concurrent.futures.ThreadPoolExecutor(max_workers=4)
 
 
-def procesar_pdf_async(app, pdf_path, destino_db=None, id_gestor_subida: Optional[int] = None):
+def procesar_pdf_async(
+    app, pdf_path, destino_db=None, id_gestor_subida: Optional[int] = None
+):
     """
     Wrapper asíncrono legacy para procesar un PDF de contenedores usando
     procesar_pdf_core dentro de un hilo.
     """
+
     def tarea():
         with app.app_context():
             return procesar_pdf_core(pdf_path, id_gestor_subida=id_gestor_subida)

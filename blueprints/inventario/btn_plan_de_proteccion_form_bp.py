@@ -69,12 +69,14 @@ import os
 from io import BytesIO
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+
 # [web:128][web:134]
 
 
 # =============================================================================
 # 2. DEFINICIÓN DEL FORMULARIO
 # =============================================================================
+
 
 class PlanProteccionForm(Form):
     """
@@ -266,6 +268,7 @@ btn_plan_de_proteccion_form_bp = Blueprint(
 # 4. RUTA: LISTADO DE PLANES DE PROTECCIÓN
 # =============================================================================
 
+
 @btn_plan_de_proteccion_form_bp.route("/")
 @login_required
 def btn_plan_de_proteccion_listado():
@@ -325,6 +328,7 @@ def btn_plan_de_proteccion_listado():
 # =============================================================================
 # 4.1 RUTA: EXPORTAR LISTADO A EXCEL
 # =============================================================================
+
 
 @btn_plan_de_proteccion_form_bp.route("/exportar_excel", methods=["GET"])
 @login_required
@@ -395,12 +399,12 @@ def exportar_excel():
 
     # Ajustar anchos de columna
     ancho_sugerido = {
-        "A": 10,   # ID
-        "B": 15,   # Nº Inventario
-        "C": 60,   # Descripción
-        "D": 30,   # Ubicación
-        "E": 12,   # Prioridad
-        "F": 18,   # Estado
+        "A": 10,  # ID
+        "B": 15,  # Nº Inventario
+        "C": 60,  # Descripción
+        "D": 30,  # Ubicación
+        "E": 12,  # Prioridad
+        "F": 18,  # Estado
     }
     for col_letter, width in ancho_sugerido.items():
         ws.column_dimensions[col_letter].width = width
@@ -421,11 +425,14 @@ def exportar_excel():
         download_name=filename,
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
+
+
 # [web:125][web:130]
 
 # =============================================================================
 # 4.2 RUTA: FORMULARIO FILTRADO POR EDIFICIO/OBRA (ENTRADA SUPER ADMIN)
 # =============================================================================
+
 
 @btn_plan_de_proteccion_form_bp.route("/formulario_filtrado", methods=["GET", "POST"])
 @login_required
@@ -486,7 +493,9 @@ def btn_plan_de_proteccion_form_editar_bp():
         if accion == "nuevo" and id_edificio_sel:
             # Pasar edificio seleccionado como parámetro para pre-cargar el form
             return redirect(
-                url_for("btn_plan_de_proteccion_form_bp.nuevo", id_edificio=id_edificio_sel)
+                url_for(
+                    "btn_plan_de_proteccion_form_bp.nuevo", id_edificio=id_edificio_sel
+                )
             )
 
     return render_template(
@@ -495,9 +504,12 @@ def btn_plan_de_proteccion_form_editar_bp():
         id_edificio=id_edificio,
         planes=planes,
     )
+
+
 # =============================================================================
 # 5. RUTA: NUEVO PLAN DE PROTECCIÓN
 # =============================================================================
+
 
 @btn_plan_de_proteccion_form_bp.route("/nuevo", methods=["GET", "POST"])
 @login_required
@@ -591,9 +603,7 @@ def nuevo():
         )
 
         if nuevo_id is not None:
-            return redirect(
-                url_for("btn_plan_de_proteccion_form_bp.ver", id=nuevo_id)
-            )
+            return redirect(url_for("btn_plan_de_proteccion_form_bp.ver", id=nuevo_id))
         return redirect(
             url_for("btn_plan_de_proteccion_form_bp.btn_plan_de_proteccion_listado")
         )
@@ -611,6 +621,7 @@ def nuevo():
 # =============================================================================
 # 6. RUTA: EDITAR PLAN DE PROTECCIÓN
 # =============================================================================
+
 
 @btn_plan_de_proteccion_form_bp.route("/editar/<int:id>", methods=["GET", "POST"])
 @login_required
@@ -720,6 +731,7 @@ def editar(id):
 # 7. RUTA: VER PLAN DE PROTECCIÓN (SOLO LECTURA)
 # =============================================================================
 
+
 @btn_plan_de_proteccion_form_bp.route("/ver/<int:id>")
 @login_required
 def ver(id):
@@ -750,6 +762,7 @@ def ver(id):
 # 8. RUTA: ELIMINAR PLAN DE PROTECCIÓN
 # =============================================================================
 
+
 @btn_plan_de_proteccion_form_bp.route("/eliminar/<int:id>", methods=["POST"])
 @login_required
 def eliminar(id):
@@ -774,6 +787,7 @@ def eliminar(id):
 # =============================================================================
 # 9. FUNCIÓN AUXILIAR: CARGAR OPCIONES DE SELECTFIELD
 # =============================================================================
+
 
 def cargar_opciones_plan_proteccion(form: PlanProteccionForm) -> None:
     """
@@ -811,6 +825,7 @@ def cargar_opciones_plan_proteccion(form: PlanProteccionForm) -> None:
 # =============================================================================
 # 10. FUNCIÓN AUXILIAR: OBTENER PLAN POR ID
 # =============================================================================
+
 
 def _obtener_plan_por_id(id_plan: int) -> dict | None:
     """
@@ -858,6 +873,7 @@ def _obtener_plan_por_id(id_plan: int) -> dict | None:
 # 11. FUNCIÓN AUXILIAR: CONSTRUIR RUTAS DE IMÁGENES (FOTO Y PLANO)
 # =============================================================================
 
+
 def _construir_rutas_imagenes(plan: dict) -> tuple[str | None, str | None]:
     """
     11.1 Función: Construir las URLs de las imágenes de foto y plano.
@@ -883,7 +899,9 @@ def _construir_rutas_imagenes(plan: dict) -> tuple[str | None, str | None]:
 
     # Plano
     if plan.get("plano"):
-        plano_url = url_for("static", filename=f"imagen/plan_proteccion/{plan['plano']}")
+        plano_url = url_for(
+            "static", filename=f"imagen/plan_proteccion/{plan['plano']}"
+        )
     else:
         plano_path = os.path.join(
             "static", "imagen", "plan_proteccion", f"Plano_ID_{id_plan}_1.jpg"

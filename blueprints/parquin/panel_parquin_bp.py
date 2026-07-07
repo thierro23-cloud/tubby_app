@@ -32,7 +32,6 @@
 
 from flask import Blueprint, render_template
 
-
 # =============================================================================
 # 1️⃣ BLUEPRINT DEL PANEL PARQUIN
 # =============================================================================
@@ -72,6 +71,7 @@ panel_parquin_bp = Blueprint(
 # punto de entrada para navegar directamente el panel fuera del super_admin.
 # =============================================================================
 
+
 @panel_parquin_bp.route("/")
 def panel_parquin():
     """
@@ -81,7 +81,6 @@ def panel_parquin():
     Aquí puedes mostrar enlaces, métricas o simplemente un mensaje de
     bienvenida al panel.
     """
-    
 
 
 # =============================================================================

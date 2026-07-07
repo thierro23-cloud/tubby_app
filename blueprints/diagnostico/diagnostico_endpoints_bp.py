@@ -17,6 +17,7 @@ from services.helpers import login_required, rol_required
 
 # Importa la utilidad que ya tienes en diagnostico/utils.py
 from blueprints.diagnostico.utils import obtener_todos_los_endpoints
+
 diagnostico_endpoints_bp = Blueprint(
     "diagnostico_endpoints_bp",
     __name__,
@@ -26,6 +27,7 @@ diagnostico_endpoints_bp = Blueprint(
 # -----------------------------------------------------------------------------
 # 1️⃣ PING BÁSICO
 # -----------------------------------------------------------------------------
+
 
 @diagnostico_endpoints_bp.route("/ping", methods=["GET"])
 @login_required
@@ -39,6 +41,7 @@ def ping():
 # 2️⃣ ENDPOINTS EN JSON
 # -----------------------------------------------------------------------------
 
+
 @diagnostico_endpoints_bp.route("/endpoints", methods=["GET"])
 @login_required
 @rol_required("super_admin")
@@ -49,14 +52,13 @@ def listar_endpoints_json():
     """
     rutas = obtener_todos_los_endpoints()
     # Opcional: filtrar rutas internas de Flask (static, etc.)
-    rutas_filtradas = [
-        r for r in rutas
-        if not r["ruta"].startswith("/static")
-    ]
-    return jsonify({
-        "total": len(rutas_filtradas),
-        "endpoints": rutas_filtradas,
-    })
+    rutas_filtradas = [r for r in rutas if not r["ruta"].startswith("/static")]
+    return jsonify(
+        {
+            "total": len(rutas_filtradas),
+            "endpoints": rutas_filtradas,
+        }
+    )
 
 
 # -----------------------------------------------------------------------------
@@ -103,6 +105,7 @@ _HTML_TEMPLATE = """
 </html>
 """
 
+
 @diagnostico_endpoints_bp.route("/endpoints/html", methods=["GET"])
 @login_required
 @rol_required("super_admin")
@@ -112,10 +115,7 @@ def listar_endpoints_html():
     Ideal para que un super_admin vea de un vistazo qué hay en la app.
     """
     rutas = obtener_todos_los_endpoints()
-    rutas_filtradas = [
-        r for r in rutas
-        if not r["ruta"].startswith("/static")
-    ]
+    rutas_filtradas = [r for r in rutas if not r["ruta"].startswith("/static")]
     # Ordenar por ruta para que sea más legible
     rutas_ordenadas = sorted(rutas_filtradas, key=lambda r: r["ruta"])
     return render_template_string(

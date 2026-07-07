@@ -109,6 +109,7 @@ from datetime import date  # 🧠 para lógica de año de expediente
 #     corregir expedientes antiguos si hace falta.
 # =============================================================================
 
+
 def resolver_anio_expediente_edicion(valor_anio_form: str | None) -> int | None:
     """
     Normaliza el año del expediente en edición avanzada.
@@ -130,9 +131,10 @@ def resolver_anio_expediente_edicion(valor_anio_form: str | None) -> int | None:
     except ValueError:
         return date.today().year
 
-# ----------------------------------------------------------------------------- 
+
+# -----------------------------------------------------------------------------
 # 2️⃣ CONFIGURACIÓN DEL BLUEPRINT · CONTENEDORES EDICIÓN
-# ----------------------------------------------------------------------------- 
+# -----------------------------------------------------------------------------
 btn_contenedores_edicion_bp = Blueprint(
     "btn_contenedores_edicion_bp",
     __name__,
@@ -140,9 +142,9 @@ btn_contenedores_edicion_bp = Blueprint(
     template_folder="templates",
 )
 
-# ----------------------------------------------------------------------------- 
+# -----------------------------------------------------------------------------
 # 3️⃣ SQL_BASE · CONSULTA DE RESULTADOS CON JOINS LEGIBLES
-# ----------------------------------------------------------------------------- 
+# -----------------------------------------------------------------------------
 SQL_BASE = """
 SELECT
     c.*,
@@ -159,12 +161,12 @@ LEFT JOIN bd_tbl_comunes.tbl_dimensiones   AS d  ON c.idtbl_dimensiones   = d.id
 WHERE 1=1
 """
 
-# ----------------------------------------------------------------------------- 
+# -----------------------------------------------------------------------------
 # 4️⃣ SQL_UPDATE_EDICION · UPDATE DE CAMPOS EDITABLES (INCLUYE AÑO EXPEDIENTE)
-# ----------------------------------------------------------------------------- 
+# -----------------------------------------------------------------------------
 # Se añade anio_expediente al UPDATE para mantener la unicidad
 # (anio_expediente, numero_expediente) en la tabla de control. [web:45][web:49]
-# ----------------------------------------------------------------------------- 
+# -----------------------------------------------------------------------------
 SQL_UPDATE_EDICION = """
 UPDATE tbl_control_contenedores
 SET
@@ -196,9 +198,10 @@ SET
 WHERE idtbl_control_contenedores = %s
 """
 
-# ----------------------------------------------------------------------------- 
+
+# -----------------------------------------------------------------------------
 # 5️⃣ API AUXILIAR · LISTADO DE CALLES PARA EL EDITOR
-# ----------------------------------------------------------------------------- 
+# -----------------------------------------------------------------------------
 @btn_contenedores_edicion_bp.route("/api/calles")
 @login_required
 def api_contenedores_edicion_calles():
@@ -219,9 +222,10 @@ def api_contenedores_edicion_calles():
     )
     return jsonify(calles)
 
-# ----------------------------------------------------------------------------- 
+
+# -----------------------------------------------------------------------------
 # 6️⃣ API GEOAPIFY · GEOCODIFICAR CALLE + CACHE
-# ----------------------------------------------------------------------------- 
+# -----------------------------------------------------------------------------
 @btn_contenedores_edicion_bp.route("/api/geocodificar_calle", methods=["POST"])
 @login_required
 def api_geocodificar_calle():
@@ -257,12 +261,14 @@ def api_geocodificar_calle():
         lat = fila_cache[0]["latitud"]
         lon = fila_cache[0]["longitud"]
         precision = fila_cache[0]["precision_nivel"]
-        return jsonify({
-            "latitud": lat,
-            "longitud": lon,
-            "fuente": "cache",
-            "precision_nivel": precision,
-        })
+        return jsonify(
+            {
+                "latitud": lat,
+                "longitud": lon,
+                "fuente": "cache",
+                "precision_nivel": precision,
+            }
+        )
 
     api_key = current_app.config.get("GEOAPIFY_API_KEY")
     if not api_key:
@@ -330,16 +336,19 @@ def api_geocodificar_calle():
     except Exception:
         pass
 
-    return jsonify({
-        "latitud": lat,
-        "longitud": lon,
-        "fuente": "geoapify",
-        "precision_nivel": precision_nivel,
-    })
+    return jsonify(
+        {
+            "latitud": lat,
+            "longitud": lon,
+            "fuente": "geoapify",
+            "precision_nivel": precision_nivel,
+        }
+    )
 
-# ----------------------------------------------------------------------------- 
+
+# -----------------------------------------------------------------------------
 # 7️⃣ VISTA PRINCIPAL · EDICIÓN AVANZADA DE CONTENEDORES
-# ----------------------------------------------------------------------------- 
+# -----------------------------------------------------------------------------
 @btn_contenedores_edicion_bp.route("/", methods=["GET", "POST"])
 @login_required
 @rol_required("super_admin", "gestor_via_publica")
@@ -439,6 +448,7 @@ def btn_contenedores_edicion():
         if not id_contenedor:
             flash("No se ha recibido ID de contenedor para guardar cambios.", "danger")
         else:
+
             def normalize_decimal_field(value):
                 if value is None:
                     return None
@@ -451,49 +461,49 @@ def btn_contenedores_edicion():
                     return None
 
             # PROVEEDOR / SOLICITANTE
-            idtbl_proveedores    = request.values.get("idtbl_proveedores", type=int)
-            nombre_solicitante   = request.values.get("nombre_solicitante") or None
-            nif                  = request.values.get("nif") or None
-            telefono             = request.values.get("telefono") or None
+            idtbl_proveedores = request.values.get("idtbl_proveedores", type=int)
+            nombre_solicitante = request.values.get("nombre_solicitante") or None
+            nif = request.values.get("nif") or None
+            telefono = request.values.get("telefono") or None
 
             # FECHAS
-            fecha_colocacion     = request.values.get("fecha_colocacion") or None
-            fecha_retirada       = request.values.get("fecha_retirada") or None
-            fecha_firma_inicial  = request.values.get("fecha_firma_inicial") or None
+            fecha_colocacion = request.values.get("fecha_colocacion") or None
+            fecha_retirada = request.values.get("fecha_retirada") or None
+            fecha_firma_inicial = request.values.get("fecha_firma_inicial") or None
 
             # DIMENSIÓN / OBSERVACIONES
-            idtbl_dimensiones    = request.values.get("idtbl_dimensiones", type=int)
-            observaciones        = request.values.get("observaciones") or None
+            idtbl_dimensiones = request.values.get("idtbl_dimensiones", type=int)
+            observaciones = request.values.get("observaciones") or None
 
             # UBICACIÓN
-            idtbl_tipos_de_vias  = request.values.get("idtbl_tipos_de_vias", type=int)
-            idtbl_calles         = request.values.get("idtbl_calles", type=int)
-            numero_portal        = request.values.get("numero_portal") or None
+            idtbl_tipos_de_vias = request.values.get("idtbl_tipos_de_vias", type=int)
+            idtbl_calles = request.values.get("idtbl_calles", type=int)
+            numero_portal = request.values.get("numero_portal") or None
 
             # GPS
-            latitud_raw          = request.values.get("latitud")
-            longitud_raw         = request.values.get("longitud")
-            precision_gps_raw    = request.values.get("precision_gps")
+            latitud_raw = request.values.get("latitud")
+            longitud_raw = request.values.get("longitud")
+            precision_gps_raw = request.values.get("precision_gps")
 
-            latitud              = normalize_decimal_field(latitud_raw)
-            longitud             = normalize_decimal_field(longitud_raw)
-            precision_gps        = normalize_decimal_field(precision_gps_raw)
+            latitud = normalize_decimal_field(latitud_raw)
+            longitud = normalize_decimal_field(longitud_raw)
+            precision_gps = normalize_decimal_field(precision_gps_raw)
 
-            gps_precision_ok     = request.values.get("gps_precision_ok") or None
-            gps_nivel_calidad    = request.values.get("gps_nivel_calidad") or None
-            gps_origen           = request.values.get("gps_origen") or None
+            gps_precision_ok = request.values.get("gps_precision_ok") or None
+            gps_nivel_calidad = request.values.get("gps_nivel_calidad") or None
+            gps_origen = request.values.get("gps_origen") or None
 
             # CSV / ADMIN
-            csv                  = request.values.get("csv") or None
-            csv_retirada         = request.values.get("csv_retirada") or None
-            idtbl_gestores       = request.values.get("idtbl_gestores", type=int)
-            numero_solicitud     = request.values.get("numero_solicitud") or None
-            numero_expediente    = request.values.get("numero_expediente") or None
+            csv = request.values.get("csv") or None
+            csv_retirada = request.values.get("csv_retirada") or None
+            idtbl_gestores = request.values.get("idtbl_gestores", type=int)
+            numero_solicitud = request.values.get("numero_solicitud") or None
+            numero_expediente = request.values.get("numero_expediente") or None
             n_solicitud_retirada = request.values.get("n_solicitud_retirada") or None
 
             # AÑO EXPEDIENTE (NUEVA LÓGICA DE EDICIÓN)
             anio_expediente_form = request.values.get("anio_expediente")
-            anio_expediente      = resolver_anio_expediente_edicion(anio_expediente_form)
+            anio_expediente = resolver_anio_expediente_edicion(anio_expediente_form)
 
             if gps_precision_ok in ("on", "true", "True", "1", "S"):
                 gps_precision_ok = "1"
@@ -533,9 +543,14 @@ def btn_contenedores_edicion():
                     ),
                     nombre_bd="control_via_publica",
                 )
-                flash(f"Contenedor {id_contenedor} actualizado correctamente.", "success")
+                flash(
+                    f"Contenedor {id_contenedor} actualizado correctamente.", "success"
+                )
             except Exception as exc:
-                flash(f"Error al actualizar el contenedor {id_contenedor}: {exc}", "danger")
+                flash(
+                    f"Error al actualizar el contenedor {id_contenedor}: {exc}",
+                    "danger",
+                )
 
         return redirect(
             url_for(

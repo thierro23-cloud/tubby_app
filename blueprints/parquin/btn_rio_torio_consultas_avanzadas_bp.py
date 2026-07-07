@@ -29,7 +29,6 @@ import io
 import xlsxwriter
 from docx import Document
 
-
 # =========================================================
 # 1. CONFIGURACIÓN DEL BLUEPRINT Y SQL BASE
 # =========================================================
@@ -172,11 +171,18 @@ def _exportar_excel(plazas, libres, ocupadas, total, fecha_ini=None, fecha_fin=N
 
     # 2.1.4 Cabeceras de la tabla
     headers = [
-        "ID plaza", "Código", "Fila", "Estado",
-        "Proveedor", "NIF",
-        "Alta plaza", "Baja plaza",
-        "F.inicio usuario", "F.baja usuario",
-        "Exp. alta plaza", "Exp. baja plaza",
+        "ID plaza",
+        "Código",
+        "Fila",
+        "Estado",
+        "Proveedor",
+        "NIF",
+        "Alta plaza",
+        "Baja plaza",
+        "F.inicio usuario",
+        "F.baja usuario",
+        "Exp. alta plaza",
+        "Exp. baja plaza",
     ]
     for col, h in enumerate(headers):
         ws.write(5, col, h)
@@ -193,8 +199,8 @@ def _exportar_excel(plazas, libres, ocupadas, total, fecha_ini=None, fecha_fin=N
         ws.write(row, 7, str(p["plaza_fecha_fin"] or ""))
         ws.write(row, 8, str(p["usuario_fecha_inicio"] or ""))
         ws.write(row, 9, str(p["usuario_fecha_baja"] or ""))
-        ws.write(row,10, str(p["plaza_exp_solicitud"] or ""))
-        ws.write(row,11, str(p["plaza_exp_solicitud_fin"] or ""))
+        ws.write(row, 10, str(p["plaza_exp_solicitud"] or ""))
+        ws.write(row, 11, str(p["plaza_exp_solicitud_fin"] or ""))
 
     workbook.close()
     output.seek(0)
@@ -281,6 +287,7 @@ def _exportar_word(plazas, libres, ocupadas, total, fecha_ini=None, fecha_fin=No
         mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     )
 
+
 # ---------------------------------------------------------
 # FIN SECCIÓN 2
 # =========================================================
@@ -298,6 +305,7 @@ def _exportar_word(plazas, libres, ocupadas, total, fecha_ini=None, fecha_fin=No
 #       Devuelve plazas cuyo registro en tbl_historico_plazas
 #       tiene fecha_fin no nula y comprendida en el rango.
 # ---------------------------------------------------------
+
 
 def obtener_bajas_plazas_periodo(hist_fecha_ini, hist_fecha_fin):
     """
@@ -342,6 +350,7 @@ def obtener_bajas_plazas_periodo(hist_fecha_ini, hist_fecha_fin):
 
     return filas
 
+
 # ---------------------------------------------------------
 # FIN SECCIÓN 3
 # =========================================================
@@ -378,16 +387,22 @@ def _exportar_periodo_excel_bajas(bajas_periodo, hist_fecha_ini, hist_fecha_fin)
     info_format = workbook.add_format({"italic": True})
 
     headers = [
-        "Plaza", "Fila", "Abonado", "NIF",
-        "Fecha inicio", "Fecha fin",
-        "Exp. fin", "Nº expediente plaza",
+        "Plaza",
+        "Fila",
+        "Abonado",
+        "NIF",
+        "Fecha inicio",
+        "Fecha fin",
+        "Exp. fin",
+        "Nº expediente plaza",
     ]
 
     ws = workbook.add_worksheet("Bajas periodo")
 
     ws.write(0, 0, "Bajas de plazas en el periodo", title_format)
     ws.write(
-        1, 0,
+        1,
+        0,
         f"Bajas con fecha_fin entre {hist_fecha_ini} y {hist_fecha_fin}",
         info_format,
     )
@@ -468,6 +483,7 @@ def _exportar_periodo_word_bajas(bajas_periodo, hist_fecha_ini, hist_fecha_fin):
         mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     )
 
+
 # ---------------------------------------------------------
 # FIN SECCIÓN 4
 # =========================================================
@@ -499,18 +515,18 @@ def btn_rio_torio_consultas_avanzadas():
     """Vista principal de consultas avanzadas de plazas (Río Torío)."""
 
     # 5.1. Lectura de parámetros de filtro (estado actual)
-    fila        = request.values.get("fila")
-    estado      = request.values.get("estado")
-    codigo      = request.values.get("codigo")
+    fila = request.values.get("fila")
+    estado = request.values.get("estado")
+    codigo = request.values.get("codigo")
     prov_nombre = request.values.get("prov_nombre")
-    prov_nif    = request.values.get("prov_nif")
-    fecha_ini   = request.values.get("fecha_ini")
-    fecha_fin   = request.values.get("fecha_fin")
-    exportar    = request.values.get("exportar")
+    prov_nif = request.values.get("prov_nif")
+    fecha_ini = request.values.get("fecha_ini")
+    fecha_fin = request.values.get("fecha_fin")
+    exportar = request.values.get("exportar")
 
     # 5.2. Lectura de parámetros (histórico por periodo)
-    hist_fecha_ini   = request.values.get("hist_fecha_ini")
-    hist_fecha_fin   = request.values.get("hist_fecha_fin")
+    hist_fecha_ini = request.values.get("hist_fecha_ini")
+    hist_fecha_fin = request.values.get("hist_fecha_fin")
     exportar_periodo = request.values.get("exportar_periodo")
 
     # 5.3. Consulta principal: plazas + usuarios actuales (aplicando filtros)
@@ -556,7 +572,8 @@ def btn_rio_torio_consultas_avanzadas():
     # 5.4. Obtención de proveedores relacionados (BD comunes)
     ids_proveedores = {
         int(p["idtbl_gestores_proveedor"])
-        for p in plazas if p.get("idtbl_gestores_proveedor") is not None
+        for p in plazas
+        if p.get("idtbl_gestores_proveedor") is not None
     }
 
     proveedor_por_id = {}
@@ -583,25 +600,27 @@ def btn_rio_torio_consultas_avanzadas():
     for p in plazas:
         uid = p.get("idtbl_gestores_proveedor")
         prov = proveedor_por_id.get(int(uid)) if uid is not None else None
-        p["prov_id"]     = prov["prov_id"]     if prov else None
+        p["prov_id"] = prov["prov_id"] if prov else None
         p["prov_nombre"] = prov["prov_nombre"] if prov else None
-        p["prov_nif"]    = prov["prov_nif"]    if prov else None
+        p["prov_nif"] = prov["prov_nif"] if prov else None
         plazas_enriquecidas.append(p)
     plazas = plazas_enriquecidas
 
     # 5.6. Filtros adicionales en memoria (proveedor nombre / NIF)
     if prov_nombre:
         t = prov_nombre.lower().strip()
-        plazas = [p for p in plazas if p["prov_nombre"] and t in p["prov_nombre"].lower()]
+        plazas = [
+            p for p in plazas if p["prov_nombre"] and t in p["prov_nombre"].lower()
+        ]
 
     if prov_nif:
         t = prov_nif.lower().strip()
         plazas = [p for p in plazas if p["prov_nif"] and t in p["prov_nif"].lower()]
 
     # 5.7. Cálculo de totales (libres/ocupadas/total)
-    total    = len(plazas)
+    total = len(plazas)
     ocupadas = sum(1 for p in plazas if p["idtbl_usuarios"] is not None)
-    libres   = total - ocupadas
+    libres = total - ocupadas
 
     # 5.8. Listado de proveedores para el desplegable de filtros
     conn_comunes = get_connection("bd_tbl_comunes")
@@ -658,6 +677,7 @@ def btn_rio_torio_consultas_avanzadas():
         proveedores_filtro=proveedores_filtro,
         bajas_periodo=bajas_periodo,
     )
+
 
 # ---------------------------------------------------------
 # FIN SECCIÓN 5

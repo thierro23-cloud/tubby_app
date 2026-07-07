@@ -1,6 +1,6 @@
-#============================================================================
+# ============================================================================
 # 📂 1️⃣ MÓDULO · CONTENEDORES - LISTAR POR CARPETAS
-#============================================================================
+# ============================================================================
 # (1.1) OBJETIVO
 # - Vista tipo “encabezado de carpetas” para revisar de un vistazo
 #   qué hay en cada carpeta lógica:
@@ -51,12 +51,12 @@
 #     · En ese caso el backend fuerza csv_instalacion = None para que la
 #       columna "CSV" aparezca vacía y solo se muestre el CSV de retirada
 #       en la tabla, evitando duplicidad visual.
-#============================================================================
+# ============================================================================
 
 
-#============================================================================
+# ============================================================================
 # 2️⃣ IMPORTS
-#============================================================================
+# ============================================================================
 import json
 from datetime import date
 
@@ -70,10 +70,9 @@ from flask import (
 from db import ejecutar_query
 from services.helpers import login_required, rol_required
 
-
-#============================================================================
+# ============================================================================
 # 3️⃣ DEFINICIÓN DEL BLUEPRINT
-#============================================================================
+# ============================================================================
 
 btn_contenedores_listar_carpetas_bp = Blueprint(
     "btn_contenedores_listar_carpetas_bp",
@@ -82,9 +81,9 @@ btn_contenedores_listar_carpetas_bp = Blueprint(
 )
 
 
-#============================================================================
+# ============================================================================
 # 4️⃣ CONSTANTES / CONFIG
-#============================================================================
+# ============================================================================
 
 # Carpetas lógicas que vamos a exponer en el selector
 CARPETAS_PERMITIDAS = [
@@ -97,9 +96,10 @@ CARPETAS_PERMITIDAS = [
 ]
 
 
-#============================================================================
+# ============================================================================
 # 5️⃣ HELPERS
-#============================================================================
+# ============================================================================
+
 
 def _resolver_carpeta_desde_request() -> str:
     """
@@ -112,9 +112,10 @@ def _resolver_carpeta_desde_request() -> str:
     return carpeta
 
 
-#============================================================================
+# ============================================================================
 # 6️⃣ RUTA PRINCIPAL · LISTAR PENDIENTES POR CARPETA
-#============================================================================
+# ============================================================================
+
 
 @btn_contenedores_listar_carpetas_bp.route("/", methods=["GET"])
 @login_required
@@ -177,7 +178,11 @@ def btn_contenedores_listar_carpetas():
 
         # Regla: en solo_retirada, si csv y csv_retirada son iguales,
         # consideramos que NO hay CSV de instalación y lo dejamos vacío.
-        if carpeta == "solo_retirada" and csv_retirada and csv_instalacion == csv_retirada:
+        if (
+            carpeta == "solo_retirada"
+            and csv_retirada
+            and csv_instalacion == csv_retirada
+        ):
             csv_instalacion = None
 
         filas.append(

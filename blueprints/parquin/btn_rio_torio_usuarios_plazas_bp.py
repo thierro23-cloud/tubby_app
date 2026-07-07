@@ -35,7 +35,6 @@ from flask import Blueprint, render_template, request
 from services.helpers import login_required, rol_required
 from db import ejecutar_query
 
-
 # =============================================================================
 # 1.1️⃣ DEFINICIÓN DEL BLUEPRINT
 # =============================================================================
@@ -75,6 +74,7 @@ btn_rio_torio_usuarios_plazas_bp = Blueprint(
 #   - Se utiliza "parquin_camiones" como base de datos lógica
 #     para usuarios y plazas de Río Torío.
 # =============================================================================
+
 
 def _rt_obtener_usuarios_parquin():
     """
@@ -172,6 +172,7 @@ def _rt_obtener_plazas_de_usuario(idtbl_usuarios: int):
 #           plazas_usuario=plazas_usuario,
 #       )
 # =============================================================================
+
 
 @btn_rio_torio_usuarios_plazas_bp.route(
     "/btn_rio_torio_usuarios_plazas",

@@ -12,6 +12,7 @@ panel_control_via_publica_bp = Blueprint(
     url_prefix="/panel-control-via-publica",
 )
 
+
 def _descubrir_modulos_control_via_publica():
     """
     Devuelve la lista de módulos de CONTROL VÍA PÚBLICA
@@ -31,7 +32,9 @@ def _descubrir_modulos_control_via_publica():
         # modulo_control_via_publica_contenedores_bp
         partes = bp_name.split("_")
         # ["modulo", "control", "via", "publica", "contenedores", "bp"]
-        modulo_id = "_".join(partes[4:-1]) or partes[4]  # contenedores, obras, ocupacion_via, ...
+        modulo_id = (
+            "_".join(partes[4:-1]) or partes[4]
+        )  # contenedores, obras, ocupacion_via, ...
 
         modulos.append(
             {
@@ -46,6 +49,7 @@ def _descubrir_modulos_control_via_publica():
         "panel": panel_id,
         "modulos": modulos,
     }
+
 
 @panel_control_via_publica_bp.route("/panel", methods=["GET"])
 @rol_required("gestor", "super_admin")

@@ -3,7 +3,13 @@
 # - render_template: para mostrar plantillas HTML
 # - session: para guardar datos del usuario mientras navega
 # - redirect y url_for: para mover al usuario de una ruta a otra
-from flask import Blueprint, render_template, session, redirect, url_for  # [web:15][web:25]
+from flask import (
+    Blueprint,
+    render_template,
+    session,
+    redirect,
+    url_for,
+)  # [web:15][web:25]
 
 # Importamos login_required, que es un “candado” para rutas
 # Solo deja pasar a usuarios que estén logueados

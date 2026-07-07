@@ -70,6 +70,7 @@ btn_rio_torio_solicitud_plazas_bp = Blueprint(
 # 2. HELPERS DE NAVEGACIÓN Y CONSULTA
 # =============================================================================
 
+
 def obtener_url_retorno_rio_torio() -> str:
     """
     2.1. obtener_url_retorno_rio_torio
@@ -261,6 +262,7 @@ def _rt_totales_plazas() -> Dict[str, int]:
 # 3. HELPERS DE ESCRITURA: SOLICITUDES, USUARIOS, HISTÓRICO
 # =============================================================================
 
+
 def _rt_insertar_solicitud(datos: Dict[str, Any]) -> None:
     """
     3.1. _rt_insertar_solicitud
@@ -448,6 +450,7 @@ def _rt_marcar_solicitudes_atendidas_por_historico() -> None:
 # =============================================================================
 # 4. APROBAR Y RECHAZAR SOLICITUDES
 # =============================================================================
+
 
 def _rt_aprobar_solicitud(
     id_solicitud: int,
@@ -659,6 +662,7 @@ def _rt_rechazar_solicitud(id_solicitud: int, motivo: str) -> None:
 # 5. VISTA PRINCIPAL: GET / POST
 # =============================================================================
 
+
 @btn_rio_torio_solicitud_plazas_bp.route(
     "/btn_rio_torio_solicitud_plazas",
     methods=["GET", "POST"],
@@ -807,7 +811,9 @@ def btn_rio_torio_solicitud_plazas():
                     )
 
                     if not datos_exp:
-                        flash("No se han encontrado datos para ese expediente.", "danger")
+                        flash(
+                            "No se han encontrado datos para ese expediente.", "danger"
+                        )
                     else:
                         fila_exp = datos_exp[0]
                         id_proveedor = fila_exp["idtbl_proveedores"]
@@ -822,7 +828,12 @@ def btn_rio_torio_solicitud_plazas():
                                 numero_expediente = %s
                             WHERE idtbl_plazas = %s
                             """,
-                            (id_proveedor, fecha_inicio_str, n_expediente, int(id_plaza)),
+                            (
+                                id_proveedor,
+                                fecha_inicio_str,
+                                n_expediente,
+                                int(id_plaza),
+                            ),
                             nombre_bd="parquin_camiones",
                         )
 
@@ -840,16 +851,16 @@ def btn_rio_torio_solicitud_plazas():
                         if generar_informe:
                             _generar_pdf_y_docx_adjudicacion(int(id_plaza))
 
-                        flash("Plaza asignada correctamente desde expediente.", "success")
+                        flash(
+                            "Plaza asignada correctamente desde expediente.", "success"
+                        )
 
                 except Exception as exc:
                     flash(f"Error al asignar plaza desde expediente: {exc}", "danger")
 
         # 5.6. PRG: redirigir siempre tras POST para evitar reenvío de formularios
         return redirect(
-            url_for(
-                "btn_rio_torio_solicitud_plazas_bp.btn_rio_torio_solicitud_plazas"
-            )
+            url_for("btn_rio_torio_solicitud_plazas_bp.btn_rio_torio_solicitud_plazas")
         )
 
     # 5.7. Lógica GET: carga de datos para la plantilla

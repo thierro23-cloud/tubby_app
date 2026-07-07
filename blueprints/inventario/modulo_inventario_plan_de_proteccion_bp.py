@@ -28,8 +28,9 @@ modulo_inventario_plan_de_proteccion_bp = Blueprint(
     "modulo_inventario_plan_de_proteccion_bp",
     __name__,
     # Cuélgate del mismo prefijo general de inventario
-    url_prefix="/inventario/plan_de_proteccion/"
+    url_prefix="/inventario/plan_de_proteccion/",
 )
+
 
 # ============================================================================
 # RUTA PRINCIPAL: REDIRECCIÓN
@@ -54,6 +55,4 @@ def index():
     #     donde definiste las rutas del formulario/listado de planes.
     #   - "index" es el nombre de la función de vista que sirve el listado
     #     (ajústalo si tu endpoint se llama distinto).
-    return redirect(
-        url_for("btn_plan_de_proteccion_form_bp.index")
-    )
+    return redirect(url_for("btn_plan_de_proteccion_form_bp.index"))

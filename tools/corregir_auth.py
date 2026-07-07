@@ -13,8 +13,10 @@ import re
 ROOT_DIR = "blueprints"
 
 # 🔍 Patrón de imports mal escritos
-pattern_import = re.compile(r'\bfrom\s+blueprints\.(auth_bp|auth_hp)\b')
-pattern_login_required = re.compile(r'\bfrom\s+blueprints\.auth\.(login|super_admin)_required\b')
+pattern_import = re.compile(r"\bfrom\s+blueprints\.(auth_bp|auth_hp)\b")
+pattern_login_required = re.compile(
+    r"\bfrom\s+blueprints\.auth\.(login|super_admin)_required\b"
+)
 pattern_url_for = re.compile(r'url_for\(["\']auth\.(.*?)["\']\)')
 
 # 👶 Recorremos todos los archivos .py

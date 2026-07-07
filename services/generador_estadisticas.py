@@ -28,11 +28,10 @@
 
 from db import ejecutar_query
 
-
-
 # =============================================================================
 # 2️⃣ ESTADÍSTICAS POR MES
 # =============================================================================
+
 
 def estadisticas_por_mes(tabla, campo_fecha):
 
@@ -53,10 +52,10 @@ def estadisticas_por_mes(tabla, campo_fecha):
     return ejecutar_query(sql)
 
 
-
 # =============================================================================
 # 3️⃣ ESTADÍSTICAS POR AÑO
 # =============================================================================
+
 
 def estadisticas_por_anio(tabla, campo_fecha):
 
@@ -76,10 +75,10 @@ def estadisticas_por_anio(tabla, campo_fecha):
     return ejecutar_query(sql)
 
 
-
 # =============================================================================
 # 4️⃣ ESTADÍSTICAS POR PROVEEDOR
 # =============================================================================
+
 
 def estadisticas_por_proveedor(tabla, campo_proveedor):
 
@@ -102,10 +101,10 @@ def estadisticas_por_proveedor(tabla, campo_proveedor):
     return ejecutar_query(sql)
 
 
-
 # =============================================================================
 # 5️⃣ ESTADÍSTICAS POR CALLE
 # =============================================================================
+
 
 def estadisticas_por_calle(tabla, campo_calle):
 
@@ -128,10 +127,10 @@ def estadisticas_por_calle(tabla, campo_calle):
     return ejecutar_query(sql)
 
 
-
 # =============================================================================
 # 6️⃣ ESTADÍSTICAS POR TIPO DE VÍA
 # =============================================================================
+
 
 def estadisticas_por_tipo_via(tabla, campo_tipo_via):
 
@@ -154,10 +153,10 @@ def estadisticas_por_tipo_via(tabla, campo_tipo_via):
     return ejecutar_query(sql)
 
 
-
 # =============================================================================
 # 7️⃣ ESTADÍSTICAS POR ESTADO
 # =============================================================================
+
 
 def estadisticas_por_estado(tabla, campo_estado):
 
@@ -177,15 +176,14 @@ def estadisticas_por_estado(tabla, campo_estado):
     return ejecutar_query(sql)
 
 
-
 # =============================================================================
 # 8️⃣ GENERADOR GENERAL DE ESTADÍSTICAS
 # =============================================================================
 
-def generar_estadisticas(tabla, campo_fecha=None,
-                        campo_proveedor=None,
-                        campo_calle=None,
-                        campo_tipo_via=None):
+
+def generar_estadisticas(
+    tabla, campo_fecha=None, campo_proveedor=None, campo_calle=None, campo_tipo_via=None
+):
 
     estadisticas = {}
 
@@ -194,7 +192,9 @@ def generar_estadisticas(tabla, campo_fecha=None,
         estadisticas["por_anio"] = estadisticas_por_anio(tabla, campo_fecha)
 
     if campo_proveedor:
-        estadisticas["por_proveedor"] = estadisticas_por_proveedor(tabla, campo_proveedor)
+        estadisticas["por_proveedor"] = estadisticas_por_proveedor(
+            tabla, campo_proveedor
+        )
 
     if campo_calle:
         estadisticas["por_calle"] = estadisticas_por_calle(tabla, campo_calle)

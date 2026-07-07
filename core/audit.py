@@ -33,6 +33,7 @@ import uuid
 # No incluye manejo avanzado de errores, es simple y eficiente.
 #
 
+
 def registrar_evento(accion, modulo=None, descripcion=None):
     """
     📌 Registra un evento en la auditoría
@@ -43,15 +44,16 @@ def registrar_evento(accion, modulo=None, descripcion=None):
     """
 
     idtbl_gestores = session.get("user_id")  # ID del usuario logueado
-    idtbl_roles = session.get("rol_id")      # ID del rol
-    ip = request.remote_addr                  # IP de origen
-    endpoint = request.endpoint               # Endpoint llamado
-    path = request.path                       # Path de la request
+    idtbl_roles = session.get("rol_id")  # ID del rol
+    ip = request.remote_addr  # IP de origen
+    endpoint = request.endpoint  # Endpoint llamado
+    path = request.path  # Path de la request
     user_agent = request.headers.get("User-Agent")  # Navegador / cliente
-    request_id = str(uuid.uuid4())            # ID único para trazabilidad
+    request_id = str(uuid.uuid4())  # ID único para trazabilidad
 
     # Inserción directa en base de datos
-    ejecutar_query("""
+    ejecutar_query(
+        """
         INSERT INTO audit_log
         (
             idtbl_gestores,
@@ -67,42 +69,47 @@ def registrar_evento(accion, modulo=None, descripcion=None):
             fecha
         )
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-    """, (
-        idtbl_gestores,
-        idtbl_roles,
-        accion,
-        modulo,
-        descripcion,
-        ip,
-        endpoint,
-        path,
-        user_agent,
-        request_id,
-        datetime.utcnow()
-    ))
+    """,
+        (
+            idtbl_gestores,
+            idtbl_roles,
+            accion,
+            modulo,
+            descripcion,
+            ip,
+            endpoint,
+            path,
+            user_agent,
+            request_id,
+            datetime.utcnow(),
+        ),
+    )
+
 
 # =============================================================================
 # 3️⃣ FUNCIONES DE ATAJO PARA EVENTOS COMUNES
 # =============================================================================
 
+
 def audit_login(idtbl_gestores):
-    """ Registra un login """
+    """Registra un login"""
     registrar_evento("login", "auth", f"user_id={idtbl_gestores}")
 
 
 def audit_logout(idtbl_gestores):
-    """ Registra un logout """
+    """Registra un logout"""
     registrar_evento("logout", "auth", f"user_id={idtbl_gestores}")
 
 
 def audit_error(descripcion):
-    """ Registra un error del sistema """
+    """Registra un error del sistema"""
     registrar_evento("error", "sistema", descripcion)
 
 
 def audit_acceso_denegado(modulo):
-    """ Registra un intento de acceso denegado """
+    """Registra un intento de acceso denegado"""
     registrar_evento("acceso_denegado", modulo)
+
 
 # =============================================================================
 # 4️⃣ RESUMEN DEL SISTEMA

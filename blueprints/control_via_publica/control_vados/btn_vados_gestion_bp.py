@@ -52,8 +52,8 @@ def btn_vados_gestion():
     # =========================================================================
     numero_vado_q = request.args.get("numero_vado", "").strip()
     nif_q = request.args.get("nif", "").strip()
-    tipo_via_q = request.args.get("tipo_via", "").strip()   # NUEVO
-    calle_q = request.args.get("calle", "").strip()         # NUEVO
+    tipo_via_q = request.args.get("tipo_via", "").strip()  # NUEVO
+    calle_q = request.args.get("calle", "").strip()  # NUEVO
     # =========================================================================
 
     # =========================================================================
@@ -121,7 +121,11 @@ def btn_vados_gestion():
 
     for vado in vados:
         # Normalizado = tiene datos de calle/municipio/proveedor
-        if vado.get("idtbl_calles") or vado.get("idtbl_municipios") or vado.get("idtbl_proveedores"):
+        if (
+            vado.get("idtbl_calles")
+            or vado.get("idtbl_municipios")
+            or vado.get("idtbl_proveedores")
+        ):
             vados_normalizados.append(vado)
         # OT = tiene NIF_SP_OT o Nombre_SP_OT
         if vado.get("NIF_SP_OT") or vado.get("Nombre_SP_OT"):
@@ -175,7 +179,7 @@ def btn_vados_gestion():
             "SELECT DISTINCT NIF_SP_OT FROM control_via_publica.tbl_vados "
             "WHERE NIF_SP_OT IS NOT NULL ORDER BY NIF_SP_OT"
         )
-        lista_nif_sp_ot = [{'nif_ot': row[0]} for row in lista_nif_sp_ot]
+        lista_nif_sp_ot = [{"nif_ot": row[0]} for row in lista_nif_sp_ot]
     except Exception:
         lista_nif_sp_ot = []
 
@@ -185,7 +189,7 @@ def btn_vados_gestion():
             "SELECT DISTINCT Nombre_SP_OT FROM control_via_publica.tbl_vados "
             "WHERE Nombre_SP_OT IS NOT NULL ORDER BY Nombre_SP_OT"
         )
-        lista_nombre_sp_ot = [{'nombre_ot': row[0]} for row in lista_nombre_sp_ot]
+        lista_nombre_sp_ot = [{"nombre_ot": row[0]} for row in lista_nombre_sp_ot]
     except Exception:
         lista_nombre_sp_ot = []
 
@@ -200,12 +204,12 @@ def btn_vados_gestion():
         lista_fechas = []
 
     # Lista de estados (fija)
-    lista_estados = ['Activo', 'Inactivo', 'Pendiente', 'Cancelado', 'Baja']
+    lista_estados = ["Activo", "Inactivo", "Pendiente", "Cancelado", "Baja"]
 
     # Lista de tipos de operación (fija)
-    lista_tipos_operacion = ['Alta', 'Cambio', 'Baja']
+    lista_tipos_operacion = ["Alta", "Cambio", "Baja"]
 
-    # [E.2] NUEVO: TIPOS DE VÍA Y CALLES (municipio = 395) 
+    # [E.2] NUEVO: TIPOS DE VÍA Y CALLES (municipio = 395)
     # ----------------------------------------------------------------------
     # OBJETIVO:
     #   - lista_tipos_vias: viene de control_via_publica.tbl_tipos_de_vias
@@ -219,13 +223,11 @@ def btn_vados_gestion():
     # ----------------------------------------------------------------------
     # Lista de tipos de vía
     try:
-        lista_tipos_vias = ejecutar_query(
-            """
+        lista_tipos_vias = ejecutar_query("""
             SELECT idtbl_tipos_de_vias, tipos_de_vias
             FROM control_via_publica.tbl_tipos_de_vias
             ORDER BY tipos_de_vias
-            """
-        )
+            """)
         lista_tipos_vias = [
             {"id": row[0], "nombre": row[1]} for row in lista_tipos_vias
         ]
@@ -249,18 +251,17 @@ def btn_vados_gestion():
 
         sql_calles += " ORDER BY calles"
 
-        lista_calles_raw = ejecutar_query(sql_calles, tuple(params_calles)) \
-            if params_calles else []
+        lista_calles_raw = (
+            ejecutar_query(sql_calles, tuple(params_calles)) if params_calles else []
+        )
 
-        lista_calles = [
-            {"id": row[0], "nombre": row[1]} for row in lista_calles_raw
-        ]
+        lista_calles = [{"id": row[0], "nombre": row[1]} for row in lista_calles_raw]
     except Exception:
         lista_calles = []
 
     # En caso de que quieras seguir usando estas listas como antes, las mantenemos:
-    lista_municipios = []     # (siguen vacías porque no las habías definido)
-    lista_proveedores = []    # (idem)
+    lista_municipios = []  # (siguen vacías porque no las habías definido)
+    lista_proveedores = []  # (idem)
     # =========================================================================
 
     # =========================================================================
@@ -271,27 +272,31 @@ def btn_vados_gestion():
     # =========================================================================
     historiales = []
     for h_num in historico_numeros:
-        historiales.append({
-            'id': h_num[0],
-            'tipo': 'cambio_numero',
-            'idtbl_vados': h_num[1],
-            'numero_anterior': h_num[2],
-            'numero_nuevo': h_num[3],
-            'fecha': h_num[4],
-            'gestor': h_num[5],
-            'observaciones': h_num[6],
-        })
+        historiales.append(
+            {
+                "id": h_num[0],
+                "tipo": "cambio_numero",
+                "idtbl_vados": h_num[1],
+                "numero_anterior": h_num[2],
+                "numero_nuevo": h_num[3],
+                "fecha": h_num[4],
+                "gestor": h_num[5],
+                "observaciones": h_num[6],
+            }
+        )
     for h_tit in historico_titulares:
-        historiales.append({
-            'id': h_tit[0],
-            'tipo': 'cambio_titular',
-            'idtbl_vados': h_tit[1],
-            'titular_anterior': h_tit[2],
-            'titular_nuevo': h_tit[3],
-            'fecha': h_tit[4],
-            'gestor': h_tit[5],
-            'observaciones': h_tit[6],
-        })
+        historiales.append(
+            {
+                "id": h_tit[0],
+                "tipo": "cambio_titular",
+                "idtbl_vados": h_tit[1],
+                "titular_anterior": h_tit[2],
+                "titular_nuevo": h_tit[3],
+                "fecha": h_tit[4],
+                "gestor": h_tit[5],
+                "observaciones": h_tit[6],
+            }
+        )
     # =========================================================================
 
     # =========================================================================

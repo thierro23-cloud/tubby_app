@@ -24,6 +24,7 @@ btn_proveedores_importar_bp = Blueprint(
 # Estas funciones preparan los datos (NIF y nombre) para que tengan un formato
 # homogéneo antes de compararlos o guardarlos en la base de datos.
 
+
 def normalizar_nif(nif: str | None) -> str:
     """
     2.1 Normalizar NIF
@@ -54,6 +55,7 @@ def normalizar_nombre(nombre: str | None) -> str:
 # -----------------------------
 # Aquí definimos funciones auxiliares para buscar un proveedor por NIF
 # y para insertar un proveedor nuevo en la tabla bd_tbl_comunes.tbl_proveedores.
+
 
 def buscar_proveedor_por_nif(nif: str | None):
     """
@@ -147,7 +149,7 @@ def btn_proveedores_importar():
     # 4.3.3 Crear un DictReader para leer el CSV delimitado por ';'
     #      Se espera que la primera línea contenga las cabeceras:
     #      NIF;nombre_razon_social
-    lector = csv.DictReader(io.StringIO(contenido), delimiter=';')
+    lector = csv.DictReader(io.StringIO(contenido), delimiter=";")
 
     # 4.3.4 Inicializar contadores y estructuras de control de resultados
     insertados = 0
@@ -180,34 +182,40 @@ def btn_proveedores_importar():
         if existente:
             # Ya existe: sumamos al contador y guardamos detalle
             existentes += 1
-            resultado.append({
-                "fila": i,
-                "estado": "existe",
-                "id": existente["Idtbl_proveedores"],
-                "nif": normalizar_nif(nif),
-                "nombre": normalizar_nombre(nombre),
-            })
+            resultado.append(
+                {
+                    "fila": i,
+                    "estado": "existe",
+                    "id": existente["Idtbl_proveedores"],
+                    "nif": normalizar_nif(nif),
+                    "nombre": normalizar_nombre(nombre),
+                }
+            )
             continue
 
         # 4.3.5.4 Si no existe, intentamos insertarlo como nuevo
         try:
             insertar_proveedor(nif, nombre)
             insertados += 1
-            resultado.append({
-                "fila": i,
-                "estado": "insertado",
-                "nif": normalizar_nif(nif),
-                "nombre": normalizar_nombre(nombre),
-            })
+            resultado.append(
+                {
+                    "fila": i,
+                    "estado": "insertado",
+                    "nif": normalizar_nif(nif),
+                    "nombre": normalizar_nombre(nombre),
+                }
+            )
         except Exception as e:
             # Si hay un error en BD, lo registramos
             errores.append(f"Fila {i}: {str(e)}")
 
     # 4.4 Construir y devolver el resumen JSON
-    return jsonify({
-        "ok": True,
-        "insertados": insertados,
-        "existentes": existentes,
-        "errores": errores,
-        "resultado": resultado,
-    })
+    return jsonify(
+        {
+            "ok": True,
+            "insertados": insertados,
+            "existentes": existentes,
+            "errores": errores,
+            "resultado": resultado,
+        }
+    )

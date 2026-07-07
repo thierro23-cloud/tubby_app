@@ -8,7 +8,7 @@ from db import ejecutar_query, ejecutar_non_query
 # ============================================================================
 # BLUEPRINT DE RECURRENCIAS DE AGENDA
 # ============================================================================
-# Propósito: Sistema completo de CRUD para gestionar recurrencias de eventos 
+# Propósito: Sistema completo de CRUD para gestionar recurrencias de eventos
 #            en agenda municipal de vía pública (terrazas, vados, contenedores, etc.)
 # URL Prefix: /agenda/recurrencias
 # Acceso: Solo usuarios con rol "gestor" o "super_admin"
@@ -28,13 +28,14 @@ agenda_recurrencias_bp = Blueprint(
 # Separación de responsabilidades: SQL aislado de las vistas Flask
 # Todas usan la BD "agenda" y los helpers de db.py
 
+
 def _ar_listar_recurrencias():
     """
     Lista todas las recurrencias (con info básica de tipo de evento y calle).
-    
+
     Returns:
         list: Lista de diccionarios con cada recurrencia y sus datos relacionados.
-    
+
     Campos devueltos:
         - idtbl_agenda_recurrencias: PK único
         - idtbl_tipos_evento_via_publica: FK tipo de evento
@@ -79,10 +80,10 @@ def _ar_listar_recurrencias():
 def _ar_obtener_recurrencia(id_recurrencia: int):
     """
     Obtiene una recurrencia concreta por ID.
-    
+
     Args:
         id_recurrencia: ID único de la recurrencia (PK).
-    
+
     Returns:
         dict|None: Diccionario con la recurrencia o None si no existe.
     """
@@ -121,7 +122,7 @@ def _ar_obtener_recurrencia(id_recurrencia: int):
 def _ar_insertar_recurrencia(datos: dict) -> None:
     """
     Inserta una nueva recurrencia en tbl_agenda_recurrencias.
-    
+
     Args:
         datos: Diccionario con los campos:
             - idtbl_tipos_evento_via_publica: FK tipo de evento
@@ -134,7 +135,7 @@ def _ar_insertar_recurrencia(datos: dict) -> None:
             - all_day_default: 1=todo el día, 0=con hora
             - idtbl_calles: FK calle
             - activo: 1=activo por defecto
-    
+
     Notas:
         - creado_en y actualizado_en se ponen automáticamente con NOW()
         - No devuelve valor (inserta directamente)
@@ -175,11 +176,11 @@ def _ar_insertar_recurrencia(datos: dict) -> None:
 def _ar_actualizar_recurrencia(id_recurrencia: int, datos: dict) -> None:
     """
     Actualiza una recurrencia existente en tbl_agenda_recurrencias.
-    
+
     Args:
         id_recurrencia: ID de la recurrencia a actualizar (PK).
         datos: Diccionario con los campos a actualizar (mêmes que en insert, excepto PK).
-    
+
     Notas:
         - actualizado_en se renueva automáticamente con NOW()
         - creado_en NO se modifica
@@ -207,11 +208,11 @@ def _ar_actualizar_recurrencia(id_recurrencia: int, datos: dict) -> None:
 def _ar_cambiar_activo(id_recurrencia: int, activo: int) -> None:
     """
     Activa/desactiva una recurrencia (soft delete).
-    
+
     Args:
         id_recurrencia: ID de la recurrencia (PK).
         activo: 1=activar, 0=desactivar.
-    
+
     Notas:
         - NO elimina el registro, solo cambia campo 'activo'
         - actualizado_en se renueva con NOW()
@@ -232,12 +233,12 @@ def _ar_cambiar_activo(id_recurrencia: int, activo: int) -> None:
 def _ar_listar_tipos_evento():
     """
     Lista tipos de evento de vía pública (para selects en formularios).
-    
+
     Returns:
         list: Lista de diccionarios con:
             - idtbl_tipos_evento_via_publica: PK
             - descripcion: Nombre del tipo (ex: "Terraza", "Vado", "Contenedor")
-    
+
     Orden: Alphabetico por descripcion.
     """
     sql = """
@@ -253,12 +254,12 @@ def _ar_listar_tipos_evento():
 def _ar_listar_calles():
     """
     Lista calles disponibles (para selects en formularios).
-    
+
     Returns:
         list: Lista de diccionarios con:
             - idtbl_calles: PK
             - Nombre_Calle: Nombre de la calle
-    
+
     Orden: Alphabetico por Nombre_Calle.
     """
     sql = """
@@ -283,6 +284,7 @@ def _ar_listar_calles():
 # 2.1 Listado de todas las recurrencias
 # ----------------------------------------------------------------------------
 
+
 @agenda_recurrencias_bp.route("/", methods=["GET"])
 @login_required
 @rol_required("gestor", "super_admin")
@@ -290,7 +292,7 @@ def ar_listar_recurrencias():
     """
     Route: / (GET)
     Función: Listar todas las recurrencias activas/inactivas.
-    
+
     Template: agenda/recurrencias/agenda_recurrencias_listar.html
     Variables:
         - recurrencias: Lista de diccionarios con cada recurrencia + datos relacionados.
@@ -305,6 +307,7 @@ def ar_listar_recurrencias():
 # 2.2 Crear nueva recurrencia
 # ----------------------------------------------------------------------------
 
+
 @agenda_recurrencias_bp.route("/nuevo", methods=["GET", "POST"])
 @login_required
 @rol_required("gestor", "super_admin")
@@ -312,7 +315,7 @@ def ar_nueva_recurrencia():
     """
     Route: /nuevo (GET | POST)
     Función: Crear una nueva recurrencia.
-    
+
     GET:
         - Muestra formulario con selects de tipos_evento y calles.
         - Template: agenda/recurrencias/agenda_recurrencias_form.html
@@ -321,14 +324,14 @@ def ar_nueva_recurrencia():
             - tipos_evento: Lista de tipos de evento
             - calles: Lista de calles
             - recurrencia: None (no hay dato previo)
-    
+
     POST:
         - Procesar datos del formulario.
         - Validación: Conversión de duracion_dias y all_day_default a int.
         - Inserta en DB con _ar_insertar_recurrencia().
         - Flash: "Recurrencia creada correctamente." (success)
         - Redirige al listado.
-    
+
     Campos del formulario:
         - idtbl_tipos_evento_via_publica: FK tipo de evento
         - titulo_base: Título
@@ -343,7 +346,9 @@ def ar_nueva_recurrencia():
     """
     if request.method == "POST":
         datos = {
-            "idtbl_tipos_evento_via_publica": request.form.get("idtbl_tipos_evento_via_publica"),
+            "idtbl_tipos_evento_via_publica": request.form.get(
+                "idtbl_tipos_evento_via_publica"
+            ),
             "titulo_base": request.form.get("titulo_base"),
             "descripcion_base": request.form.get("descripcion_base"),
             "origen_tabla": request.form.get("origen_tabla"),
@@ -374,6 +379,7 @@ def ar_nueva_recurrencia():
 # 2.3 Editar recurrencia existente
 # ----------------------------------------------------------------------------
 
+
 @agenda_recurrencias_bp.route("/<int:id_recurrencia>/editar", methods=["GET", "POST"])
 @login_required
 @rol_required("gestor", "super_admin")
@@ -381,7 +387,7 @@ def ar_editar_recurrencia(id_recurrencia: int):
     """
     Route: /<id_recurrencia>/editar (GET | POST)
     Función: Editar una recurrencia existente.
-    
+
     GET:
         - Obtiene recurrencia por ID con _ar_obtener_recurrencia().
         - Si no existe: Flash "Recurrencia no encontrada." + redirige al listado.
@@ -392,14 +398,14 @@ def ar_editar_recurrencia(id_recurrencia: int):
             - recurrencia: Diccionario con datos de la recurrencia
             - tipos_evento: Lista de tipos (para select)
             - calles: Lista de calles (para select)
-    
+
     POST:
         - Procesar datos actualizados del formulario.
         - Same validación que en creación (int conversion).
         - Actualiza en DB con _ar_actualizar_recurrencia().
         - Flash: "Recurrencia actualizada correctamente." (success)
         - Redirige al listado.
-    
+
     Parámetros:
         - id_recurrencia: PK de la recurrencia a editar (extraído de la URL).
     """
@@ -410,7 +416,9 @@ def ar_editar_recurrencia(id_recurrencia: int):
 
     if request.method == "POST":
         datos = {
-            "idtbl_tipos_evento_via_publica": request.form.get("idtbl_tipos_evento_via_publica"),
+            "idtbl_tipos_evento_via_publica": request.form.get(
+                "idtbl_tipos_evento_via_publica"
+            ),
             "titulo_base": request.form.get("titulo_base"),
             "descripcion_base": request.form.get("descripcion_base"),
             "origen_tabla": request.form.get("origen_tabla"),
@@ -441,6 +449,7 @@ def ar_editar_recurrencia(id_recurrencia: int):
 # 2.4 Activar / desactivar (soft delete)
 # ----------------------------------------------------------------------------
 
+
 @agenda_recurrencias_bp.route(
     "/<int:id_recurrencia>/toggle-activo",
     methods=["POST"],
@@ -451,7 +460,7 @@ def ar_toggle_activo(id_recurrencia: int):
     """
     Route: /<id_recurrencia>/toggle-activo (POST)
     Función: Activar o desactivar una recurrencia (soft delete).
-    
+
     POST:
         - Obtiene recurrencia por ID.
         - Si no existe: Flash "Recurrencia no encontrada." + redirige.
@@ -461,10 +470,10 @@ def ar_toggle_activo(id_recurrencia: int):
             - "Recurrencia desactivada." si nuevo_estado == 0
             - "Recurrencia activada." si nuevo_estado == 1
         - Redirige al listado.
-    
+
     Parámetros:
         - id_recurrencia: PK de la recurrencia (de la URL).
-    
+
     Notas:
         - Solo POST (no se puede acceder por GET).
         - Toggle automático: invierte el estado actual.

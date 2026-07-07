@@ -44,6 +44,7 @@
 import concurrent.futures
 
 from flask import current_app
+
 # 1.1) Imports estándar y Flask (TERMINA)
 # -----------------------------------------------------------------------------
 
@@ -140,6 +141,8 @@ def procesar_pdf_async(app, ruta_pdf, funcion_procesado):
 
     # Enviamos la tarea al pool sin bloquear el hilo llamante
     executor.submit(tarea)
+
+
 # 2.1) procesar_pdf_async(app, ruta_pdf, funcion_procesado) (TERMINA)
 # -----------------------------------------------------------------------------
 

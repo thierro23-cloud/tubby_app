@@ -32,6 +32,7 @@ modulo_gestores_administrar = Blueprint(
     url_prefix="/gestores_admin",
 )
 
+
 # ============================================================================
 # RUTA PRINCIPAL: REDIRECCIÓN
 # ============================================================================
@@ -48,6 +49,4 @@ def modulo_gestores_administrar_bp():
 
         btn_administrar_gestores_bp.btn_administrar_gestores
     """
-    return redirect(
-        url_for("btn_administrar_gestores_bp.btn_administrar_gestores")
-    )
+    return redirect(url_for("btn_administrar_gestores_bp.btn_administrar_gestores"))

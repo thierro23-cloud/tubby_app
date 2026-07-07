@@ -108,7 +108,6 @@ from flask import current_app
 
 from watchers.utils_async import procesar_pdf_entrada
 
-
 # =============================================================================
 # 3️⃣ RUTAS DE CARPETAS DE CONTENEDORES
 # =============================================================================
@@ -231,6 +230,8 @@ class ContenedoresHandler(PatternMatchingEventHandler):
                 f"id_pendiente={resultado.get('id_pendiente')} "
                 f"ruta_final_pdf={resultado.get('ruta_final_pdf')}"
             )
+
+
 # 5.1) ContenedoresHandler (TERMINA)
 # -----------------------------------------------------------------------------
 
@@ -295,6 +296,8 @@ def iniciar_watcher_contenedores(app):
     watcher_activo = True
     app.logger.info(f"🚀 Watcher iniciado: {CARPETA_ENTRADA}")
     app.logger.info(f"👁 [entrada_pdf] Vigilando carpeta: {CARPETA_ENTRADA}")
+
+
 # 6.1) iniciar_watcher_contenedores(app) (TERMINA)
 # -----------------------------------------------------------------------------
 

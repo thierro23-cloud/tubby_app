@@ -44,7 +44,9 @@ def obtener_todos_los_endpoints(app=None):
             app = flask.current_app._get_current_object()
         except Exception:
             # Si no hay contexto de app, no podemos acceder a url_map
-            raise RuntimeError("No se pudo obtener la app Flask (no hay contexto de aplicación activo)")
+            raise RuntimeError(
+                "No se pudo obtener la app Flask (no hay contexto de aplicación activo)"
+            )
 
     # -------------------------------------------------------------------------
     # 📦 2. PREPARAMOS LA LISTA DONDE GUARDAREMOS TODAS LAS RUTAS
@@ -61,11 +63,15 @@ def obtener_todos_los_endpoints(app=None):
     #         • rule.endpoint→ nombre interno del endpoint
     # -------------------------------------------------------------------------
     for rule in app.url_map.iter_rules():
-        routes.append({
-            "ruta":    str(rule),                   # URL de la ruta (por ejemplo "/panel/policias")
-            "methods": sorted(list(rule.methods)),  # Lista ordenada de métodos HTTP (GET, POST, ...)
-            "endpoint": rule.endpoint               # Nombre interno del endpoint en Flask
-        })
+        routes.append(
+            {
+                "ruta": str(rule),  # URL de la ruta (por ejemplo "/panel/policias")
+                "methods": sorted(
+                    list(rule.methods)
+                ),  # Lista ordenada de métodos HTTP (GET, POST, ...)
+                "endpoint": rule.endpoint,  # Nombre interno del endpoint en Flask
+            }
+        )
 
     # -------------------------------------------------------------------------
     # 📤 4. DEVOLVER EL RESULTADO

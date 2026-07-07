@@ -14,6 +14,7 @@ logger = logging.getLogger("tubby_app")
 
 HASH_ADMIN = "$2b$12$3aA4jE6s8N.CMVwXqDx6gOmp4IzWVDpXEvvEm/20te6LATfmWvKui"
 
+
 def _es_hash_bcrypt_valido(hash_str: str) -> bool:
     """
     Valida si el hash tiene formato bcrypt.
@@ -28,9 +29,7 @@ if not HASH_ADMIN:
     if os.getenv("FLASK_ENV") == "development":
         logger.warning("⚠ Usando hash temporal (modo desarrollo)")
 
-        HASH_ADMIN = bcrypt.hashpw(
-            b"admin", bcrypt.gensalt()
-        ).decode()
+        HASH_ADMIN = bcrypt.hashpw(b"admin", bcrypt.gensalt()).decode()
 
     else:
         raise ValueError(
@@ -44,6 +43,7 @@ if not _es_hash_bcrypt_valido(HASH_ADMIN):
 # =============================================================================
 # 2️⃣ FUNCIÓN DE VERIFICACIÓN
 # =============================================================================
+
 
 def verificar_password(password_plano: str) -> bool:
     """
@@ -60,8 +60,7 @@ def verificar_password(password_plano: str) -> bool:
 
     try:
         resultado = bcrypt.checkpw(
-            password_plano.encode("utf-8"),
-            HASH_ADMIN.encode("utf-8")
+            password_plano.encode("utf-8"), HASH_ADMIN.encode("utf-8")
         )
 
         if not resultado:

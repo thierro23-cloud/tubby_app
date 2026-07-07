@@ -55,6 +55,7 @@ btn_rio_torio_usuarios_tbl_bp = Blueprint(
 # 2️⃣ HELPERS SQL · USUARIOS Y PROVEEDORES
 # =============================================================================
 
+
 def _rt_obtener_usuarios_tbl():
     """
     2.1️⃣ Devuelve usuarios de parquin_camiones.tbl_usuarios.
@@ -108,7 +109,9 @@ def _rt_obtener_proveedores_parquin_activo():
         ORDER BY Nombre_Razon_Social
     """
     return ejecutar_query(sql, nombre_bd="bd_tbl_comunes")
-#=============================================================================
+
+
+# =============================================================================
 # 3️⃣ VISTA · BOTÓN USUARIOS TBL RIO_TORIO
 # =============================================================================
 # RUTA
@@ -138,6 +141,7 @@ def _rt_obtener_proveedores_parquin_activo():
 #       · templates/parquin/rio_torio/rio_torio_usuarios_tbl.html
 #     con ambas colecciones paralelas para análisis comparativo.
 # =============================================================================
+
 
 @btn_rio_torio_usuarios_tbl_bp.route(
     "/btn_rio_torio_usuarios_tbl",

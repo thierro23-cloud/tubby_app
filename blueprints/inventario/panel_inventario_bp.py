@@ -2,6 +2,7 @@
 """
 Panel Inventario
 """
+
 from flask import Blueprint, redirect, url_for
 from flask_login import login_required
 from services.helpers import rol_required
@@ -12,6 +13,7 @@ panel_inventario_bp = Blueprint(
     url_prefix="/inventario",
     template_folder="templates/inventario",
 )
+
 
 @panel_inventario_bp.route("/", methods=["GET"])
 @login_required

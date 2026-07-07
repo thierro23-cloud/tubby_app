@@ -34,6 +34,7 @@ observer_obras = None
 # 3️⃣ HANDLER DE EVENTOS · OBRAS
 # =============================================================================
 
+
 class ObrasHandler(PatternMatchingEventHandler):
     """
     Handler que vigila OBRAS/entrada_pdf y reacciona a nuevos PDFs.
@@ -77,6 +78,7 @@ class ObrasHandler(PatternMatchingEventHandler):
 # 4️⃣ INICIAR WATCHER · OBRAS
 # =============================================================================
 
+
 def iniciar_watcher_obras(app):
     """
     Arranca el watcher de obras SI AÚN NO ESTÁ ACTIVO.
@@ -94,9 +96,7 @@ def iniciar_watcher_obras(app):
     global watcher_obras_activo, observer_obras
 
     if watcher_obras_activo:
-        app.logger.info(
-            "ℹ Watcher de obras ya estaba activo; no se reinicia"
-        )
+        app.logger.info("ℹ Watcher de obras ya estaba activo; no se reinicia")
         return
 
     os.makedirs(CARPETA_ENTRADA_OBRAS, exist_ok=True)
@@ -106,13 +106,9 @@ def iniciar_watcher_obras(app):
 
     handler = ObrasHandler(app)
     observer_obras = Observer()
-    observer_obras.schedule(
-        handler, path=CARPETA_ENTRADA_OBRAS, recursive=False
-    )
+    observer_obras.schedule(handler, path=CARPETA_ENTRADA_OBRAS, recursive=False)
     observer_obras.start()
 
     watcher_obras_activo = True
     app.logger.info(f"🚀 Watcher de obras iniciado: {CARPETA_ENTRADA_OBRAS}")
-    app.logger.info(
-        f"👁 [obras/entrada_pdf] Vigilando carpeta: {CARPETA_ENTRADA_OBRAS}"
-    )
+    app.logger.info(f"👁 [obras/entrada_pdf] Vigilando carpeta: {CARPETA_ENTRADA_OBRAS}")

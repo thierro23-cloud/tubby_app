@@ -6,10 +6,13 @@
 
 from flask import Blueprint, request, flash, redirect, url_for, jsonify
 from db import execute
-from werkzeug.security import generate_password_hash  # 🗝️ Para hacer magia con contraseñas
+from werkzeug.security import (
+    generate_password_hash,
+)  # 🗝️ Para hacer magia con contraseñas
 
 # 🗂 Creamos el cajoncito mágico llamado auth_bp
 auth_bp = Blueprint("auth_bp", __name__, template_folder="templates/auth")
+
 
 # =====================================================
 # 🔐 RECUPERAR CONTRASEÑA – EXPLICADO PARA NIÑOS
@@ -47,8 +50,10 @@ def recuperar_password():
 
     # 📬 Aquí podríamos enviar un correo al admin con temp_password
     # Por ahora, devolvemos un mensaje mágico en JSON para pruebas
-    return jsonify({
-        "status": "OK",  # ✅ Todo salió bien
-        "mensaje": f"Contraseña temporal enviada a {admin_email}",  # 💌 Mensaje tipo cómic
-        "temp_password": temp_password  # 🔑 Para ver que funciona en pruebas
-    })
+    return jsonify(
+        {
+            "status": "OK",  # ✅ Todo salió bien
+            "mensaje": f"Contraseña temporal enviada a {admin_email}",  # 💌 Mensaje tipo cómic
+            "temp_password": temp_password,  # 🔑 Para ver que funciona en pruebas
+        }
+    )

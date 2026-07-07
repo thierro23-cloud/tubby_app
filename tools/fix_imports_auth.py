@@ -28,6 +28,7 @@ REGLAS = {
     "blueprints.auth.super_admin_required": "blueprints.auth.super_admin_required",
 }
 
+
 # ============================================================
 # 🧸 Función copiar backup
 # ============================================================
@@ -44,6 +45,7 @@ def crear_backup():
                 os.makedirs(os.path.dirname(dst), exist_ok=True)
                 shutil.copy2(src, dst)
     print("✅ Backup creado en /backup_imports_auth")
+
 
 # ============================================================
 # 🧙‍♂️ Función reparar imports
@@ -76,6 +78,7 @@ def reparar_imports():
                     cambios += 1
 
     print(f"\n🎉 Archivos corregidos: {cambios}")
+
 
 # ============================================================
 # 🚀 EJECUCIÓN PRINCIPAL

@@ -48,6 +48,7 @@ btn_rio_torio_plano_bp = Blueprint(
 #   - Ruta:               /parquin/rio_torio/plano
 # =============================================================================
 
+
 @btn_rio_torio_plano_bp.route("/plano", methods=["GET"])
 @rol_required("gestor", "super_admin")
 def btn_rio_torio_plano():
@@ -79,14 +80,12 @@ def btn_rio_torio_plano():
 
     try:
         # Obtener todas las filas disponibles para selector y navegación.
-        cursor.execute(
-            """
+        cursor.execute("""
             SELECT DISTINCT fila
             FROM tbl_plazas
             WHERE fila IS NOT NULL
             ORDER BY fila
-            """
-        )
+            """)
         filas_rows = cursor.fetchall()
         filas_disponibles = [row["fila"] for row in filas_rows] or [fila]
 

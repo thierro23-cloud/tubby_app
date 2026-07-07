@@ -232,14 +232,15 @@ def btn_vados_importar():
             return None
 
         # 4. Recorrer filas: validar y preparar registros válidos
+
     # -------------------------------------------------------
     registros_validos: list[tuple[Any, ...]] = []
     errores = 0
     detalle_errores: list[dict[str, Any]] = []
 
     # Contadores relacionados con proveedores
-    proveedores_localizados = 0        # filas con idtbl_proveedores != None
-    proveedores_no_encontrados = 0     # filas con NIF informado pero sin proveedor
+    proveedores_localizados = 0  # filas con idtbl_proveedores != None
+    proveedores_no_encontrados = 0  # filas con NIF informado pero sin proveedor
 
     for idx, row in df.iterrows():
         try:
@@ -292,16 +293,16 @@ def btn_vados_importar():
                 (
                     id_tipo_via,
                     id_calle,
-                    395,          # idtbl_municipios fijo
+                    395,  # idtbl_municipios fijo
                     id_proveedor,
                     numero_vado,
-                    None,         # idtbl_vado_anterior
-                    None,         # idtbl_propietario_anterior
-                    None,         # fecha_baja
-                    None,         # fecha_cambio
+                    None,  # idtbl_vado_anterior
+                    None,  # idtbl_propietario_anterior
+                    None,  # fecha_baja
+                    None,  # fecha_cambio
                     id_gestor,
                     tipo_operacion,
-                    0,            # baja = activo
+                    0,  # baja = activo
                     desc_ot,
                     superficie,
                     anchura,

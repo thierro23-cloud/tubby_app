@@ -57,13 +57,13 @@
 from __future__ import annotations
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash
+
 # ⚠️ NO USAR Flask-Login AQUÍ:
 # from flask_login import login_required  ❌  (NO)
 # En su lugar usamos nuestros decoradores propios:
 from services.helpers import login_required, rol_required
 
 from db import ejecutar_query, ejecutar_non_query
-
 
 # =============================================================================
 # 0️⃣ BLUEPRINT · REGISTRO EN LA APP
@@ -102,6 +102,7 @@ btn_proveedores_usuarios_gestionar_bp = Blueprint(
 #       idtbl_usuarios, idtbl_proveedores, numero_cuenta,
 #       activo_baja, fecha_inicio, fecha_baja
 # =============================================================================
+
 
 def _obtener_proveedores_con_usuarios():
     """
@@ -208,6 +209,7 @@ def _guardar_usuario_proveedor(datos: dict) -> None:
 
     ejecutar_non_query(sql, datos, "parquin_camiones")
 
+
 # =============================================================================
 # 2️⃣ VISTA · BOTÓN GESTIONAR USUARIOS POR PROVEEDOR
 # =============================================================================
@@ -230,6 +232,7 @@ def _guardar_usuario_proveedor(datos: dict) -> None:
 #   - No interviene Flask-Login.
 #   - No se chequea current_user, solo session["user_id"] y session["rol"].
 # =============================================================================
+
 
 @btn_proveedores_usuarios_gestionar_bp.route(
     "/btn_proveedores_usuarios_gestionar",

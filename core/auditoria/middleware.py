@@ -56,7 +56,6 @@ from core.permisos import endpoint_activo, tiene_permiso
 #    - Útil para seguridad, compliance y debugging
 from core.audit import registrar_evento
 
-
 # =============================================================================
 # 2️⃣ CONFIGURACIÓN INTERNA
 # =============================================================================
@@ -79,22 +78,19 @@ from core.audit import registrar_evento
 #
 # ⚠️ IMPORTANTE: No añadas endpoints de negocio aquí
 #    Solo rutas de autenticación y recursos públicos del sistema
-ENDPOINTS_PUBLICOS = {
-    "auth_bp.login",
-    "auth_bp.logout",
-    "static"
-}
+ENDPOINTS_PUBLICOS = {"auth_bp.login", "auth_bp.logout", "static"}
 
 
 # =============================================================================
 # 3️⃣ MIDDLEWARE PRINCIPAL (BEFORE_REQUEST)
 # =============================================================================
 
+
 def seguridad_global():
     """
     🔐 Middleware global de seguridad.
     Se ejecuta ANTES de cada request.
-    
+
     📌 FLUJO DE EJECUCIÓN:
     ────────────────────────────────────────────────────────────────────────
     1. Flask recibe una petición HTTP (GET /dashboard, POST /api/usuarios, etc.)
@@ -102,15 +98,15 @@ def seguridad_global():
     3. Esta función decide si permitir o bloquear la petición
     4. Si devuelve None → la petición continúa hacia la vista
     5. Si devuelve una respuesta (redirect, JSON, HTML) → la petición se corta aquí
-    
+
     📌 ARQUITECTURA:
     ────────────────────────────────────────────────────────────────────────
     Este middleware se registra en app.py con:
         app.before_request(seguridad_global)
-    
+
     Flask ejecuta TODOS los before_request en orden de registro,
     y el primero que devuelva algo diferente de None detiene la cadena.
-    
+
     📌 VENTAJAS:
     ────────────────────────────────────────────────────────────────────────
     ✔ Control centralizado: no repites validaciones en cada vista
@@ -157,7 +153,7 @@ def seguridad_global():
     # 🌐 IGNORAR ARCHIVOS ESTÁTICOS
     # ---------------------------------------------------------
     # Flask sirve archivos estáticos (CSS, JS, imágenes) con endpoint "static".
-    # 
+    #
     # Ejemplo:
     #   - URL: /static/css/main.css → endpoint: "static"
     #   - URL: /static/js/app.js → endpoint: "static"
@@ -193,7 +189,7 @@ def seguridad_global():
     # 👤 VALIDAR LOGIN
     # ---------------------------------------------------------
     # A partir de aquí, TODOS los endpoints requieren autenticación.
-    # 
+    #
     # 📌 CÓMO FUNCIONA:
     #   - Cuando el usuario hace login exitoso, guardas session["user_id"]
     #   - Flask mantiene esta sesión con cookies firmadas
@@ -295,9 +291,7 @@ def seguridad_global():
 
     if not tiene_permiso(endpoint, rol_id):
         registrar_evento(
-            accion="acceso_denegado",
-            modulo=endpoint,
-            descripcion=f"rol_id={rol_id}"
+            accion="acceso_denegado", modulo=endpoint, descripcion=f"rol_id={rol_id}"
         )
 
         if request.path.startswith("/api"):
@@ -338,34 +332,35 @@ def seguridad_global():
 # 4️⃣ MIDDLEWARE DE ERRORES (GLOBAL)
 # =============================================================================
 
+
 def registrar_errores(app):
     """
     🔥 Captura TODOS los errores automáticamente
-    
+
     📌 PROPÓSITO:
     ────────────────────────────────────────────────────────────────────────
     Flask lanza excepciones HTTP cuando algo falla:
       - 404 Not Found: ruta no existe
       - 500 Internal Server Error: error en código Python
       - 403 Forbidden: acceso denegado (aunque nosotros lo manejamos arriba)
-    
+
     Sin estos handlers, Flask muestra páginas de error por defecto,
     que son inconsistentes, poco profesionales y rompen la experiencia.
-    
+
     📌 VENTAJAS DE HANDLERS PERSONALIZADOS:
     ────────────────────────────────────────────────────────────────────────
     ✔ Consistencia: misma estructura de respuesta en toda la app
     ✔ Seguridad: no expones stack traces en producción
     ✔ Auditoría: registras TODOS los errores para análisis
     ✔ UX: respuestas claras tanto para web como para API
-    
+
     📌 CÓMO SE REGISTRA:
     ────────────────────────────────────────────────────────────────────────
     En app.py llamas:
         registrar_errores(app)
-    
+
     Esto asocia cada handler con su código HTTP correspondiente.
-    
+
     📌 PARÁMETRO 'app':
     ────────────────────────────────────────────────────────────────────────
     Es la instancia principal de Flask.
@@ -380,29 +375,29 @@ def registrar_errores(app):
     def not_found(e):
         """
         🚫 Página o endpoint no encontrado
-        
+
         📌 CUÁNDO SE DISPARA:
         ──────────────────────────────────────────────────────────────────
         - El usuario escribe una URL que no existe
         - Hay un typo en url_for() o en un enlace
         - Se eliminó una ruta pero quedan enlaces antiguos
         - Peticiones a recursos borrados o movidos
-        
+
         👉 EJEMPLOS:
           - GET /dasboard (typo) → 404
           - GET /api/clientes/999999 (ID no existe) → depende de tu lógica,
             podrías manejar esto en la vista con 404 también
-        
+
         🛡️ RESPUESTA:
         ──────────────────────────────────────────────────────────────────
         - Registro en auditoría con request.path para ver qué se buscó
         - JSON para API (máquinas)
         - Texto simple para web (idealmente plantilla HTML profesional)
-        
+
         ⚠️ MEJORA RECOMENDADA:
           Devolver render_template("errores/404.html") con diseño
           consistente, sugerencias de navegación, y buscador interno
-        
+
         📌 PARÁMETRO 'e':
         ──────────────────────────────────────────────────────────────────
         Es la excepción HTTP que Flask lanza internamente.
@@ -426,7 +421,7 @@ def registrar_errores(app):
     def server_error(e):
         """
         💥 Error interno del servidor
-        
+
         📌 CUÁNDO SE DISPARA:
         ──────────────────────────────────────────────────────────────────
         - Excepción no capturada en código Python
@@ -434,18 +429,18 @@ def registrar_errores(app):
         - División por cero, KeyError, AttributeError, etc.
         - Fallo en conexión a servicios externos
         - Error en templates Jinja2
-        
+
         👉 EJEMPLOS:
           - division_result = 10 / 0 → ZeroDivisionError → 500
           - user = User.query.get(None) → puede lanzar error → 500
           - Template usa variable inexistente → 500
-        
+
         🛡️ RESPUESTA:
         ──────────────────────────────────────────────────────────────────
         - Registro en auditoría (CRÍTICO para debugging)
         - JSON genérico para API (sin detalles técnicos)
         - Mensaje genérico para web
-        
+
         ⚠️ SEGURIDAD:
           NUNCA devuelvas el stack trace completo en producción.
           Eso expone:
@@ -453,18 +448,18 @@ def registrar_errores(app):
             - Nombres de variables y lógica interna
             - Versiones de librerías
             - Rutas de base de datos
-        
+
         👉 BUENAS PRÁCTICAS:
           1. Registra el error completo en logs del servidor
           2. Envía notificación a equipo técnico (email, Slack, Sentry)
           3. Devuelve mensaje genérico al usuario
           4. En desarrollo, Flask.debug=True muestra el debugger interactivo
-        
+
         ⚠️ MEJORA RECOMENDADA:
           - Usar logging.exception() para guardar stack trace completo
           - Integrar Sentry o similar para tracking de errores
           - Devolver render_template("500.html") profesional
-        
+
         📌 PARÁMETRO 'e':
         ──────────────────────────────────────────────────────────────────
         Es la excepción Python original (ZeroDivisionError, etc.).
@@ -472,7 +467,7 @@ def registrar_errores(app):
           - str(e): mensaje de error
           - type(e).__name__: tipo de excepción
           - traceback.format_exc(): stack trace completo
-        
+
         Pero recuerda: solo úsalo en logs, nunca en respuesta al usuario.
         """
         registrar_evento("error_500", request.path)

@@ -76,24 +76,20 @@ def login_combo():
     cursor = conn.cursor(dictionary=True)
 
     # 1️⃣ Todos los identificadores disponibles en tbl_login (para el combo)
-    cursor.execute(
-        """
+    cursor.execute("""
         SELECT DISTINCT identificador
         FROM tbl_login
         WHERE identificador IS NOT NULL
         ORDER BY identificador
-        """
-    )
+        """)
     identificadores = [r["identificador"] for r in cursor.fetchall()]
 
     # 2️⃣ Todos los password_hash distintos (para el combo de hashes)
-    cursor.execute(
-        """
+    cursor.execute("""
         SELECT DISTINCT password_hash
         FROM tbl_login
         WHERE password_hash IS NOT NULL
-        """
-    )
+        """)
     passwords = [r["password_hash"] for r in cursor.fetchall()]
 
     resultado = None

@@ -2,6 +2,7 @@ from core.auth.repository import get_user_by_email
 from core.auth.utils import verify_password
 from flask import session
 
+
 def login_user(email, password):
 
     user = get_user_by_email(email)

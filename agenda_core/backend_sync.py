@@ -32,7 +32,9 @@ ORIGEN_TABLA_OBRAS = "tbl_obras"
 # -----------------------------------------------------------------------------
 # Configuración
 # -----------------------------------------------------------------------------
-def obtener_config_sync(origen_tabla: str = ORIGEN_TABLA_OBRAS) -> Optional[Dict[str, Any]]:
+def obtener_config_sync(
+    origen_tabla: str = ORIGEN_TABLA_OBRAS,
+) -> Optional[Dict[str, Any]]:
     """
     Devuelve la configuración de sincronización para una tabla origen.
     Usa tbl_agenda_sync_config para no hardcodear nombres de campos.

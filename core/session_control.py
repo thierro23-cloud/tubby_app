@@ -6,7 +6,6 @@ from datetime import datetime, timedelta
 from flask import session
 from core.auditoria.auditoria import registrar_salida
 
-
 SESSION_TIMEOUT = 30  # minutos
 
 

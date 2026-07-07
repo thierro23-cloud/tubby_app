@@ -96,6 +96,7 @@ from datetime import datetime
 # 1️⃣ HELPERS DE BAJO NIVEL · ENVOLTURA DE BD
 # =============================================================================
 
+
 class SuperAdminRepo:
     """
     Capa de acceso a datos (repositorio) para el módulo Super Admin.
@@ -122,13 +123,20 @@ class SuperAdminRepo:
         """
         Devuelve módulos asociados a un panel por su nombre.
         """
-        rows = db.execute("""
+        rows = (
+            db.execute(
+                """
             SELECT m.id, m.nombre, p.nombre AS panel
             FROM modulos m
             JOIN paneles p ON m.id_panel = p.id
             WHERE p.nombre = :nombre_panel
             ORDER BY m.nombre
-        """, {"nombre_panel": nombre_panel}).mappings().all()
+        """,
+                {"nombre_panel": nombre_panel},
+            )
+            .mappings()
+            .all()
+        )
         return [dict(r) for r in rows]
 
     @staticmethod
@@ -156,11 +164,14 @@ class SuperAdminRepo:
         """
         Activa o desactiva un endpoint en BD.
         """
-        result = db.execute("""
+        result = db.execute(
+            """
             UPDATE endpoints
             SET activo = :activo
             WHERE endpoint_name = :endpoint_name
-        """, {"activo": 1 if activo else 0, "endpoint_name": endpoint_name})
+        """,
+            {"activo": 1 if activo else 0, "endpoint_name": endpoint_name},
+        )
         db.commit()
         return result.rowcount > 0
 
@@ -191,26 +202,37 @@ class SuperAdminRepo:
         """
         Devuelve la lista de nombres de roles que tiene un usuario.
         """
-        rows = db.execute("""
+        rows = (
+            db.execute(
+                """
             SELECT r.nombre
             FROM roles r
             JOIN usuario_roles ur ON ur.id_rol = r.id
             WHERE ur.id_usuario = :id_usuario
-        """, {"id_usuario": id_usuario}).mappings().all()
+        """,
+                {"id_usuario": id_usuario},
+            )
+            .mappings()
+            .all()
+        )
         return [r["nombre"] for r in rows]
 
     # -------------------------------------------------------------------------
     # 1.3️⃣ PERMISOS EFECTIVOS POR USUARIO
     # -------------------------------------------------------------------------
     @staticmethod
-    def get_permisos_efectivos_usuario(db: Session, id_usuario: int) -> List[Dict[str, Any]]:
+    def get_permisos_efectivos_usuario(
+        db: Session, id_usuario: int
+    ) -> List[Dict[str, Any]]:
         """
         Devuelve la lista de endpoints con un flag tiene_permiso para un usuario.
 
         Resolución:
           usuario → roles → rol_permisos → permisos_endpoints → endpoints
         """
-        rows = db.execute("""
+        rows = (
+            db.execute(
+                """
             SELECT
                 e.id,
                 e.endpoint_name AS endpoint,
@@ -228,7 +250,12 @@ class SuperAdminRepo:
             JOIN modulos m           ON m.id      = e.id_modulo
             JOIN paneles p           ON p.id      = m.id_panel
             WHERE ur.id_usuario      = :id_usuario
-        """, {"id_usuario": id_usuario}).mappings().all()
+        """,
+                {"id_usuario": id_usuario},
+            )
+            .mappings()
+            .all()
+        )
 
         return [dict(r) for r in rows]
 
@@ -242,28 +269,37 @@ class SuperAdminRepo:
         Alterna relación rol ↔ permiso (añade o elimina).
         """
         # ¿Existe ya?
-        exists = db.execute("""
+        exists = db.execute(
+            """
             SELECT 1
             FROM rol_permisos
             WHERE id_rol = :id_rol
               AND id_permiso = :id_permiso
-        """, {"id_rol": id_rol, "id_permiso": id_permiso}).scalar()
+        """,
+            {"id_rol": id_rol, "id_permiso": id_permiso},
+        ).scalar()
 
         if exists:
             # Eliminar relación
-            db.execute("""
+            db.execute(
+                """
                 DELETE FROM rol_permisos
                 WHERE id_rol = :id_rol
                   AND id_permiso = :id_permiso
-            """, {"id_rol": id_rol, "id_permiso": id_permiso})
+            """,
+                {"id_rol": id_rol, "id_permiso": id_permiso},
+            )
             db.commit()
             return True
         else:
             # Insertar relación
-            db.execute("""
+            db.execute(
+                """
                 INSERT INTO rol_permisos (id_rol, id_permiso)
                 VALUES (:id_rol, :id_permiso)
-            """, {"id_rol": id_rol, "id_permiso": id_permiso})
+            """,
+                {"id_rol": id_rol, "id_permiso": id_permiso},
+            )
             db.commit()
             return True
 
@@ -271,6 +307,7 @@ class SuperAdminRepo:
 # =============================================================================
 # 2️⃣ SERVICIO DE ALTO NIVEL · API QUE USA EL BLUEPRINT
 # =============================================================================
+
 
 class SuperAdminService:
     """
@@ -309,7 +346,9 @@ class SuperAdminService:
         """
         ok = SuperAdminRepo.set_endpoint_activo(db, nombre_endpoint, True)
         if ok:
-            print(f"[SUPER_ADMIN] Activado endpoint: {nombre_endpoint} @ {datetime.now()}")
+            print(
+                f"[SUPER_ADMIN] Activado endpoint: {nombre_endpoint} @ {datetime.now()}"
+            )
         return ok
 
     @staticmethod
@@ -319,7 +358,9 @@ class SuperAdminService:
         """
         ok = SuperAdminRepo.set_endpoint_activo(db, nombre_endpoint, False)
         if ok:
-            print(f"[SUPER_ADMIN] Desactivado endpoint: {nombre_endpoint} @ {datetime.now()}")
+            print(
+                f"[SUPER_ADMIN] Desactivado endpoint: {nombre_endpoint} @ {datetime.now()}"
+            )
         return ok
 
     # -------------------------------------------------------------------------
@@ -368,5 +409,7 @@ class SuperAdminService:
         """
         ok = SuperAdminRepo.toggle_permiso_rol_sobre_endpoint(db, id_rol, id_permiso)
         if ok:
-            print(f"[SUPER_ADMIN] Toggle permiso id_permiso={id_permiso} para rol id_rol={id_rol}")
+            print(
+                f"[SUPER_ADMIN] Toggle permiso id_permiso={id_permiso} para rol id_rol={id_rol}"
+            )
         return ok

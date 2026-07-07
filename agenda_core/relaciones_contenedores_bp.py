@@ -28,6 +28,7 @@ relaciones_contenedores_bp = Blueprint(
 # 1️⃣ LISTAR RELACIONES PARA PANEL
 # =============================================================================
 
+
 @relaciones_contenedores_bp.route("/", methods=["GET"])
 @login_required
 def listar_relaciones_contenedores():
@@ -74,6 +75,7 @@ def listar_relaciones_contenedores():
 # =============================================================================
 # 2️⃣ CREAR RELACIÓN (COLOCACIÓN↔RETIRADA) + CERRAR AGENDA
 # =============================================================================
+
 
 @relaciones_contenedores_bp.route("/", methods=["POST"])
 @login_required

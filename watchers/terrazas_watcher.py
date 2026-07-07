@@ -34,6 +34,7 @@ observer_terrazas = None
 # 3️⃣ HANDLER DE EVENTOS · TERRAZAS
 # =============================================================================
 
+
 class TerrazasHandler(PatternMatchingEventHandler):
     """
     Handler que vigila TERRAZAS/entrada_pdf y reacciona a nuevos PDFs.
@@ -77,6 +78,7 @@ class TerrazasHandler(PatternMatchingEventHandler):
 # 4️⃣ INICIAR WATCHER · TERRAZAS
 # =============================================================================
 
+
 def iniciar_watcher_terrazas(app):
     """
     Arranca el watcher de terrazas SI AÚN NO ESTÁ ACTIVO.
@@ -94,9 +96,7 @@ def iniciar_watcher_terrazas(app):
     global watcher_terrazas_activo, observer_terrazas
 
     if watcher_terrazas_activo:
-        app.logger.info(
-            "ℹ Watcher de terrazas ya estaba activo; no se reinicia"
-        )
+        app.logger.info("ℹ Watcher de terrazas ya estaba activo; no se reinicia")
         return
 
     os.makedirs(CARPETA_ENTRADA_TERRAZAS, exist_ok=True)
@@ -106,9 +106,7 @@ def iniciar_watcher_terrazas(app):
 
     handler = TerrazasHandler(app)
     observer_terrazas = Observer()
-    observer_terrazas.schedule(
-        handler, path=CARPETA_ENTRADA_TERRAZAS, recursive=False
-    )
+    observer_terrazas.schedule(handler, path=CARPETA_ENTRADA_TERRAZAS, recursive=False)
     observer_terrazas.start()
 
     watcher_terrazas_activo = True

@@ -1,8 +1,8 @@
-#============================================================================
+# ============================================================================
 # 🚛 1️⃣ MÓDULO · CONTENEDORES - LISTAR PENDIENTES (ARQUITECTURA NUEVA)
-#============================================================================
+# ============================================================================
 # 🧠 EMPIEZA INTRODUCCIÓN GENERAL
-#----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
 # (1.1) DESCRIPCIÓN GENERAL
 #   (1.1.1) Gestiona el flujo de VALIDACIÓN MANUAL de CONTENEDORES PENDIENTES
 #           detectados automáticamente desde PDF.
@@ -70,14 +70,14 @@
 #         dentro de esa carpeta.
 #   - Si no se recibe carpeta ni id_pendiente:
 #       · Se comporta como antes (workflow clásico sobre todos los pendientes).
-#----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
 # 🧠 TERMINA INTRODUCCIÓN GENERAL
-#============================================================================
+# ============================================================================
 
 
-#============================================================================
+# ============================================================================
 # 📦 2️⃣ IMPORTS Y CONFIGURACIÓN BÁSICA DEL MÓDULO
-#============================================================================
+# ============================================================================
 
 import json
 import os
@@ -97,12 +97,13 @@ from flask import (
     session,
 )
 from db import ejecutar_query, ejecutar_non_query
-from services.helpers import login_required, rol_required   # Tus decoradores
+from services.helpers import login_required, rol_required  # Tus decoradores
 from flask_login import current_user
 
-#============================================================================
+# ============================================================================
 # 🧠 2️⃣ BIS · LÓGICA DE AÑO DE EXPEDIENTE (BACKEND)
-#============================================================================
+# ============================================================================
+
 
 def resolver_anio_expediente(valor_anio_form: str | None) -> int:
     """
@@ -132,9 +133,10 @@ def resolver_anio_expediente(valor_anio_form: str | None) -> int:
 
     return anio_actual
 
-#============================================================================
+
+# ============================================================================
 # 🧱 3️⃣ DEFINICIÓN DEL BLUEPRINT · CONTENEDORES PENDIENTES
-#============================================================================
+# ============================================================================
 
 btn_contenedores_listar_pendientes_bp = Blueprint(
     "btn_contenedores_listar_pendientes_bp",
@@ -142,9 +144,9 @@ btn_contenedores_listar_pendientes_bp = Blueprint(
     url_prefix="/control_via_publica/contenedores/pendientes",
 )
 
-#============================================================================
+# ============================================================================
 # 🧠 4️⃣ CONSULTAS SQL · CAPA DE DATOS REUTILIZABLE
-#============================================================================
+# ============================================================================
 
 SQL_PENDIENTE = """
 SELECT *
@@ -249,9 +251,10 @@ INSERT INTO tbl_control_contenedores (
 )
 """
 
-#============================================================================
+# ============================================================================
 # 📄 5️⃣ SERVIR PDF ORIGINAL · VISOR MITAD IZQUIERDA
-#============================================================================
+# ============================================================================
+
 
 @btn_contenedores_listar_pendientes_bp.route("/pdf/<int:id_pendiente>/<path:filename>")
 @login_required
@@ -290,9 +293,11 @@ def serve_pdf(id_pendiente, filename):
         mimetype="application/pdf",
     )
 
-#============================================================================
+
+# ============================================================================
 # 🔁 6️⃣ LISTADO SECUENCIAL · WORKFLOW UNO A UNO (PDF | FORM)
-#============================================================================
+# ============================================================================
+
 
 @btn_contenedores_listar_pendientes_bp.route("/", methods=["GET"])
 @login_required
@@ -488,10 +493,10 @@ def btn_contenedores_listar_pendientes():
 
     # (6.3.7) Carga de combos auxiliares
     proveedores = ejecutar_query(SQL_PROVEEDORES, (), "bd_tbl_comunes")
-    tipos_vias  = ejecutar_query(SQL_TIPOS_VIA, (), "bd_tbl_comunes")
-    calles      = ejecutar_query(SQL_CALLES, (), "bd_tbl_comunes")
+    tipos_vias = ejecutar_query(SQL_TIPOS_VIA, (), "bd_tbl_comunes")
+    calles = ejecutar_query(SQL_CALLES, (), "bd_tbl_comunes")
     dimensiones = ejecutar_query(SQL_DIMENSIONES, (), "bd_tbl_comunes")
-    gestores    = ejecutar_query(SQL_GESTORES, (), "bd_tbl_comunes")
+    gestores = ejecutar_query(SQL_GESTORES, (), "bd_tbl_comunes")
 
     # (6.3.7.bis) Contexto temporal para la UI (año actual)
     hoy = date.today()
@@ -519,21 +524,24 @@ def btn_contenedores_listar_pendientes():
             carpeta=carpeta_actual,
         ),
     )
-#============================================================================
+
+
+# ============================================================================
 # 🌐 7️⃣ AJAX · CALLES POR TIPO DE VÍA
-#============================================================================
+# ============================================================================
+
 
 @btn_contenedores_listar_pendientes_bp.route("/calles_por_tipo/<int:id_tipo>")
 @login_required
 @rol_required("gestor", "super_admin")
 def calles_por_tipo(id_tipo):
-    return jsonify(
-        ejecutar_query(SQL_CALLES_TIPO, (id_tipo,), "bd_tbl_comunes")
-    )
+    return jsonify(ejecutar_query(SQL_CALLES_TIPO, (id_tipo,), "bd_tbl_comunes"))
 
-#============================================================================
+
+# ============================================================================
 # ✅ 8️⃣ GUARDAR VALIDACIÓN · INSERCIÓN + ELIMINACIÓN + SALTO
-#============================================================================
+# ============================================================================
+
 
 @btn_contenedores_listar_pendientes_bp.route("/guardar/<int:id>", methods=["POST"])
 @login_required
@@ -566,31 +574,31 @@ def guardar_validacion(id):
     idtbl_gestor_subida = session["user_id"]
 
     datos_insert = {
-        "idtbl_contenedores_pendientes":    id,
-        "idtbl_proveedores":                request.form.get("idtbl_proveedores") or None,
-        "nombre_solicitante":               request.form.get("nombre_solicitante") or None,
-        "nif":                              request.form.get("nif") or None,
-        "telefono":                         request.form.get("telefono") or None,
-        "fecha_colocacion":                 request.form.get("fecha_colocacion") or None,
-        "fecha_retirada":                   request.form.get("fecha_retirada") or None,
-        "fecha_firma_inicial":              request.form.get("fecha_firma_inicial") or None,
-        "idtbl_dimensiones":                request.form.get("idtbl_dimensiones") or None,
-        "observaciones":                    request.form.get("observaciones") or None,
-        "idtbl_tipos_de_vias":              request.form.get("idtbl_tipos_de_vias") or None,
-        "idtbl_calles":                     request.form.get("idtbl_calles") or None,
-        "numero_portal":                    request.form.get("numero_portal") or None,
-        "csv":                              request.form.get("csv") or None,
-        "csv_retirada":                     request.form.get("csv_retirada") or None,
-        "numero_solicitud":                 request.form.get("numero_solicitud") or None,
-        "numero_expediente":                numero_expediente,
-        "anio_expediente":                  anio_expediente,
-        "n_solicitud_retirada":             request.form.get("n_solicitud_retirada") or None,
-        "latitud":                          request.form.get("latitud") or None,
-        "longitud":                         request.form.get("longitud") or None,
-        "precision_gps":                    request.form.get("precision_gps") or None,
-        "gps_nivel_calidad":                request.form.get("gps_nivel_calidad") or None,
-        "gps_origen":                       request.form.get("gps_origen") or None,
-        "idtbl_gestor_subida":              idtbl_gestor_subida,
+        "idtbl_contenedores_pendientes": id,
+        "idtbl_proveedores": request.form.get("idtbl_proveedores") or None,
+        "nombre_solicitante": request.form.get("nombre_solicitante") or None,
+        "nif": request.form.get("nif") or None,
+        "telefono": request.form.get("telefono") or None,
+        "fecha_colocacion": request.form.get("fecha_colocacion") or None,
+        "fecha_retirada": request.form.get("fecha_retirada") or None,
+        "fecha_firma_inicial": request.form.get("fecha_firma_inicial") or None,
+        "idtbl_dimensiones": request.form.get("idtbl_dimensiones") or None,
+        "observaciones": request.form.get("observaciones") or None,
+        "idtbl_tipos_de_vias": request.form.get("idtbl_tipos_de_vias") or None,
+        "idtbl_calles": request.form.get("idtbl_calles") or None,
+        "numero_portal": request.form.get("numero_portal") or None,
+        "csv": request.form.get("csv") or None,
+        "csv_retirada": request.form.get("csv_retirada") or None,
+        "numero_solicitud": request.form.get("numero_solicitud") or None,
+        "numero_expediente": numero_expediente,
+        "anio_expediente": anio_expediente,
+        "n_solicitud_retirada": request.form.get("n_solicitud_retirada") or None,
+        "latitud": request.form.get("latitud") or None,
+        "longitud": request.form.get("longitud") or None,
+        "precision_gps": request.form.get("precision_gps") or None,
+        "gps_nivel_calidad": request.form.get("gps_nivel_calidad") or None,
+        "gps_origen": request.form.get("gps_origen") or None,
+        "idtbl_gestor_subida": idtbl_gestor_subida,
     }
 
     ejecutar_non_query(

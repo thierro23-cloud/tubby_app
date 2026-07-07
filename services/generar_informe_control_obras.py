@@ -53,10 +53,10 @@ from reportlab.pdfgen import canvas
 
 from db import ejecutar_query, ejecutar_non_query
 
-
 # =============================================================================
 # 2️⃣ CÁLCULO MES ANTERIOR
 # =============================================================================
+
 
 def rango_mes_anterior(hoy: date | None = None) -> Tuple[date, date, int, int]:
 
@@ -82,6 +82,7 @@ def rango_mes_anterior(hoy: date | None = None) -> Tuple[date, date, int, int]:
 # 3️⃣ RUTA DE REPORTES
 # =============================================================================
 
+
 def get_ruta_reportes():
 
     sql = """
@@ -102,6 +103,7 @@ def get_ruta_reportes():
 # =============================================================================
 # 4️⃣ CARGAR DATOS INFORME
 # =============================================================================
+
 
 def cargar_datos_informe(inicio, fin):
 
@@ -157,6 +159,7 @@ def cargar_datos_informe(inicio, fin):
 # 5️⃣ AGRUPAR POR OBRA
 # =============================================================================
 
+
 def agrupar_por_obra(filas):
 
     out = {}
@@ -169,33 +172,31 @@ def agrupar_por_obra(filas):
 
             out[oid] = {
                 "obra": {
-
                     "id": oid,
                     "proveedor": r.get("proveedor_nombre"),
                     "nif": r.get("proveedor_nif"),
                     "tipo_via": r.get("tipo_via_nombre"),
                     "calle": r.get("calle_nombre"),
-                    "observaciones": r.get("observaciones")
-
+                    "observaciones": r.get("observaciones"),
                 },
-                "visitas": []
+                "visitas": [],
             }
 
         if r.get("idtbl_control_via_publica"):
 
-            out[oid]["visitas"].append({
-
-                "fecha": r.get("fecha_inspeccion"),
-                "agente": r.get("n_agente1"),
-                "vallas": r.get("vallas"),
-                "metros_vallas": r.get("vallas_metros"),
-                "materiales": r.get("materiales_de_construccion"),
-                "metros_materiales": r.get("materiales_metros"),
-                "andamios": r.get("andamios"),
-                "gruas": r.get("gruas"),
-                "gestor": r.get("gestor_control_id")
-
-            })
+            out[oid]["visitas"].append(
+                {
+                    "fecha": r.get("fecha_inspeccion"),
+                    "agente": r.get("n_agente1"),
+                    "vallas": r.get("vallas"),
+                    "metros_vallas": r.get("vallas_metros"),
+                    "materiales": r.get("materiales_de_construccion"),
+                    "metros_materiales": r.get("materiales_metros"),
+                    "andamios": r.get("andamios"),
+                    "gruas": r.get("gruas"),
+                    "gestor": r.get("gestor_control_id"),
+                }
+            )
 
     return out
 
@@ -203,6 +204,7 @@ def agrupar_por_obra(filas):
 # =============================================================================
 # 6️⃣ GENERAR DATOS PARA FLASK
 # =============================================================================
+
 
 def generar_informe_datos(fecha_inicio=None, fecha_fin=None):
 
@@ -214,6 +216,7 @@ def generar_informe_datos(fecha_inicio=None, fecha_fin=None):
 # =============================================================================
 # 7️⃣ GENERAR DOCX
 # =============================================================================
+
 
 def generar_docx(path, datos, anio, mes):
 
@@ -239,9 +242,7 @@ def generar_docx(path, datos, anio, mes):
 
             for v in visitas:
 
-                doc.add_paragraph(
-                    f"{v['fecha']} | agente {v['agente']}"
-                )
+                doc.add_paragraph(f"{v['fecha']} | agente {v['agente']}")
 
     os.makedirs(os.path.dirname(path), exist_ok=True)
 
@@ -251,6 +252,7 @@ def generar_docx(path, datos, anio, mes):
 # =============================================================================
 # 8️⃣ GENERAR PDF
 # =============================================================================
+
 
 def generar_pdf(path, datos, anio, mes):
 
@@ -283,6 +285,7 @@ def generar_pdf(path, datos, anio, mes):
 # 9️⃣ REGISTRAR INFORME
 # =============================================================================
 
+
 def registrar_informe(anio, mes, docx, pdf, estado, error):
 
     sql = """
@@ -292,15 +295,14 @@ def registrar_informe(anio, mes, docx, pdf, estado, error):
     """
 
     ejecutar_non_query(
-        sql,
-        (anio, mes, docx, pdf, estado, error),
-        nombre_bd="control_via_publica"
+        sql, (anio, mes, docx, pdf, estado, error), nombre_bd="control_via_publica"
     )
 
 
 # =============================================================================
 # 🔟 GENERAR INFORME ENTRE FECHAS (USADO POR FLASK)
 # =============================================================================
+
 
 def generar_informe_entre_fechas(fecha_inicio, fecha_fin):
 
@@ -312,6 +314,7 @@ def generar_informe_entre_fechas(fecha_inicio, fecha_fin):
 # =============================================================================
 # 1️⃣1️⃣ GENERAR INFORME AUTOMÁTICO
 # =============================================================================
+
 
 def generar_informe_control_obras():
 

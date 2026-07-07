@@ -1,5 +1,10 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, g
-from services.helpers import login_required, rol_required, ejecutar_consulta, ejecutar_non_query
+from services.helpers import (
+    login_required,
+    rol_required,
+    ejecutar_consulta,
+    ejecutar_non_query,
+)
 
 # =============================================================================
 # 1. BLUEPRINT: BTN_VADOS_FORM_BP
@@ -44,6 +49,7 @@ btn_vados_form_bp = Blueprint(
 # =============================================================================
 # 2. HELPERS DE CARGA DE DATOS (TIPOS, CALLES, PROVEEDORES, MUNICIPIOS, VADO)
 # =============================================================================
+
 
 def cargar_tipos_de_vias() -> list[dict]:
     """
@@ -154,6 +160,7 @@ def cargar_vado_por_id(idtbl_vados: int) -> dict | None:
 # 3. RUTAS GET: NUEVO Y EDITAR
 # =============================================================================
 
+
 @btn_vados_form_bp.get("/nuevo")
 @login_required
 @rol_required("gestor", "super_admin")
@@ -234,6 +241,7 @@ def vado_editar_form(idtbl_vados: int):
 # en la columna idtbl_gestores del vado.
 # =============================================================================
 
+
 @btn_vados_form_bp.post("/guardar")
 @login_required
 @rol_required("gestor", "super_admin")
@@ -276,11 +284,15 @@ def vado_guardar():
     # 4.3 Validaciones mínimas (puedes ampliarlas según tus reglas de negocio)
     # -------------------------------------------------------------------------
     if not numero_vado or not idtbl_tipos_de_vias or not idtbl_calles:
-        flash("Faltan datos obligatorios (número de vado, tipo de vía o calle).", "danger")
+        flash(
+            "Faltan datos obligatorios (número de vado, tipo de vía o calle).", "danger"
+        )
         if es_nuevo:
             return redirect(url_for("btn_vados_form_bp.btn_vado_form_nuevo"))
         else:
-            return redirect(url_for("btn_vados_form_bp.vado_editar_form", idtbl_vados=idtbl_vados))
+            return redirect(
+                url_for("btn_vados_form_bp.vado_editar_form", idtbl_vados=idtbl_vados)
+            )
 
     # -------------------------------------------------------------------------
     # 4.4 Obtener el idtbl_gestores del usuario logueado
@@ -291,7 +303,9 @@ def vado_guardar():
         if es_nuevo:
             return redirect(url_for("btn_vados_form_bp.btn_vado_form_nuevo"))
         else:
-            return redirect(url_for("btn_vados_form_bp.vado_editar_form", idtbl_vados=idtbl_vados))
+            return redirect(
+                url_for("btn_vados_form_bp.vado_editar_form", idtbl_vados=idtbl_vados)
+            )
 
     # -------------------------------------------------------------------------
     # 4.5 INSERT o UPDATE en base de datos
@@ -405,7 +419,9 @@ def vado_guardar():
         if es_nuevo:
             return redirect(url_for("btn_vados_form_bp.btn_vado_form_nuevo"))
         else:
-            return redirect(url_for("btn_vados_form_bp.vado_editar_form", idtbl_vados=idtbl_vados))
+            return redirect(
+                url_for("btn_vados_form_bp.vado_editar_form", idtbl_vados=idtbl_vados)
+            )
 
     # -------------------------------------------------------------------------
     # 4.6 Redirección tras guardar
@@ -422,4 +438,6 @@ def vado_guardar():
     if es_nuevo:
         return redirect(url_for("btn_vados_form_bp.btn_vado_form_nuevo"))
     else:
-        return redirect(url_for("btn_vados_form_bp.vado_editar_form", idtbl_vados=idtbl_vados))
+        return redirect(
+            url_for("btn_vados_form_bp.vado_editar_form", idtbl_vados=idtbl_vados)
+        )

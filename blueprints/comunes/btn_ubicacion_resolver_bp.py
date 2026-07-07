@@ -28,11 +28,13 @@ import unicodedata
 try:
     # Opción recomendada: rapidfuzz (rápido y moderno)
     from rapidfuzz import fuzz
+
     USE_RAPIDFUZZ = True
 except ImportError:
     try:
         # Alternativa: python-Levenshtein
         from Levenshtein import ratio as levenshtein_ratio
+
         USE_RAPIDFUZZ = False
     except ImportError:
         # Último recurso: sin fuzzy real, solo igualdad exacta
@@ -53,20 +55,39 @@ btn_ubicacion_resolver_bp = Blueprint(
 # ------------------------------------------------------------
 
 TIPOS_VIA_CONOCIDOS = [
-    "CALLE", "CL", "C/", "C.",
-    "AVENIDA", "AVDA", "AVD", "AV.", "AV",
-    "CARRETERA", "CTRA", "CRTA", "CTRA.",
-    "PLAZA", "PL", "PZA",
-    "RONDA", "PASEO", "PSO",
-    "TRAVESIA", "TRV",
-    "CAMINO", "CMNO", "CAM.",
-    "GLORIETA", "GTA",
+    "CALLE",
+    "CL",
+    "C/",
+    "C.",
+    "AVENIDA",
+    "AVDA",
+    "AVD",
+    "AV.",
+    "AV",
+    "CARRETERA",
+    "CTRA",
+    "CRTA",
+    "CTRA.",
+    "PLAZA",
+    "PL",
+    "PZA",
+    "RONDA",
+    "PASEO",
+    "PSO",
+    "TRAVESIA",
+    "TRV",
+    "CAMINO",
+    "CMNO",
+    "CAM.",
+    "GLORIETA",
+    "GTA",
     # añade aquí todos los que uses en tu base
 ]
 
 # ------------------------------------------------------------
 # 4. Funciones de normalización de texto
 # ------------------------------------------------------------
+
 
 def quitar_acentos(texto):
     """
@@ -124,6 +145,7 @@ def normalizar_calle(texto):
 # ------------------------------------------------------------
 # 5. Búsqueda fuzzy en BD (incluye idtbl_tipos_de_vias)
 # ------------------------------------------------------------
+
 
 def buscar_ubicacion_por_nombre(nombre_calle, id_municipio=395, umbral_similitud=0.75):
     """
@@ -212,6 +234,7 @@ def buscar_ubicacion_por_nombre(nombre_calle, id_municipio=395, umbral_similitud
 # 6. Vista principal: subir Excel y devolver texto
 # ------------------------------------------------------------
 
+
 @btn_ubicacion_resolver_bp.route("/resolver_texto", methods=["GET", "POST"])
 @login_required
 @rol_required("su")
@@ -262,10 +285,15 @@ def btn_ubicacion_resolver_texto():
             break
 
     if not nombre_columna_calle:
-        return jsonify({
-            "ok": False,
-            "msg": "No se ha encontrado ninguna columna llamada CALLE (CALLE/Calle/calle) en el Excel",
-        }), 400
+        return (
+            jsonify(
+                {
+                    "ok": False,
+                    "msg": "No se ha encontrado ninguna columna llamada CALLE (CALLE/Calle/calle) en el Excel",
+                }
+            ),
+            400,
+        )
 
     # 6.4. Preparar cabecera de salida
     lineas_salida = ["CALLE;idtbl_calles;idtbl_tipos_de_vias;score"]

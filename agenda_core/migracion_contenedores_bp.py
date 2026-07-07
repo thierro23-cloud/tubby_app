@@ -6,10 +6,10 @@ from flask import Blueprint, jsonify, current_app
 from db import ejecutar_query, ejecutar_non_query
 from datetime import datetime, timedelta
 
-migracion_bp = Blueprint('migracion', __name__, url_prefix='/api/migracion')
+migracion_bp = Blueprint("migracion", __name__, url_prefix="/api/migracion")
 
 
-@migracion_bp.route('/verificar-agenda', methods=['GET'])
+@migracion_bp.route("/verificar-agenda", methods=["GET"])
 def verificar_agenda():
     """
     Comprueba el estado actual de la agenda para eventos de contenedores,
@@ -26,21 +26,34 @@ def verificar_agenda():
             WHERE origen_tabla = 'tbl_control_contenedores'
             """,
             (),
-            nombre_bd="control_via_publica"
+            nombre_bd="control_via_publica",
         )[0]
-        
-        return jsonify({
-            "total_eventos": eventos["total"],
-            "primera_fecha": str(eventos["primera_fecha"]) if eventos["primera_fecha"] else None,
-            "ultima_fecha": str(eventos["ultima_fecha"]) if eventos["ultima_fecha"] else None,
-        }), 200
-        
+
+        return (
+            jsonify(
+                {
+                    "total_eventos": eventos["total"],
+                    "primera_fecha": (
+                        str(eventos["primera_fecha"])
+                        if eventos["primera_fecha"]
+                        else None
+                    ),
+                    "ultima_fecha": (
+                        str(eventos["ultima_fecha"])
+                        if eventos["ultima_fecha"]
+                        else None
+                    ),
+                }
+            ),
+            200,
+        )
+
     except Exception as e:
         current_app.logger.error(f"Error verificar_agenda: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 
-@migracion_bp.route('/contenedores-a-agenda', methods=['POST'])
+@migracion_bp.route("/contenedores-a-agenda", methods=["POST"])
 def migrar_contenedores_a_agenda():
     """
     Migra los registros de tbl_control_contenedores a tbl_agenda_via_publica
@@ -56,14 +69,14 @@ def migrar_contenedores_a_agenda():
             LIMIT 1
             """,
             (),
-            nombre_bd="control_via_publica"
+            nombre_bd="control_via_publica",
         )
-        
+
         if not tipo_evento:
             return jsonify({"error": "No existe el tipo de evento CONTENEDORES"}), 400
-        
+
         idtbl_tipos_evento = tipo_evento[0]["idtbl_tipos_evento"]
-        
+
         # 2) Obtener contenedores a migrar
         contenedores = ejecutar_query(
             """
@@ -79,13 +92,13 @@ def migrar_contenedores_a_agenda():
             ORDER BY fecha_colocacion
             """,
             (),
-            nombre_bd="control_via_publica"
+            nombre_bd="control_via_publica",
         )
-        
+
         total_ok = 0
         total_error = 0
         errores = []
-        
+
         for cont in contenedores:
             try:
                 idtbl_contenedor = cont["idtbl_contenedor"]
@@ -94,23 +107,23 @@ def migrar_contenedores_a_agenda():
                 lugar_ubicacion = cont["lugar_ubicacion"] or "Sin ubicación"
                 tamano = cont["tamano_contenedor"] or ""
                 idtbl_calles = cont["idtbl_calles"]
-                
+
                 # 2.1) Calcular fechas de evento
                 if isinstance(fecha_colocacion, str):
                     fecha_inicio = datetime.strptime(fecha_colocacion, "%d/%m/%Y")
                 else:
                     fecha_inicio = fecha_colocacion
-                
+
                 # Ejemplo: 90 días de duración
                 fecha_fin = fecha_inicio + timedelta(days=90)
-                
+
                 # 2.2) Construir título y descripción
                 titulo = f"Contenedor {csv}"
                 if tamano:
                     titulo += f" - {tamano}"
-                
+
                 descripcion = f"Colocación de contenedor en {lugar_ubicacion}"
-                
+
                 # 3) Evitar duplicados: comprobar si ya existe evento para este contenedor
                 existe = ejecutar_query(
                     """
@@ -121,13 +134,13 @@ def migrar_contenedores_a_agenda():
                     LIMIT 1
                     """,
                     (idtbl_contenedor,),
-                    nombre_bd="control_via_publica"
+                    nombre_bd="control_via_publica",
                 )
-                
+
                 if existe:
                     # Ya hay evento para este contenedor → omitir
                     continue
-                
+
                 # 4) Insertar evento en tbl_agenda_via_publica
                 ejecutar_non_query(
                     """
@@ -152,17 +165,15 @@ def migrar_contenedores_a_agenda():
                         "tbl_control_contenedores",
                         idtbl_contenedor,
                     ),
-                    nombre_bd="control_via_publica"
+                    nombre_bd="control_via_publica",
                 )
-                
+
                 evento = ejecutar_query(
-                    "SELECT LAST_INSERT_ID() AS id",
-                    (),
-                    nombre_bd="control_via_publica"
+                    "SELECT LAST_INSERT_ID() AS id", (), nombre_bd="control_via_publica"
                 )[0]
-                
+
                 idtbl_agenda = evento["id"]
-                
+
                 # 5) Asociar calle afectada (si hay)
                 if idtbl_calles:
                     ejecutar_non_query(
@@ -180,24 +191,33 @@ def migrar_contenedores_a_agenda():
                             "AMBOS",
                             lugar_ubicacion,
                         ),
-                        nombre_bd="control_via_publica"
+                        nombre_bd="control_via_publica",
                     )
-                
+
                 total_ok += 1
-                
+
             except Exception as e:
                 total_error += 1
                 errores.append(f"CSV {csv}: {str(e)}")
-                current_app.logger.error(f"Error migrando CSV {csv}: {e}", exc_info=True)
-        
-        return jsonify({
-            "status": "completado",
-            "total_contenedores": len(contenedores),
-            "migrados": total_ok,
-            "errores": total_error,
-            "detalle_errores": errores,
-        }), 200
-        
+                current_app.logger.error(
+                    f"Error migrando CSV {csv}: {e}", exc_info=True
+                )
+
+        return (
+            jsonify(
+                {
+                    "status": "completado",
+                    "total_contenedores": len(contenedores),
+                    "migrados": total_ok,
+                    "errores": total_error,
+                    "detalle_errores": errores,
+                }
+            ),
+            200,
+        )
+
     except Exception as e:
-        current_app.logger.error(f"Error migrar_contenedores_a_agenda: {e}", exc_info=True)
+        current_app.logger.error(
+            f"Error migrar_contenedores_a_agenda: {e}", exc_info=True
+        )
         return jsonify({"error": str(e)}), 500

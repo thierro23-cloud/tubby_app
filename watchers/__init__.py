@@ -63,12 +63,14 @@ from flask import Flask
 #     de las funciones que los necesitan.
 # =============================================================================
 
+
 def _get_carpeta_entrada() -> str:
     """
     Helper interno para obtener CARPETA_ENTRADA desde contenedores_watcher
     sin crear imports circulares.
     """
     from watchers.contenedores_watcher import CARPETA_ENTRADA
+
     return CARPETA_ENTRADA
 
 
@@ -78,12 +80,14 @@ def _procesar_pdf_entrada(nombre_pdf: str):
     sin importar utils_async a nivel de módulo.
     """
     from watchers.utils_async import procesar_pdf_entrada
+
     return procesar_pdf_entrada(nombre_pdf)
 
 
 # =============================================================================
 # 3️⃣ PROCESAR PDFs EXISTENTES · COLA VIEJA DESDE ENTRADA_PDF
 # =============================================================================
+
 
 def procesar_pdfs_existentes(app: Flask):
     """
@@ -152,6 +156,7 @@ def procesar_pdfs_existentes(app: Flask):
 # 4️⃣ CARGAR WATCHERS GENÉRICOS · watcher_*.py
 # =============================================================================
 
+
 def iniciar_watchers(app: Flask):
     """
     Busca ficheros watcher_*.py dentro de la carpeta watchers/ e intenta
@@ -161,9 +166,7 @@ def iniciar_watchers(app: Flask):
             iniciar_watcher_contenedores(app)
     """
 
-    carpeta_watchers = os.path.join(
-        os.path.dirname(__file__)
-    )
+    carpeta_watchers = os.path.join(os.path.dirname(__file__))
 
     app.logger.info(
         "🔎 Buscando watchers en: %s",

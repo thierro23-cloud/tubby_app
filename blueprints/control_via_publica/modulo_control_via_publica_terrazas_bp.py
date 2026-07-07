@@ -18,6 +18,7 @@ modulo_control_via_publica_terrazas_bp = Blueprint(
     template_folder="templates/modulos/terrazas",
 )
 
+
 @modulo_control_via_publica_terrazas_bp.route("/", methods=["GET"])
 @rol_required("gestor_via_publica")
 def modulo_control_via_publica_terrazas():

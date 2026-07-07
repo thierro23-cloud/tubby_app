@@ -68,7 +68,6 @@ from flask_login import login_required, current_user
 
 from db import ejecutar_query, ejecutar_non_query
 
-
 # 1.1️⃣ DEFINICIÓN DEL BLUEPRINT
 # ------------------------------
 # - variable: btn_rio_torio_plazas_bp
@@ -87,6 +86,7 @@ btn_rio_torio_plazas_bp = Blueprint(
 # 1.2️⃣ FUNCIÓN DE PERMISOS PARA SUPER ADMIN
 # =============================================================================
 
+
 def es_super_admin():
     """
     Devuelve True si el usuario actual es super admin.
@@ -102,6 +102,7 @@ def es_super_admin():
 # =============================================================================
 # 2️⃣ LISTADO PRINCIPAL DE PLAZAS (RÍO/TORIO)
 # =============================================================================
+
 
 @btn_rio_torio_plazas_bp.route("/", methods=["GET"])
 @login_required
@@ -159,6 +160,7 @@ def lista_plazas_rio_torio():
 # =============================================================================
 # 3️⃣ ALTA DE NUEVA PLAZA
 # =============================================================================
+
 
 @btn_rio_torio_plazas_bp.route("/nueva", methods=["GET", "POST"])
 @login_required
@@ -263,6 +265,7 @@ def nueva_plaza_rio_torio():
 # 4️⃣ EDICIÓN DE PLAZA EXISTENTE
 # =============================================================================
 
+
 @btn_rio_torio_plazas_bp.route("/editar/<int:id_plaza>", methods=["GET", "POST"])
 @login_required
 def editar_plaza_rio_torio(id_plaza: int):
@@ -351,6 +354,7 @@ def editar_plaza_rio_torio(id_plaza: int):
 # =============================================================================
 # 5️⃣ HELPERS DE DATOS (USUARIOS, INVENTARIO, PLAZA)
 # =============================================================================
+
 
 def _cargar_usuarios_con_parquin():
     """

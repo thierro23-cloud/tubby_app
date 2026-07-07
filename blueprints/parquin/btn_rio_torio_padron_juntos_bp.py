@@ -98,7 +98,10 @@ btn_rio_torio_padron_juntos_bp = Blueprint(
 # 3️⃣ HELPERS SQL: ABONADOS Y PLAZAS (VERSIÓN JUNTOS)
 # =============================================================================
 
-def _obtener_abonados_y_plazas_juntos(fecha_inicio_periodo: date, fecha_fin_periodo: date):
+
+def _obtener_abonados_y_plazas_juntos(
+    fecha_inicio_periodo: date, fecha_fin_periodo: date
+):
     """
     Obtiene la información de abonados y sus plazas actuales para la versión
     'juntos', donde se mostrará por abonado:
@@ -147,7 +150,9 @@ def _obtener_abonados_y_plazas_juntos(fecha_inicio_periodo: date, fecha_fin_peri
     return datos
 
 
-def _obtener_resumen_plazas_rio_torio(fecha_inicio_periodo: date, fecha_fin_periodo: date) -> dict:
+def _obtener_resumen_plazas_rio_torio(
+    fecha_inicio_periodo: date, fecha_fin_periodo: date
+) -> dict:
     """
     Devuelve un resumen de plazas del parquin Rio Torio:
       - totales
@@ -187,6 +192,7 @@ def _obtener_resumen_plazas_rio_torio(fecha_inicio_periodo: date, fecha_fin_peri
 # =============================================================================
 # 4️⃣ FUNCIÓN PRINCIPAL: GENERAR EL DOCUMENTO WORD (JUNTOS)
 # =============================================================================
+
 
 def _generar_informe_word_juntos(mes_informe: int, anio_informe: int) -> Path:
     """
@@ -254,9 +260,7 @@ def _generar_informe_word_juntos(mes_informe: int, anio_informe: int) -> Path:
     header_paragraph.alignment = WD_ALIGN_PARAGRAPH.RIGHT
     header_paragraph.add_run("Jefatura de Policía Local\nAdministración\n")
     header_paragraph.add_run(
-        f"Plazas totales: {totales} | "
-        f"Libres: {libres} | "
-        f"Ocupadas: {ocupadas}"
+        f"Plazas totales: {totales} | " f"Libres: {libres} | " f"Ocupadas: {ocupadas}"
     )
 
     section.left_margin = Cm(3)
@@ -359,9 +363,7 @@ def _generar_informe_word_juntos(mes_informe: int, anio_informe: int) -> Path:
     p_final = document.add_paragraph()
     p_final.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
     p_final.paragraph_format.first_line_indent = Cm(2)
-    p_final.add_run(
-        "Lo que comunico a Vd., para su conocimiento y efectos oportunos."
-    )
+    p_final.add_run("Lo que comunico a Vd., para su conocimiento y efectos oportunos.")
 
     document.add_paragraph()
     p_firma_fecha = document.add_paragraph()
@@ -390,7 +392,10 @@ def _generar_informe_word_juntos(mes_informe: int, anio_informe: int) -> Path:
 # 5️⃣ HELPER: CONTAR FORMA DE PAGO (JUNTOS)
 # =============================================================================
 
-def _contar_forma_pago_juntos(fecha_inicio_periodo: date, fecha_fin_periodo: date) -> dict:
+
+def _contar_forma_pago_juntos(
+    fecha_inicio_periodo: date, fecha_fin_periodo: date
+) -> dict:
     """
     Calcula contadores por forma de pago para el padrón JUNTOS.
 
@@ -450,9 +455,11 @@ def _contar_forma_pago_juntos(fecha_inicio_periodo: date, fecha_fin_periodo: dat
         "otros": total_pago_otro,
     }
 
+
 # =============================================================================
 # 5️⃣ VISTA DEL BOTÓN: FORMULARIO (GET) + GENERACIÓN (POST) · JUNTOS
 # =============================================================================
+
 
 @btn_rio_torio_padron_juntos_bp.route(
     "/btn_rio_torio_padron_juntos_bp",
@@ -523,9 +530,7 @@ def btn_rio_torio_padron_juntos():
             ),
         )
     except Exception as e:
-        current_app.logger.error(
-            f"Error generando padrón Rio Torío (juntos): {e}"
-        )
+        current_app.logger.error(f"Error generando padrón Rio Torío (juntos): {e}")
         flash("Error generando el informe de padrón (juntos).", "danger")
         return redirect(
             url_for("btn_rio_torio_padron_juntos_bp.btn_rio_torio_padron_juntos")

@@ -19,9 +19,9 @@ from flask import (
 )
 
 usuarios_bp = Blueprint(
-    "usuarios_bp",            # 🔑 url_for('usuarios_bp.panel_usuarios')
+    "usuarios_bp",  # 🔑 url_for('usuarios_bp.panel_usuarios')
     __name__,
-    url_prefix="/usuarios",   # 🌐 todas las rutas cuelgan de /usuarios
+    url_prefix="/usuarios",  # 🌐 todas las rutas cuelgan de /usuarios
 )
 
 

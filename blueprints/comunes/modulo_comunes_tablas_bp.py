@@ -20,7 +20,6 @@ IMPORTANTE:
 from flask import Blueprint
 from services.helpers import login_required, rol_required
 
-
 # =============================================================================
 # 1️⃣ BLUEPRINT DEL MÓDULO
 # =============================================================================
@@ -36,6 +35,7 @@ modulo_comunes_tablas_bp = Blueprint(
 # =============================================================================
 # 2️⃣ VISTA DEL MÓDULO (SIN LÓGICA, SOLO CONTENEDOR)
 # =============================================================================
+
 
 @modulo_comunes_tablas_bp.route("/", methods=["GET"])
 @login_required
