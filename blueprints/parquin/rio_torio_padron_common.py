@@ -1,6 +1,60 @@
 # =============================================================================
 # 🧾 PADRÓN RÍO TORÍO · LÓGICA COMÚN
 # =============================================================================
+"""
+INTRODUCCIÓN
+------------
+Este módulo centraliza la lógica del padrón del parking de camiones de Río Torío.
+Su objetivo es obtener los datos históricos del periodo solicitado, transformarlos
+en información útil (abonados, variaciones y resumen de plazas) y generar un
+informe Word con formato administrativo.
+
+Autor: Tinito
+Fecha: 07/07/2026
+
+EXPLICACIÓN BREVE POR BLOQUES
+-----------------------------
+
+[BLOQUE 1] Configuración y utilidades base
+- Importaciones necesarias (fechas, rutas, Word, Flask y consultas SQL).
+- Localización de la carpeta `padron` y definición de `RUTA_DESTINO`.
+- Constante `MESES_ES` para nombres de mes en español.
+
+[BLOQUE 2] Cálculo de periodos y etiquetas
+- `obtener_periodo_padron`: calcula periodo automático.
+- `periodo_mes_anio`: obtiene inicio/fin de un mes concreto.
+- `etiqueta_periodo`: genera texto legible del periodo.
+- `nombre_fichero_periodo`: construye el nombre del `.docx`.
+
+[BLOQUE 3] Acceso a datos históricos
+- `obtener_historico_periodo`: consulta SQL principal.
+- Recupera histórico de plazas activas total o parcialmente dentro del rango.
+
+[BLOQUE 4] Construcción del padrón principal
+- `construir_padron_principal`: agrupa por proveedor.
+- Consolida plazas únicas y calcula total de plazas por abonado.
+
+[BLOQUE 5] Detección de variaciones
+- `construir_variaciones`: identifica:
+  - BAJAS,
+  - CAMBIOS DE PLAZA,
+  - CAMBIOS DE FORMA DE PAGO.
+- Ordena los eventos para su presentación en informe.
+
+[BLOQUE 6] Métricas y contadores
+- `obtener_resumen_plazas_rio_torio`: calcula totales, ocupadas y libres
+  usando solo histórico (coherencia por periodo).
+- `contar_formas_pago`: cuenta plazas por modalidad de pago.
+
+[BLOQUE 7] Generación de informe Word
+- `generar_informe_word_periodo`: orquesta todo el flujo.
+- Crea encabezado, texto administrativo, tabla principal y tabla de variaciones.
+- Guarda el archivo en `RUTA_DESTINO` y deja traza en logs.
+
+[BLOQUE 8] Salida estructurada para API/consumo interno
+- `datos_padron_periodo`: devuelve los datos procesados en formato dict
+  sin generar documento Word.
+"""
 from __future__ import annotations
 
 from collections import defaultdict
