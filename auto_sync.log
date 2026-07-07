@@ -52,3 +52,13 @@ error: Please commit or stash them.
 ==================================================
 [07/07/2026 10:40:28,71] Iniciando auto-sync...
 [07/07/2026 10:40:28,77] git add -A
+warning: in the working copy of 'auto_sync.log', LF will be replaced by CRLF the next time Git touches it
+[07/07/2026 10:40:28,88] git commit -m "auto-sync 07/07/2026 10:40:28,88"
+[main 19334b7] auto-sync 07/07/2026 10:40:28,88
+ 1 file changed, 10 insertions(+)
+[07/07/2026 10:40:29,07] git pull --rebase origin main
+error: cannot pull with rebase: You have unstaged changes.
+error: Please commit or stash them.
+==================================================
+[07/07/2026 10:43:46,99] Iniciando auto-sync...
+[07/07/2026 10:43:47,04] git add -A
