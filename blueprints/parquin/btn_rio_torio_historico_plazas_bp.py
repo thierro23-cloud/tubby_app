@@ -1,31 +1,54 @@
 """
-Río Torío · Histórico de plazas
-================================
+===============================================================================
+RÍO TORÍO · HISTÓRICO DE PLAZAS (Blueprint Flask)
+===============================================================================
 
-0. INTRODUCCIÓN
----------------
-Este módulo gestiona el histórico de ocupación de plazas del parking de camiones
-de Río Torío. Centraliza las operaciones de:
+[0] INTRODUCCIÓN GENERAL
+------------------------
+Este módulo implementa el blueprint de Flask responsable de la gestión del
+histórico de ocupación de plazas del parking de camiones de Río Torío.
+
+Centraliza en una única unidad de código:
 - listado global del histórico;
 - detalle por plaza;
-- alta y edición de registros individuales;
-- validación de coherencia de intervalos de fechas y forma de pago;
-- restricción de acceso a usuarios con rol super_admin.
+- alta y edición de intervalos;
+- validaciones de coherencia temporal y funcional;
+- carga de catálogos para desplegables de la plantilla;
+- control de acceso por rol (super_admin).
 
-El objetivo es garantizar que los periodos de ocupación por plaza y proveedor
-sean consistentes (sin solapamientos, sin más de un intervalo abierto por plaza,
-con forma de pago definida) y ofrecer una interfaz única para consultar y editar
-dicho histórico.
+El propósito funcional es asegurar integridad del histórico:
+- sin solapamientos en una misma plaza,
+- sin intervalos incoherentes (inicio > fin),
+- sin intervalos abiertos simultáneos para una misma plaza,
+- con forma de pago obligatoria.
 
-Author: Tino Hierro
-Date: 2026-06-24
+Además, el catálogo de proveedores se obtiene de `bd_tbl_comunes` y se filtra
+por presencia en parking mediante `parquin_camiones.tbl_usuarios` para poblar
+selectores con datos relevantes.
+
+Autor: Tinito
+Fecha: 07/07/2026
+Repositorio: thierro23-cloud/tubby_app
+Archivo: blueprints/parquin/btn_rio_torio_historico_plazas_bp.py
 """
 
 from __future__ import annotations
 
+# =============================================================================
+# [1] IMPORTACIONES Y DEPENDENCIAS
+# =============================================================================
+# 1.1. Librería estándar
+#      - date: validaciones y comparación de intervalos temporales.
+#      - Any: tipado flexible en resultados de consultas.
 from datetime import date
 from typing import Any
 
+# 1.2. Flask
+#      - Blueprint: encapsula rutas de esta funcionalidad.
+#      - render_template: render de vistas HTML.
+#      - current_app: logging centralizado.
+#      - request: lectura de datos de formulario.
+#      - redirect / url_for: patrón PRG tras persistencia.
 from flask import (
     Blueprint,
     render_template,
@@ -35,18 +58,22 @@ from flask import (
     url_for,
 )
 
+# 1.3. Acceso a datos
+#      - ejecutar_query: consultas SELECT.
+#      - ejecutar_non_query: INSERT/UPDATE.
 from db import ejecutar_query, ejecutar_non_query
+
+# 1.4. Seguridad/autorización
+#      - rol_required("super_admin"): restringe acceso a perfiles autorizados.
 from services.helpers import rol_required
 
+
 # =============================================================================
-# 1. BLUEPRINT: HISTÓRICO DE PLAZAS RÍO TORÍO
+# [2] BLUEPRINT Y RUTA BASE
 # =============================================================================
-# 1.1. Definición del blueprint
-#      Este blueprint agrupa las rutas relacionadas con la consulta y
-#      edición del histórico de ocupación de plazas del parking de
-#      camiones Río Torío. Incluye:
-#      - listado global de histórico;
-#      - detalle por plaza (listado + alta/edición).
+# 2.1. Definición del blueprint principal para histórico de plazas.
+#      URL base:
+#      /parquin/rio_torio/historico_plazas
 btn_rio_torio_historico_plazas_bp = Blueprint(
     "btn_rio_torio_historico_plazas_bp",
     __name__,
@@ -55,20 +82,32 @@ btn_rio_torio_historico_plazas_bp = Blueprint(
 
 
 # =============================================================================
-# 2. SQL BASE: CONSULTA GLOBAL DE HISTÓRICO
+# [3] SQL BASE · LISTADO GLOBAL DE HISTÓRICO
 # =============================================================================
-# 2.1. SQL_HISTORICO_PLAZAS
-#      Consulta el listado completo de histórico, uniendo:
-#      - tbl_historico_plazas (Río Torío),
-#      - tbl_plazas (para código de plaza),
-#      - bd_tbl_comunes.tbl_proveedores (para razón social del proveedor).
+# 3.1. Consulta principal del listado global:
+#      - histórico (tbl_historico_plazas)
+#      - catálogo de plazas (tbl_plazas)
+#      - datos de proveedor (bd_tbl_comunes.tbl_proveedores)
+#
+# 3.2. Se incorpora:
+#      - NIF
+#      - nombre/apellidos
+#      - nombre_razon_social
+#      - campo "proveedor" normalizado con COALESCE para mostrar texto amigable
 SQL_HISTORICO_PLAZAS = """
     SELECT
         h.idtbl_historico_plazas,
         h.idtbl_plazas,
-        pz.codigo_plazas        AS codigo_plaza,
+        pz.codigo_plazas AS codigo_plaza,
         h.idtbl_proveedores,
-        pr.Nombre_Razon_Social  AS proveedor,
+        pr.NIF AS nif,
+        pr.nombre AS nombre,
+        pr.apellidos AS apellidos,
+        pr.Nombre_Razon_Social AS nombre_razon_social,
+        COALESCE(
+            NULLIF(pr.Nombre_Razon_Social, ''),
+            CONCAT_WS(' ', pr.apellidos, pr.nombre)
+        ) AS proveedor,
         h.fecha_inicio,
         h.fecha_fin,
         h.exp_solicitud_fin,
@@ -87,26 +126,17 @@ SQL_HISTORICO_PLAZAS = """
 
 
 # =============================================================================
-# 3. HELPERS DE FECHAS E INTERVALOS
+# [4] HELPERS DE FECHAS E INTEGRIDAD DE INTERVALOS
 # =============================================================================
-
-
 def _parse_fecha(fecha_str: str | None) -> date | None:
     """
-    3.1. _parse_fecha
-    -----------------
-    Convierte una fecha ISO `YYYY-MM-DD` en un objeto `date`.
+    [4.1] Convierte fecha ISO (YYYY-MM-DD) a date.
 
     Args:
-        fecha_str (str | None): Fecha en formato ISO o None.
+        fecha_str: Fecha en cadena o None.
 
     Returns:
-        date | None: Fecha convertida o None si la entrada está vacía.
-
-    Uso:
-        Se emplea en la vista de detalle por plaza para convertir las
-        fechas recibidas desde el formulario antes de validarlas y
-        almacenarlas.
+        date | None
     """
     if not fecha_str:
         return None
@@ -118,24 +148,14 @@ def _validar_intervalo_fechas(
     fecha_fin: date | None,
 ) -> None:
     """
-    3.2. _validar_intervalo_fechas
-    ------------------------------
-    Valida la coherencia básica entre fecha_inicio y fecha_fin.
+    [4.2] Valida coherencia básica del intervalo temporal.
 
     Reglas:
-        - fecha_inicio es obligatoria;
-        - si hay fecha_fin, fecha_inicio no puede ser posterior.
-
-    Args:
-        fecha_inicio (date | None): Fecha de inicio del intervalo.
-        fecha_fin (date | None): Fecha de fin del intervalo.
+    - fecha_inicio obligatoria;
+    - si fecha_fin existe, no puede ser anterior a fecha_inicio.
 
     Raises:
-        ValueError: Si falta fecha_inicio o si fecha_inicio > fecha_fin.
-
-    Uso:
-        Se invoca desde _validar_historico_plaza antes de comprobar
-        solapamientos o intervalos abiertos.
+        ValueError si falla validación.
     """
     if not fecha_inicio:
         raise ValueError("La fecha de inicio es obligatoria.")
@@ -151,26 +171,13 @@ def _intervalos_se_solapan(
     fin2: date | None,
 ) -> bool:
     """
-    3.3. _intervalos_se_solapan
-    ---------------------------
-    Comprueba si dos intervalos de fechas se solapan.
+    [4.3] Determina si dos intervalos se solapan.
 
-    Definición:
-        - Un intervalo [inicio, fin] se considera abierto si fin es None.
-        - Para comparar, se sustituye None por date.max.
-
-    Args:
-        inicio1 (date): Inicio del primer intervalo.
-        fin1 (date | None): Fin del primer intervalo.
-        inicio2 (date): Inicio del segundo intervalo.
-        fin2 (date | None): Fin del segundo intervalo.
+    Nota:
+    - Un intervalo abierto (fin=None) se trata como fin=date.max.
 
     Returns:
-        bool: True si los intervalos se solapan, False en caso contrario.
-
-    Uso:
-        Se usa en _validar_historico_plaza para detectar solapamientos
-        entre el nuevo intervalo y los existentes en la misma plaza.
+        True si hay solape, False si no.
     """
     fin1_real = fin1 or date.max
     fin2_real = fin2 or date.max
@@ -187,34 +194,17 @@ def _validar_historico_plaza(
     forma_pago: str | None,
 ) -> None:
     """
-    3.4. _validar_historico_plaza
-    ------------------------------
-    Valida que el histórico de una plaza sea coherente antes de guardar.
+    [4.4] Valida coherencia completa de histórico antes de guardar.
 
-    Reglas:
-        - la forma de pago es obligatoria;
-        - la fecha de inicio es obligatoria;
-        - no puede haber fecha_inicio posterior a fecha_fin;
-        - no puede haber solapamientos para la misma plaza;
-        - no puede haber más de un intervalo abierto (sin fecha_fin) por plaza;
-        - si cambia la forma de pago para un intervalo abierto del mismo proveedor,
-          debe tratarse como un nuevo intervalo (no se permite dos abiertos
-          con distinta forma de pago).
-
-    Args:
-        id_historico (int | None): ID del registro en edición o None si es alta.
-        id_plaza (int): ID de la plaza.
-        id_proveedor (int): ID del proveedor.
-        fecha_inicio (date): Fecha de inicio del intervalo.
-        fecha_fin (date | None): Fecha de fin del intervalo.
-        forma_pago (str | None): Forma de pago.
+    Reglas aplicadas:
+    - forma_pago obligatoria;
+    - intervalo temporal válido;
+    - sin solapamiento para la misma plaza;
+    - sin doble intervalo abierto para la misma plaza;
+    - no permitir otro abierto del mismo proveedor con forma_pago distinta.
 
     Raises:
-        ValueError: Si alguna regla de coherencia se incumple.
-
-    Uso:
-        Se invoca tanto en altas como en ediciones de registros de
-        tbl_historico_plazas antes de ejecutar el INSERT/UPDATE.
+        ValueError ante inconsistencia.
     """
     if not forma_pago:
         raise ValueError("La forma de pago es obligatoria.")
@@ -242,7 +232,7 @@ def _validar_historico_plaza(
     for fila in filas:
         id_hist_existente = fila["idtbl_historico_plazas"]
 
-        # Ignoramos el propio registro en edición
+        # Ignorar auto-colisión cuando se edita el mismo registro.
         if id_historico and id_hist_existente == id_historico:
             continue
 
@@ -251,17 +241,17 @@ def _validar_historico_plaza(
         forma_pago_exist = fila.get("forma_pago")
         id_prov_exist = fila["idtbl_proveedores"]
 
-        # Marcamos si hay otro intervalo abierto
+        # Marcar existencia de otro abierto.
         if ff_exist is None and fecha_fin is None:
             hay_abierto_distinto = True
 
-        # Comprobamos solapamientos
+        # Validar solapamiento temporal.
         if _intervalos_se_solapan(fecha_inicio, fecha_fin, fi_exist, ff_exist):
             raise ValueError(
                 "El periodo indicado se solapa con otro periodo ya registrado para esta plaza."
             )
 
-        # Comprobamos cambio de forma de pago en intervalo abierto del mismo proveedor
+        # Validar cambio de forma de pago en abierto del mismo proveedor.
         if (
             ff_exist is None
             and fecha_fin is None
@@ -279,26 +269,87 @@ def _validar_historico_plaza(
 
 
 # =============================================================================
-# 4. VISTA: LISTADO GLOBAL DEL HISTÓRICO
+# [5] HELPERS DE CATÁLOGOS PARA DESPLEGABLES
 # =============================================================================
+def _obtener_catalogo_plazas() -> list[dict[str, Any]]:
+    """
+    [5.1] Catálogo de plazas para combo/select.
+
+    Returns:
+        [{id, codigo_plaza}, ...]
+    """
+    return ejecutar_query(
+        """
+        SELECT
+            idtbl_plazas AS id,
+            codigo_plazas AS codigo_plaza
+        FROM tbl_plazas
+        ORDER BY codigo_plazas
+        """,
+        params=(),
+        nombre_bd="parquin_camiones",
+    )
 
 
+def _obtener_catalogo_proveedores_parking() -> list[dict[str, Any]]:
+    """
+    [5.2] Catálogo de proveedores para combo/select.
+
+    Origen:
+    - bd_tbl_comunes.tbl_proveedores
+
+    Filtro:
+    - Solo proveedores vinculados al entorno parking, mediante EXISTS sobre
+      parquin_camiones.tbl_usuarios.
+
+    Campos:
+    - id, nif, nombre, apellidos, nombre_razon_social, etiqueta
+
+    Nota importante:
+    Si en tu esquema el vínculo NO es `tbl_usuarios.idtbl_proveedores`,
+    sustituir ese campo por el real.
+    """
+    return ejecutar_query(
+        """
+        SELECT
+            p.Idtbl_proveedores AS id,
+            p.NIF AS nif,
+            p.nombre AS nombre,
+            p.apellidos AS apellidos,
+            p.Nombre_Razon_Social AS nombre_razon_social,
+            COALESCE(
+                NULLIF(p.Nombre_Razon_Social, ''),
+                CONCAT_WS(' ', p.apellidos, p.nombre)
+            ) AS etiqueta
+        FROM bd_tbl_comunes.tbl_proveedores AS p
+        WHERE EXISTS (
+            SELECT 1
+            FROM parquin_camiones.tbl_usuarios u
+            WHERE u.idtbl_proveedores = p.Idtbl_proveedores
+        )
+        ORDER BY etiqueta
+        """,
+        params=(),
+        nombre_bd="bd_tbl_comunes",
+    )
+
+
+# =============================================================================
+# [6] RUTA GET · LISTADO GLOBAL DEL HISTÓRICO
+# =============================================================================
 @btn_rio_torio_historico_plazas_bp.route("/", methods=["GET"])
 @rol_required("super_admin")
 def btn_rio_torio_historico_plazas():
     """
-    4.1. btn_rio_torio_historico_plazas
-    -----------------------------------
-    Muestra el listado global del histórico de plazas de Río Torío.
+    [6.1] Vista de listado global.
 
-    Comportamiento:
-        - Carga todas las filas del histórico de plazas usando SQL_HISTORICO_PLAZAS.
-        - Carga catálogo de plazas (id + código).
-        - Carga catálogo de proveedores (id + NIF + razón social).
-        - Gestiona errores mediante logging y un mensaje en pantalla.
+    Carga:
+    - filas de histórico global;
+    - catálogo de plazas;
+    - catálogo de proveedores filtrado para parking.
 
-    Returns:
-        str: Render del template del listado global.
+    Render:
+    - parquin/rio_torio/rio_torio_historico_plazas.html
     """
     error = None
 
@@ -314,35 +365,14 @@ def btn_rio_torio_historico_plazas():
         error = f"Error al consultar el histórico de plazas: {e}"
 
     try:
-        plazas = ejecutar_query(
-            """
-            SELECT
-                idtbl_plazas AS id,
-                codigo_plazas AS codigo_plaza
-            FROM tbl_plazas
-            ORDER BY codigo_plazas
-            """,
-            params=(),
-            nombre_bd="parquin_camiones",
-        )
+        plazas = _obtener_catalogo_plazas()
     except Exception as e:
         current_app.logger.exception("Error al cargar catálogo de plazas (Río Torío)")
         plazas = []
         error = (error or "") + f" Error al cargar plazas: {e}"
 
     try:
-        proveedores = ejecutar_query(
-            """
-            SELECT
-                Idtbl_proveedores AS id,
-                NIF AS nif,
-                Nombre_Razon_Social AS nombre
-            FROM tbl_proveedores
-            ORDER BY Nombre_Razon_Social
-            """,
-            params=(),
-            nombre_bd="bd_tbl_comunes",
-        )
+        proveedores = _obtener_catalogo_proveedores_parking()
     except Exception as e:
         current_app.logger.exception("Error al cargar proveedores (Río Torío)")
         proveedores = []
@@ -358,10 +388,8 @@ def btn_rio_torio_historico_plazas():
 
 
 # =============================================================================
-# 5. VISTA: DETALLE Y EDICIÓN POR PLAZA
+# [7] RUTA GET/POST · DETALLE POR PLAZA + ALTA/EDICIÓN
 # =============================================================================
-
-
 @btn_rio_torio_historico_plazas_bp.route(
     "/plaza/<int:id_plaza>",
     methods=["GET", "POST"],
@@ -369,26 +397,21 @@ def btn_rio_torio_historico_plazas():
 @rol_required("super_admin")
 def rio_torio_historico_plazas(id_plaza: int) -> str:
     """
-    5.1. rio_torio_historico_plazas
-    --------------------------------
-    Muestra y edita el histórico de una plaza concreta.
+    [7.1] Detalle de una plaza concreta y persistencia de formulario.
 
-    Comportamiento:
-        - GET:
-            · Carga proveedores, plazas y filas de histórico de la plaza.
-            · Muestra el detalle y permite seleccionar registros para edición.
-        - POST:
-            · Lee los campos del formulario (alta o edición).
-            · Valida coherencia mediante _validar_historico_plaza.
-            · Si accion == "editar" y hay id_historico_int, hace UPDATE.
-            · Si no, hace INSERT.
-            · Redirige de nuevo al detalle de la plaza (PRG).
+    GET:
+    - carga catálogos y filas de la plaza;
+    - renderiza plantilla de detalle.
 
-    Args:
-        id_plaza (int): ID de la plaza recibida por URL.
+    POST:
+    - parsea formulario;
+    - valida reglas de negocio;
+    - UPDATE si accion=editar;
+    - INSERT en caso contrario;
+    - redirige (patrón PRG).
 
-    Returns:
-        str: Render del template de detalle por plaza.
+    Template:
+    - parquin/rio_torio/rio_torio_historico_plaza.html
     """
     error: str | None = None
 
@@ -407,7 +430,7 @@ def rio_torio_historico_plazas(id_plaza: int) -> str:
             exp_cambio = request.form.get("exp_solicitud_cambio") or None
             id_usuario = request.form.get("idtbl_usuarios") or None
 
-            # 5.1.1. Conversión básica de IDs
+            # [7.1.1] Conversión de ids
             id_plaza_final = int(id_plaza_form) if id_plaza_form else id_plaza
             id_proveedor_int = int(id_proveedor) if id_proveedor else None
             id_historico_int = int(id_historico_str) if id_historico_str else None
@@ -418,7 +441,7 @@ def rio_torio_historico_plazas(id_plaza: int) -> str:
                     "Debes seleccionar un proveedor antes de guardar el histórico."
                 )
 
-            # 5.1.2. Conversión y validación de fechas
+            # [7.1.2] Conversión + validación de fechas
             fecha_inicio = _parse_fecha(fecha_inicio_str)
             fecha_fin = _parse_fecha(fecha_fin_str)
 
@@ -431,9 +454,9 @@ def rio_torio_historico_plazas(id_plaza: int) -> str:
                 forma_pago=forma_pago,
             )
 
-            # 5.1.3. Persistencia: UPDATE vs INSERT
+            # [7.1.3] Persistencia
             if accion == "editar" and id_historico_int:
-                # EDICIÓN: actualizar el registro existente en tbl_historico_plazas.
+                # UPDATE de registro existente.
                 ejecutar_non_query(
                     """
                     UPDATE tbl_historico_plazas
@@ -466,7 +489,7 @@ def rio_torio_historico_plazas(id_plaza: int) -> str:
                     nombre_bd="parquin_camiones",
                 )
             else:
-                # ALTA: insertar nuevo registro en tbl_historico_plazas.
+                # INSERT de nuevo intervalo.
                 ejecutar_non_query(
                     """
                     INSERT INTO tbl_historico_plazas
@@ -491,7 +514,7 @@ def rio_torio_historico_plazas(id_plaza: int) -> str:
                     nombre_bd="parquin_camiones",
                 )
 
-            # 5.1.4. PRG: redirigir al detalle de la plaza tras guardar
+            # [7.1.4] Patrón PRG (Post/Redirect/Get)
             return redirect(
                 url_for(
                     "btn_rio_torio_historico_plazas_bp.rio_torio_historico_plazas",
@@ -505,20 +528,9 @@ def rio_torio_historico_plazas(id_plaza: int) -> str:
             )
             error = f"Error al guardar histórico de la plaza: {e}"
 
-    # 5.2. GET: carga de catálogos y filas de histórico para la plaza
+    # [7.2] Carga de catálogos para GET y para POST con error
     try:
-        proveedores = ejecutar_query(
-            """
-            SELECT
-                Idtbl_proveedores AS id,
-                NIF AS nif,
-                Nombre_Razon_Social AS nombre
-            FROM tbl_proveedores
-            ORDER BY Nombre_Razon_Social
-            """,
-            params=(),
-            nombre_bd="bd_tbl_comunes",
-        )
+        proveedores = _obtener_catalogo_proveedores_parking()
     except Exception as e:
         current_app.logger.exception(
             "Error al cargar proveedores para detalle (Río Torío)"
@@ -527,22 +539,13 @@ def rio_torio_historico_plazas(id_plaza: int) -> str:
         error = (error or "") + f" Error al cargar proveedores: {e}"
 
     try:
-        plazas = ejecutar_query(
-            """
-            SELECT
-                idtbl_plazas AS id,
-                codigo_plazas AS nombre
-            FROM tbl_plazas
-            ORDER BY codigo_plazas
-            """,
-            params=(),
-            nombre_bd="parquin_camiones",
-        )
+        plazas = _obtener_catalogo_plazas()
     except Exception as e:
         current_app.logger.exception("Error al cargar plazas para detalle (Río Torío)")
         plazas = []
         error = (error or "") + f" Error al cargar plazas: {e}"
 
+    # [7.3] Carga de filas históricas de la plaza, incluyendo nif/nombre/apellidos
     try:
         filas = ejecutar_query(
             """
@@ -551,7 +554,14 @@ def rio_torio_historico_plazas(id_plaza: int) -> str:
                 h.idtbl_plazas,
                 pz.codigo_plazas AS codigo_plaza,
                 h.idtbl_proveedores,
-                pr.Nombre_Razon_Social AS proveedor,
+                pr.NIF AS nif,
+                pr.nombre AS nombre,
+                pr.apellidos AS apellidos,
+                pr.Nombre_Razon_Social AS nombre_razon_social,
+                COALESCE(
+                    NULLIF(pr.Nombre_Razon_Social, ''),
+                    CONCAT_WS(' ', pr.apellidos, pr.nombre)
+                ) AS proveedor,
                 h.fecha_inicio,
                 h.fecha_fin,
                 h.exp_solicitud_fin,
@@ -580,6 +590,7 @@ def rio_torio_historico_plazas(id_plaza: int) -> str:
 
     codigo_plaza = filas[0]["codigo_plaza"] if filas else None
 
+    # [7.4] Render final con todos los datos requeridos por la plantilla
     return render_template(
         "parquin/rio_torio/rio_torio_historico_plaza.html",
         error=error,
