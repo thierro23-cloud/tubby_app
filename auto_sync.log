@@ -1,3 +1,14 @@
 ==================================================
 [07/07/2026  9:31:17,89] Iniciando auto-sync...
 [07/07/2026  9:31:17,97] git add -A
+[07/07/2026  9:31:18,12] git commit -m "auto-sync 07/07/2026  9:31:18,12"
+[main ca91570] auto-sync 07/07/2026  9:31:18,12
+ 2 files changed, 94 insertions(+)
+ create mode 100644 auto_sync.bat
+ create mode 100644 auto_sync.log
+[07/07/2026  9:31:18,26] git pull --rebase origin main
+error: cannot pull with rebase: You have unstaged changes.
+error: Please commit or stash them.
+==================================================
+[07/07/2026  9:40:28,74] Iniciando auto-sync...
+[07/07/2026  9:40:28,78] git add -A
