@@ -6,22 +6,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <!--
-  0. INTRODUCCIÓN DE PLANTILLA
-  ----------------------------
+  =============================================================================
+  [0] INTRODUCCIÓN DE PLANTILLA
+  =============================================================================
   Esta plantilla muestra y permite editar el histórico de una plaza concreta:
 
-  - Sección superior: título, subtítulo y navegación.
-  - Tarjeta izquierda: formulario de alta/edición de histórico.
-  - Tarjeta derecha: tabla con todas las filas de histórico de la plaza.
+  - Cabecera: contexto de pantalla + navegación.
+  - Columna izquierda: formulario de alta/edición.
+  - Columna derecha: tabla histórica con filtros y ordenación.
 
-  Comportamiento:
-  - Al hacer clic en "Editar" en una fila, se rellena el formulario con
-    los datos de esa fila y se establece accion="editar".
-  - Al hacer clic en "Nuevo intervalo", se limpia el formulario y se
-    establece accion="nuevo".
-  - Al hacer clic en un encabezado de la tabla, se ordenan los registros
-    por esa columna (ascendente/descendente).
-  - Los filtros superiores actúan sobre plaza, NIF y proveedor.
+  Comportamiento principal:
+  - "Editar" carga la fila en el formulario y activa accion="editar".
+  - "Nuevo intervalo" limpia formulario y activa accion="nuevo".
+  - Encabezados de tabla ordenan por columna (asc/desc).
+  - Filtros por plaza, NIF y proveedor.
   -->
   <style>
     :root {
@@ -105,23 +103,12 @@
       white-space: nowrap;
     }
 
-    .btn:hover {
-      transform: translateY(-1px);
-    }
+    .btn:hover { transform: translateY(-1px); }
 
-    .btn-primary {
-      background: var(--primary);
-      color: #fff;
-    }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-dark); }
 
-    .btn-primary:hover {
-      background: var(--primary-dark);
-    }
-
-    .btn-secondary {
-      background: var(--secondary);
-      color: #fff;
-    }
+    .btn-secondary { background: var(--secondary); color: #fff; }
 
     .btn-outline {
       background: transparent;
@@ -129,9 +116,7 @@
       border-color: var(--primary);
     }
 
-    .btn-outline:hover {
-      background: #f0f7ff;
-    }
+    .btn-outline:hover { background: #f0f7ff; }
 
     .alert {
       margin: 1rem 1rem 0;
@@ -171,9 +156,7 @@
       gap: 1rem;
     }
 
-    .card-body {
-      padding: 1rem;
-    }
+    .card-body { padding: 1rem; }
 
     .grid {
       display: grid;
@@ -252,9 +235,7 @@
       user-select: none;
     }
 
-    th.sortable:hover {
-      background: var(--hover);
-    }
+    th.sortable:hover { background: var(--hover); }
 
     th.sortable::after {
       content: " ⇅";
@@ -262,52 +243,24 @@
       color: var(--muted);
     }
 
-    th.sortable[data-order="asc"]::after {
-      content: " ↑";
-    }
+    th.sortable[data-order="asc"]::after { content: " ↑"; }
+    th.sortable[data-order="desc"]::after { content: " ↓"; }
 
-    th.sortable[data-order="desc"]::after {
-      content: " ↓";
-    }
+    tbody tr:nth-child(even) { background: #fbfdff; }
+    tbody tr:hover { background: var(--hover); }
 
-    tbody tr:nth-child(even) {
-      background: #fbfdff;
-    }
-
-    tbody tr:hover {
-      background: var(--hover);
-    }
-
-    .text-center {
-      text-align: center;
-    }
-
-    .text-muted {
-      color: var(--muted);
-    }
+    .text-center { text-align: center; }
+    .text-muted { color: var(--muted); }
 
     @media (max-width: 1100px) {
-      .content {
-        grid-template-columns: 1fr;
-      }
+      .content { grid-template-columns: 1fr; }
     }
 
     @media (max-width: 700px) {
-      .page-wrapper {
-        margin: 0;
-      }
-
-      .page-shell {
-        border-radius: 0;
-      }
-
-      table {
-        min-width: 760px;
-      }
-
-      .page-header,
-      .card-header,
-      .card-body {
+      .page-wrapper { margin: 0; }
+      .page-shell { border-radius: 0; }
+      table { min-width: 760px; }
+      .page-header, .card-header, .card-body {
         padding-left: 0.8rem;
         padding-right: 0.8rem;
       }
@@ -319,10 +272,12 @@
 <div class="page-wrapper">
   <div class="page-shell">
 
-    <!-- 1. CABECERA PRINCIPAL DEL DETALLE -->
+    <!-- =========================================================================
+         [1] CABECERA PRINCIPAL
+         ========================================================================= -->
     <header class="page-header">
       <div>
-        <h1>🧮 Histórico de plaza {{ codigo_plaza or ('ID ' ~ id_plaza) }}</h1>
+        <h1>🧮 Histórico de plaza /histórico {{ codigo_plaza or ('ID ' ~ id_plaza) }}</h1>
         <div class="subtitle">
           Alta, edición y consulta del histórico de asignaciones para esta plaza
         </div>
@@ -339,17 +294,21 @@
       </div>
     </header>
 
-    <!-- 2. ALERTA DE ERROR GLOBAL (SI LA HAY) -->
+    <!-- =========================================================================
+         [2] ALERTA DE ERROR
+         ========================================================================= -->
     {% if error %}
       <div class="alert alert-danger">
         {{ error }}
       </div>
     {% endif %}
 
-    <!-- 3. CONTENIDO PRINCIPAL: FORMULARIO + TABLA -->
+    <!-- =========================================================================
+         [3] CONTENIDO: FORMULARIO + TABLA
+         ========================================================================= -->
     <div class="content">
 
-      <!-- 3.1. TARJETA DE FORMULARIO DE ALTA/EDICIÓN -->
+      <!-- [3.1] FORMULARIO DE ALTA/EDICIÓN -->
       <div class="card">
         <div class="card-header">
           <span>Formulario de histórico</span>
@@ -357,7 +316,6 @@
         </div>
 
         <div class="card-body">
-          <!-- 3.1.1. Formulario -->
           <form method="post" id="form-historico">
             <input type="hidden" name="accion" id="accion" value="nuevo">
             <input type="hidden" name="idtbl_historico_plazas" id="idtbl_historico_plazas">
@@ -370,7 +328,9 @@
                 <select class="form-select" name="idtbl_proveedores" id="idtbl_proveedores" required>
                   <option value="">Selecciona proveedor...</option>
                   {% for p in proveedores %}
-                    <option value="{{ p.id }}">{{ p.nombre }} ({{ p.nif }})</option>
+                    <option value="{{ p.id }}">
+                      {{ p.nombre_razon_social or ((p.apellidos or '') ~ ' ' ~ (p.nombre or ''))|trim }} ({{ p.nif }})
+                    </option>
                   {% endfor %}
                 </select>
               </div>
@@ -429,44 +389,37 @@
                 <textarea class="form-control" name="observaciones" id="observaciones" rows="2"></textarea>
               </div>
 
-              <!-- Botón guardar -->
+              <!-- Guardar -->
               <div class="actions-bottom" style="grid-column: 1 / -1;">
-                <button type="submit" class="btn btn-primary">
-                  💾 Guardar histórico
-                </button>
+                <button type="submit" class="btn btn-primary">💾 Guardar histórico</button>
               </div>
             </div>
           </form>
         </div>
       </div>
 
-      <!-- 3.2. TARJETA DE TABLA DE HISTÓRICO -->
+      <!-- [3.2] TABLA DE HISTÓRICO -->
       <div class="card">
         <div class="card-header">
           <span>Registros históricos de la plaza</span>
-          <span class="text-muted">
-            Total: {{ filas|length }} registros
-          </span>
+          <span class="text-muted">Total: {{ filas|length }} registros</span>
         </div>
 
         <div class="card-body">
 
-          <!-- 3.2.1. Filtros superiores (plaza, NIF, proveedor) -->
+          <!-- [3.2.1] Filtros -->
           <div class="grid" style="margin-bottom: 0.8rem; grid-template-columns: repeat(3, minmax(0, 1fr));">
             <div class="field">
               <label class="form-label" for="filtro_plaza">Filtrar por plaza</label>
-              <input type="text" class="form-control" id="filtro_plaza"
-                     placeholder="Código de plaza...">
+              <input type="text" class="form-control" id="filtro_plaza" placeholder="Código de plaza...">
             </div>
             <div class="field">
               <label class="form-label" for="filtro_nif">Filtrar por NIF</label>
-              <input type="text" class="form-control" id="filtro_nif"
-                     placeholder="NIF proveedor...">
+              <input type="text" class="form-control" id="filtro_nif" placeholder="NIF proveedor...">
             </div>
             <div class="field">
               <label class="form-label" for="filtro_proveedor">Filtrar por proveedor</label>
-              <input type="text" class="form-control" id="filtro_proveedor"
-                     placeholder="Nombre / apellidos / razón social...">
+              <input type="text" class="form-control" id="filtro_proveedor" placeholder="Nombre / apellidos / razón social...">
             </div>
           </div>
 
@@ -493,8 +446,8 @@
                   data-id-plaza="{{ f.idtbl_plazas }}"
                   data-codigo-plaza="{{ f.codigo_plaza }}"
                   data-id-proveedor="{{ f.idtbl_proveedores }}"
-                  data-nif="{{ f.nif if f.nif is defined else '' }}"
-                  data-proveedor="{{ f.proveedor }}"
+                  data-nif="{{ f.nif or '' }}"
+                  data-proveedor="{{ f.proveedor or '' }}"
                   data-fecha-inicio="{{ f.fecha_inicio }}"
                   data-fecha-fin="{{ f.fecha_fin or '' }}"
                   data-forma-pago="{{ f.forma_pago or '' }}"
@@ -506,21 +459,21 @@
                 >
                   <td>{{ f.idtbl_historico_plazas }}</td>
                   <td>{{ f.codigo_plaza }}</td>
-                  <td>{{ f.nif if f.nif is defined else '—' }}</td>
-                  <td>{{ f.proveedor }}</td>
+                  <td>{{ f.nif or '—' }}</td>
+                  <td>{{ f.proveedor or '—' }}</td>
                   <td>{{ f.fecha_inicio }}</td>
                   <td>{{ f.fecha_fin or '—' }}</td>
                   <td>{{ f.forma_pago or '—' }}</td>
                   <td>{{ f.idtbl_usuarios or '—' }}</td>
                   <td>{{ f.observaciones or '—' }}</td>
                   <td class="text-center">
-                    <button type="button" class="btn btn-outline"
-                            onclick="cargarFilaEnFormulario(this.closest('tr'))">
+                    <button type="button" class="btn btn-outline" onclick="cargarFilaEnFormulario(this.closest('tr'))">
                       ✏️ Editar
                     </button>
                   </td>
                 </tr>
               {% endfor %}
+
               {% if filas|length == 0 %}
                 <tr>
                   <td colspan="10" class="text-center text-muted">
@@ -534,18 +487,20 @@
         </div>
       </div>
 
-    </div> <!-- .content -->
+    </div>
+  </div>
+</div>
 
-  </div> <!-- .page-shell -->
-</div> <!-- .page-wrapper -->
-
-<!-- 4. LÓGICA JS: FORMULARIO + ORDENACIÓN + FILTROS -->
+<!-- ===========================================================================
+     [4] LÓGICA JS · FORMULARIO + ORDENACIÓN + FILTROS
+     =========================================================================== -->
 <script>
   function limpiarFormulario() {
     const form = document.getElementById('form-historico');
     form.reset();
     document.getElementById('accion').value = 'nuevo';
     document.getElementById('idtbl_historico_plazas').value = '';
+    document.getElementById('idtbl_plazas').value = '{{ id_plaza }}';
     document.getElementById('modo-formulario').textContent = 'Modo: alta';
   }
 
@@ -615,16 +570,11 @@
 
   document.addEventListener('DOMContentLoaded', function () {
     const table = document.getElementById('tabla-historico');
-    if (!table || !table.tHead || !table.tBodies.length) {
-      return;
-    }
+    if (!table || !table.tHead || !table.tBodies.length) return;
 
-    const headerRow = table.tHead.rows[0];
-    const headers = Array.from(headerRow.cells);
-
+    const headers = Array.from(table.tHead.rows[0].cells);
     headers.forEach(th => {
       if (!th.classList.contains('sortable')) return;
-
       th.addEventListener('click', function () {
         const colIndex = parseInt(th.dataset.col, 10);
         if (isNaN(colIndex)) return;
@@ -644,6 +594,7 @@
       const rows = Array.from(table.tBodies[0].querySelectorAll('tr'));
 
       rows.forEach(row => {
+        if (row.cells.length < 4) return; // protege fila vacía/mensaje
         const plaza = (row.cells[1].textContent || '').toLowerCase();
         const nif = (row.cells[2].textContent || '').toLowerCase();
         const proveedor = (row.cells[3].textContent || '').toLowerCase();
@@ -652,8 +603,7 @@
         const coincideNif = !termNif || nif.includes(termNif);
         const coincideProv = !termProv || proveedor.includes(termProv);
 
-        row.style.display =
-          coincidePlaza && coincideNif && coincideProv ? '' : 'none';
+        row.style.display = coincidePlaza && coincideNif && coincideProv ? '' : 'none';
       });
     }
 
@@ -661,6 +611,11 @@
       if (!input) return;
       input.addEventListener('input', aplicarFiltros);
     });
+  });
+</script>
+
+</body>
+</html>
   });
 </script>
 
