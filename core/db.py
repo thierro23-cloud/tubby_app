@@ -1,17 +1,12 @@
 # =============================================================================
-# MODULO DB - CONEXION A BASES DE DATOS MySQL
+# 📡 MÓDULO DB – RADIO MÁGICA DE CONEXIÓN MySQL
 # =============================================================================
-# DESCRIPCION GENERAL
+# DESCRIPCIÓN GENERAL
 # -------------------
-# Este modulo se encarga de:
-# 1) Abrir conexiones con MySQL a la base indicada.
-# 2) Ejecutar consultas de lectura y escritura.
-# 3) Garantizar cierre de cursores y conexiones.
-#
-# IMPORTANTE:
-# - Las bases de datos deben existir previamente.
-# - El esquema (tablas) debe gestionarse mediante migraciones, no desde aqui.
-# - get_connection() solo conecta o falla con un error claro.
+# Este módulo se encarga de:
+# 1️⃣ Abrir conexiones con MySQL a la base indicada.
+# 2️⃣ Ejecutar consultas de lectura y escritura.
+# 3️⃣ Garantizar cierre de cursores y conexiones.
 # =============================================================================
 
 from typing import Any, Dict, List, Optional
@@ -20,25 +15,18 @@ from flask import current_app
 
 
 # =============================================================================
-# SECCION 1: CONEXION A LA BASE DE DATOS
+# 🔑 SECCIÓN 1: CONEXIÓN A BASE DE DATOS
 # =============================================================================
 def get_connection(
     nombre_bd: str = "bd_tbl_comunes",
 ) -> mysql.connector.MySQLConnection:
     """
-    Abre una conexion a la base de datos indicada.
-
-    Lee la configuracion desde current_app.config["DATABASES"].
-    Falla con un RuntimeError claro si:
-    - No hay contexto de aplicacion Flask activo.
-    - La clave "DATABASES" no esta definida en la configuracion.
-    - La base solicitada no esta en el diccionario DATABASES.
-    - MySQL rechaza la conexion (credenciales, host, BD inexistente, etc.).
-
-    No crea bases de datos ni tablas. Solo conecta o falla.
+    🔑 Abre conexión a la BD.
+    - No crea la base ni tablas.
+    - Solo conecta o falla.
     """
 
-    # 1) Leer config Flask -- no hay credenciales de fallback embebidas
+    # 1️⃣ Leer config Flask
     try:
         libro_casas = current_app.config.get("DATABASES")
     except RuntimeError:
@@ -49,8 +37,7 @@ def get_connection(
 
     if not libro_casas:
         raise RuntimeError(
-            "La configuracion 'DATABASES' no esta definida en la aplicacion Flask. "
-            "Revisa config.py y las variables de entorno DB_HOST, DB_USER, DB_PASSWORD, DB_PORT."
+            "La configuracion 'DATABASES' no esta definida en la aplicacion Flask."
         )
 
     casa = libro_casas.get(nombre_bd)
@@ -62,19 +49,17 @@ def get_connection(
 
     host = casa["HOST"]
     user = casa["USER"]
-    pw = casa["PASSWORD"]
+    password = casa["PASSWORD"]
     database = casa["DB"]
     port = casa.get("PORT", 3306)
 
-    # 2) Conectar -- si la BD no existe o las credenciales son incorrectas, se lanza Error
-    conn = mysql.connector.connect(
-        host=host, user=user, password=pw, database=database, port=port
+    # 2️⃣ Intentar conexión normal
+    return mysql.connector.connect(
+        host=host, user=user, password=password, database=database, port=port
     )
-    return conn
-
 
 # =============================================================================
-# SECCION 2: EJECUTAR CONSULTAS (LECTURA)
+# 📗 SECCIÓN 3: EJECUTAR CONSULTAS (LECTURA)
 # =============================================================================
 def ejecutar_query(
     sql: str, params: Optional[tuple] = None, nombre_bd: str = "bd_tbl_comunes"
@@ -98,7 +83,7 @@ def ejecutar_query(
 
 
 # =============================================================================
-# SECCION 3: EJECUTAR CONSULTAS (MODIFICACION)
+# 📗 SECCIÓN 4: EJECUTAR CONSULTAS (MODIFICACIÓN)
 # =============================================================================
 def ejecutar_non_query(
     sql: str, params: Optional[tuple] = None, nombre_bd: str = "bd_tbl_comunes"
@@ -115,3 +100,32 @@ def ejecutar_non_query(
     finally:
         cursor.close()
         conn.close()
+
+
+# =============================================================================
+# 📘 SECCIÓN 5: EJEMPLOS DE USO
+# =============================================================================
+"""
+# Leer usuarios
+usuarios = ejecutar_query("SELECT * FROM tbl_login")
+
+# Insertar nuevo usuario
+ejecutar_non_query(
+    "INSERT INTO tbl_login (usuario, password) VALUES (%s,%s)",
+    ("pepe","123456")
+)
+
+# Marcar plaza como ocupada
+ejecutar_non_query(
+    "UPDATE tbl_plazas SET estado='ocupada' WHERE idtbl_plazas=%s",
+    (1,),
+    nombre_bd="parquin_camiones"
+)
+
+# Crear incidencia
+ejecutar_non_query(
+    "INSERT INTO tbl_incidencias (descripcion) VALUES (%s)",
+    ("Vía obstruida por contenedor",),
+    nombre_bd="control_via_publica"
+)
+"""
