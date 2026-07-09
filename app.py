@@ -36,6 +36,9 @@ import traceback
 import importlib.util
 from datetime import datetime
 from typing import Optional
+# === AÑADIR JUNTO A TUS IMPORTS ===
+import subprocess
+from datetime import datetime, timezone
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
