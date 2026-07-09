@@ -1,0 +1,94 @@
+# =============================================================================
+# 🐳 TUBBY APP · DOCKER COMPOSE
+# =============================================================================
+#
+# Servicios:
+#   mysql    → MySQL 8.0
+#   backend  → Flask app
+#
+# DATOS EN DISCO EXTERNO
+# ──────────────────────
+# Por defecto los datos de MySQL se guardan en el volumen Docker gestionado
+# "mysql_data".  Para redirigirlos a un disco externo (p. ej. E:\tubby-data en
+# Windows o /media/user/disco/tubby-data en Linux/Mac) crea el archivo
+# .env.compose con:
+#
+#   MYSQL_DATA_DIR=E:/tubby-data/mysql-data
+#   MYSQL_INIT_DIR=E:/tubby-data/mysql-init
+#   CONTENEDORES_DIR=E:/tubby-data/contenedores
+#
+# y docker compose lo leerá automáticamente.
+# Si no existe .env.compose se usa el volumen Docker local por defecto.
+#
+# INICIO / PARADA
+# ───────────────
+#   docker compose up -d          # arrancar en segundo plano
+#   docker compose logs -f        # ver logs
+#   docker compose down           # parar (datos se conservan)
+#   docker compose down -v        # parar y BORRAR volúmenes (¡pierde datos!)
+#
+# =============================================================================
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # MySQL 8.0
+  # ---------------------------------------------------------------------------
+  mysql:
+    image: mysql:8.0
+    container_name: tubby_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_tubby_2024}
+      MYSQL_USER: ${DB_USER:-tubby}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-tubby_pass_2024}
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    volumes:
+      # MySQL data directory.
+      # Set MYSQL_DATA_DIR in .env.compose to redirect to an external drive.
+      - ${MYSQL_DATA_DIR:-mysql_data}:/var/lib/mysql
+      # Drop *.sql / *.sh files here to run them on first start.
+      # Set MYSQL_INIT_DIR in .env.compose to use a folder on an external drive.
+      - ${MYSQL_INIT_DIR:-./sql}:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # ---------------------------------------------------------------------------
+  # Flask backend
+  # ---------------------------------------------------------------------------
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tubby_backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      # Flask binding – must be 0.0.0.0 inside the container
+      HOST: 0.0.0.0
+      PORT: ${PORT:-5000}
+      # Point the app at the MySQL service (overrides .env value)
+      DB_HOST: mysql
+      DB_PORT: ${MYSQL_PORT:-3306}
+    ports:
+      - "${PORT:-5000}:${PORT:-5000}"
+    volumes:
+      # contenedores/ is mounted from the host so watchers can read/write files.
+      # Set CONTENEDORES_DIR in .env.compose to use a folder on an external drive.
+      - ${CONTENEDORES_DIR:-./contenedores}:/app/contenedores
+
+# -----------------------------------------------------------------------------
+# Named volume used when MYSQL_DATA_DIR is not set.
+# When MYSQL_DATA_DIR is set this volume is not created / used.
+# -----------------------------------------------------------------------------
+volumes:
+  mysql_data:

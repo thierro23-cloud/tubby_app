@@ -1,1 +1,21 @@
 auto_sync.log
+
+# Environment / secrets – never commit these
+.env
+.env.compose
+
+# Python artefacts
+__pycache__/
+*.py[cod]
+*.pyo
+venv/
+.venv/
+*.egg-info/
+
+# Logs
+logs/
+*.log
+
+# OS artefacts
+.DS_Store
+Thumbs.db

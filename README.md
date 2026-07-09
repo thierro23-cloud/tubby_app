@@ -18,7 +18,99 @@
 - 👕 **Vestuario Personal** - Gestión de equipamiento de personal
 - 🚨 **Plan de Emergencias** - Coordinación de emergencias
 
-## 🚀 INICIO RÁPIDO
+## 🐳 INICIO RÁPIDO CON DOCKER (recomendado)
+
+Ejecuta toda la aplicación en contenedores sin instalar Python, MySQL ni dependencias en tu máquina.
+Solo necesitas **Docker Desktop** (Windows/Mac) o **Docker Engine + Compose** (Linux).
+
+### Requisitos
+- [Docker](https://docs.docker.com/get-docker/) (incluye Docker Compose en versiones recientes)
+- Git
+
+### Arranque básico
+
+```bash
+# 1. Clona el repositorio
+git clone https://github.com/thierro23-cloud/tubby_app.git
+cd tubby_app
+
+# 2. Crea el archivo .env a partir de la plantilla Docker
+cp .env.docker.example .env
+# Edita .env y cambia contraseñas y SECRET_KEY
+
+# 3. Arranca los servicios
+docker compose up -d
+
+# 4. Abre la aplicación en http://localhost:5000
+```
+
+### Parar / reiniciar
+
+```bash
+docker compose down          # para los contenedores (datos conservados)
+docker compose down -v       # para y BORRA los volúmenes (¡pierde datos!)
+docker compose logs -f       # ver logs en tiempo real
+docker compose up -d --build # reconstruir imagen tras cambiar código o deps
+```
+
+### Guardar datos en un disco externo
+
+Para que MySQL guarde sus datos en un disco externo, añade las rutas en tu `.env`:
+
+```dotenv
+# Windows:
+MYSQL_DATA_DIR=E:/tubby-data/mysql-data
+MYSQL_INIT_DIR=E:/tubby-data/mysql-init
+CONTENEDORES_DIR=E:/tubby-data/contenedores
+
+# Linux / Mac:
+# MYSQL_DATA_DIR=/media/user/disco/tubby-data/mysql-data
+# MYSQL_INIT_DIR=/media/user/disco/tubby-data/mysql-init
+# CONTENEDORES_DIR=/media/user/disco/tubby-data/contenedores
+```
+
+Crea las carpetas antes de arrancar:
+
+```bash
+# Windows (PowerShell)
+mkdir E:\tubby-data\mysql-data
+mkdir E:\tubby-data\mysql-init
+mkdir E:\tubby-data\contenedores\entrada_pdf
+mkdir E:\tubby-data\contenedores\papelera
+mkdir E:\tubby-data\contenedores\para_revision
+mkdir E:\tubby-data\contenedores\solo_retirada
+
+# Linux / Mac
+mkdir -p /media/user/disco/tubby-data/mysql-data
+mkdir -p /media/user/disco/tubby-data/mysql-init
+mkdir -p /media/user/disco/tubby-data/contenedores/{entrada_pdf,papelera,para_revision,solo_retirada}
+```
+
+Luego lanza `docker compose up -d` normalmente.
+
+### Scripts SQL de inicialización
+
+Coloca tus archivos `.sql` en la carpeta apuntada por `MYSQL_INIT_DIR` (por defecto `./sql/`).
+MySQL los ejecutará automáticamente la primera vez que arranque con un directorio de datos vacío.
+
+### Variables de entorno importantes para Docker
+
+| Variable | Valor para Docker | Descripción |
+|---|---|---|
+| `DB_HOST` | `mysql` | **No uses `localhost`** – usa el nombre del servicio |
+| `DB_PORT` | `3306` | Puerto MySQL |
+| `DB_USER` | `tubby` | Usuario MySQL |
+| `DB_PASSWORD` | *(tu contraseña)* | Contraseña MySQL |
+| `MYSQL_ROOT_PASSWORD` | *(tu contraseña)* | Contraseña root de MySQL |
+| `HOST` | `0.0.0.0` | Fijado automáticamente por docker-compose |
+| `PORT` | `5000` | Puerto del backend |
+
+> ⚠️ La plantilla `.env.docker.example` ya incluye `DB_HOST=mysql`.
+> El archivo `.env.example` original usa `localhost` y es para desarrollo local sin Docker.
+
+---
+
+## 🚀 INICIO RÁPIDO (desarrollo local sin Docker)
 
 ### Requisitos
 - Python 3.8+
