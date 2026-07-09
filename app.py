@@ -231,7 +231,7 @@ def endpoint_existe(nombre_endpoint: str) -> bool:
 
 
 def url_segura(endpoint: str, **kwargs) -> str:
-    """Devuelve URL solo si endpoint existe; en caso contrario '#'."""
+    """Devuelve URL solo si endpoint existe; en caso contrario '#'"""
     try:
         if endpoint in current_app.view_functions:
             return url_for(endpoint, **kwargs)
