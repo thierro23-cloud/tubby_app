@@ -1,16 +1,16 @@
 # =============================================================================
-# MODULO DB - CONEXION A BASES DE DATOS MySQL
+# 📡 MÓDULO DB – CONEXIÓN A BASES DE DATOS MySQL
 # =============================================================================
-# DESCRIPCION GENERAL
+# DESCRIPCIÓN GENERAL
 # -------------------
-# Este modulo se encarga de:
-# 1) Abrir conexiones con MySQL a la base indicada.
-# 2) Ejecutar consultas de lectura y escritura.
-# 3) Garantizar cierre de cursores y conexiones.
+# Este módulo se encarga de:
+# 1️⃣ Abrir conexiones con MySQL a la base indicada.
+# 2️⃣ Ejecutar consultas de lectura y escritura.
+# 3️⃣ Garantizar cierre de cursores y conexiones.
 #
 # IMPORTANTE:
 # - Las bases de datos deben existir previamente.
-# - El esquema (tablas) debe gestionarse mediante migraciones, no desde aqui.
+# - El esquema (tablas) debe gestionarse mediante migraciones, no desde aquí.
 # - get_connection() solo conecta o falla con un error claro.
 # =============================================================================
 
@@ -20,36 +20,36 @@ from flask import current_app
 
 
 # =============================================================================
-# SECCION 1: CONEXION A LA BASE DE DATOS
+# 🔑 SECCIÓN 1: CONEXIÓN A LA BASE DE DATOS
 # =============================================================================
 def get_connection(
     nombre_bd: str = "bd_tbl_comunes",
 ) -> mysql.connector.MySQLConnection:
     """
-    Abre una conexion a la base de datos indicada.
+    🔑 Abre conexión a la BD indicada.
 
-    Lee la configuracion desde current_app.config["DATABASES"].
-    Falla con un RuntimeError claro si:
-    - No hay contexto de aplicacion Flask activo.
-    - La clave "DATABASES" no esta definida en la configuracion.
-    - La base solicitada no esta en el diccionario DATABASES.
-    - MySQL rechaza la conexion (credenciales, host, BD inexistente, etc.).
+    Lee la configuración desde current_app.config["DATABASES"].
+    Falla con RuntimeError claro si:
+    - No hay contexto de aplicación Flask activo.
+    - La clave "DATABASES" no está definida en la configuración.
+    - La base solicitada no está en el diccionario DATABASES.
+    - MySQL rechaza la conexión (credenciales, host, BD inexistente, etc.).
 
     No crea bases de datos ni tablas. Solo conecta o falla.
     """
 
-    # 1) Leer config Flask -- no hay credenciales de fallback embebidas
+    # 1️⃣ Leer config Flask — no hay credenciales de fallback embebidas
     try:
         libro_casas = current_app.config.get("DATABASES")
     except RuntimeError:
         raise RuntimeError(
-            "No hay contexto de aplicacion Flask disponible. "
-            "Asegurate de llamar a get_connection() dentro de una request o app_context."
+            "No hay contexto de aplicación Flask disponible. "
+            "Asegúrate de llamar a get_connection() dentro de una request o app_context."
         )
 
     if not libro_casas:
         raise RuntimeError(
-            "La configuracion 'DATABASES' no esta definida en la aplicacion Flask. "
+            "La configuración 'DATABASES' no está definida en la aplicación Flask. "
             "Revisa config.py y las variables de entorno DB_HOST, DB_USER, DB_PASSWORD, DB_PORT."
         )
 
@@ -57,24 +57,24 @@ def get_connection(
     if not casa:
         disponibles = ", ".join(sorted(libro_casas.keys()))
         raise RuntimeError(
-            f"No encuentro la base '{nombre_bd}'. Bases disponibles: {disponibles}"
+            f"❌ No encuentro la base '{nombre_bd}'! Casas disponibles: {disponibles}"
         )
 
     host = casa["HOST"]
     user = casa["USER"]
-    pw = casa["PASSWORD"]
+    password = casa["PASSWORD"]
     database = casa["DB"]
     port = casa.get("PORT", 3306)
 
-    # 2) Conectar -- si la BD no existe o las credenciales son incorrectas, se lanza Error
+    # 2️⃣ Conectar — si la BD no existe o las credenciales son incorrectas, se lanza Error
     conn = mysql.connector.connect(
-        host=host, user=user, password=pw, database=database, port=port
+        host=host, user=user, password=password, database=database, port=port
     )
     return conn
 
 
 # =============================================================================
-# SECCION 2: EJECUTAR CONSULTAS (LECTURA)
+# 📗 SECCIÓN 2: EJECUTAR CONSULTAS (LECTURA)
 # =============================================================================
 def ejecutar_query(
     sql: str, params: Optional[tuple] = None, nombre_bd: str = "bd_tbl_comunes"
@@ -98,7 +98,7 @@ def ejecutar_query(
 
 
 # =============================================================================
-# SECCION 3: EJECUTAR CONSULTAS (MODIFICACION)
+# 📗 SECCIÓN 3: EJECUTAR CONSULTAS (MODIFICACIÓN)
 # =============================================================================
 def ejecutar_non_query(
     sql: str, params: Optional[tuple] = None, nombre_bd: str = "bd_tbl_comunes"
@@ -115,3 +115,32 @@ def ejecutar_non_query(
     finally:
         cursor.close()
         conn.close()
+
+
+# =============================================================================
+# 📘 SECCIÓN 4: EJEMPLOS DE USO
+# =============================================================================
+"""
+# Leer usuarios
+usuarios = ejecutar_query("SELECT * FROM tbl_login")
+
+# Insertar nuevo usuario
+ejecutar_non_query(
+    "INSERT INTO tbl_login (usuario, password) VALUES (%s,%s)",
+    ("pepe","123456")
+)
+
+# Marcar plaza como ocupada
+ejecutar_non_query(
+    "UPDATE tbl_plazas SET estado='ocupada' WHERE idtbl_plazas=%s",
+    (1,),
+    nombre_bd="parquin_camiones"
+)
+
+# Crear incidencia
+ejecutar_non_query(
+    "INSERT INTO tbl_incidencias (descripcion) VALUES (%s)",
+    ("Vía obstruida por contenedor",),
+    nombre_bd="control_via_publica"
+)
+"""
