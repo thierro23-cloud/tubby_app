@@ -16,73 +16,6 @@ import mysql.connector
 from mysql.connector import Error
 from flask import current_app
 
-# 📦 BASES DE DATOS DE FALLBACK
-FALLBACK_DATABASES = {
-    "bd_tbl_comunes": {
-        "HOST": "localhost",
-        "USER": "root",
-        "PASSWORD": "F@Fe1132",
-        "DB": "bd_tbl_comunes",
-        "PORT": 3306,
-    },
-    "parquin_camiones": {
-        "HOST": "localhost",
-        "USER": "root",
-        "PASSWORD": "F@Fe1132",
-        "DB": "parquin_camiones",
-        "PORT": 3306,
-    },
-    "control_via_publica": {
-        "HOST": "localhost",
-        "USER": "root",
-        "PASSWORD": "F@Fe1132",
-        "DB": "control_via_publica",
-        "PORT": 3306,
-    },
-    "gis_municipal": {
-        "HOST": "localhost",
-        "USER": "root",
-        "PASSWORD": "F@Fe1132",
-        "DB": "gis_municipal",
-        "PORT": 3306,
-    },
-    "inventario": {
-        "HOST": "localhost",
-        "USER": "root",
-        "PASSWORD": "F@Fe1132",
-        "DB": "inventario",
-        "PORT": 3306,
-    },
-    "patrulla_verde": {
-        "HOST": "localhost",
-        "USER": "root",
-        "PASSWORD": "F@Fe1132",
-        "DB": "patrulla_verde",
-        "PORT": 3306,
-    },
-    "plan_de_emergencias": {
-        "HOST": "localhost",
-        "USER": "root",
-        "PASSWORD": "F@Fe1132",
-        "DB": "plan_de_emergencias",
-        "PORT": 3306,
-    },
-    "personal_vestuario": {
-        "HOST": "localhost",
-        "USER": "root",
-        "PASSWORD": "F@Fe1132",
-        "DB": "personal_vestuario",
-        "PORT": 3306,
-    },
-    "mobiliario_urbano": {
-        "HOST": "localhost",
-        "USER": "root",
-        "PASSWORD": "F@Fe1132",
-        "DB": "mobiliario_urbano",
-        "PORT": 3306,
-    },
-}
-
 
 # =============================================================================
 # 🔑 SECCIÓN 1: CONEXIÓN CON CREACIÓN AUTOMÁTICA DE BD Y TABLAS
@@ -96,14 +29,20 @@ def get_connection(
     - Crea tablas básicas si no existen.
     """
 
-    # 1️⃣ Leer config Flask o fallback
+    # 1️⃣ Leer config Flask — no hay credenciales de fallback embebidas
     try:
         libro_casas = current_app.config.get("DATABASES")
     except RuntimeError:
-        libro_casas = None
+        raise RuntimeError(
+            "❌ No hay contexto de aplicación Flask disponible. "
+            "Asegúrate de llamar a get_connection() dentro de una request o app_context."
+        )
 
     if not libro_casas:
-        libro_casas = FALLBACK_DATABASES
+        raise RuntimeError(
+            "❌ La configuración 'DATABASES' no está definida en la aplicación Flask. "
+            "Revisa config.py y las variables de entorno DB_HOST, DB_USER, DB_PASSWORD."
+        )
 
     casa = libro_casas.get(nombre_bd)
     if not casa:
